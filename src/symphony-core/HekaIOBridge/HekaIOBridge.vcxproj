@@ -68,8 +68,8 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>$(SolutionDir)\..\..\externals\ITCMM;$(IncludePath)</IncludePath>
-    <LibraryPath>$(SolutionDir)\..\..\externals\ITCMM\$(Platform);$(SolutionDir)\$(Configuration);$(LibraryPath)</LibraryPath>
+    <IncludePath>$(SolutionDir)..\..\externals\ITCMM;$(IncludePath)</IncludePath>
+    <LibraryPath>$(SolutionDir)..\..\externals\ITCMM\$(Platform);$(SolutionDir)\$(Configuration);$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
@@ -78,8 +78,8 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
-    <LibraryPath>$(SolutionDir)\..\externals\Hekka\ITCMM-110410\Win32;$(SolutionDir)\$(Configuration);$(LibraryPath)</LibraryPath>
-    <IncludePath>$(SolutionDir)\..\externals\Hekka\ITCMM-110410;$(IncludePath)</IncludePath>
+    <LibraryPath>$(SolutionDir)..\..\externals\ITCMM\$(Platform);$(SolutionDir)\$(Configuration);$(LibraryPath)</LibraryPath>
+    <IncludePath>$(SolutionDir)..\..\externals\ITCMM;$(IncludePath)</IncludePath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
