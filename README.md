@@ -24,23 +24,23 @@ Symphony Core makes use of the following 3rd-party libraries:
 
 **HDF5 DotNet**
 
-HDF5 (Hierarchical Data Format 5) Software Library and Utilities 
-Copyright 2006-2012 by The HDF Group.
+  > HDF5 (Hierarchical Data Format 5) Software Library and Utilities 
+  > Copyright 2006-2012 by The HDF Group.
 
-NCSA HDF5 (Hierarchical Data Format 5) Software Library and Utilities 
-Copyright 1998-2006 by the Board of Trustees of the University of Illinois.
+  > NCSA HDF5 (Hierarchical Data Format 5) Software Library and Utilities 
+  > Copyright 1998-2006 by the Board of Trustees of the University of Illinois.
 
-See externals\HDF5DotNet\license.txt for license
+  > See externals\HDF5DotNet\license.txt for license
 
 **Googletest**
 
-Copyright 2008, Google Inc.
-All rights reserved.
+> Copyright 2008, Google Inc.
+> All rights reserved.
 
-See externals\fused_gtest\gtest\license.txt for license
+> See externals\fused_gtest\gtest\license.txt for license
 
 **Heka ITCMM**
 
-Copyright 2007-2012 Heka Instruments, Inc.
+> Copyright 2007-2012 Heka Instruments, Inc.
 
-See externals\ITCMM\license.txt for license
+> See externals\ITCMM\license.txt for license
