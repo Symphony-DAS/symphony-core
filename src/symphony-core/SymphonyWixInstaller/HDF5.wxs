@@ -5,31 +5,31 @@
       <Component Id="C.hdf5_hl">
         <File Id="F.hdf5_hl"
               KeyPath="yes"
-              Source="$(var.SolutionDir)\..\externals\HDF5DotNet\hdf5_hldll.dll"/>
+              Source="$(var.SolutionDir)..\..\externals\HDF5DotNet\hdf5_hldll.dll"/>
       </Component>
 
       <Component Id="C.hdf5">
         <File Id="F.hdf5"
               KeyPath="yes"
-              Source="$(var.SolutionDir)\..\externals\HDF5DotNet\hdf5dll.dll"/>
+              Source="$(var.SolutionDir)..\..\externals\HDF5DotNet\hdf5dll.dll"/>
       </Component>
 
       <Component Id="C.hdf5dotnet">
         <File Id="F.hdf5dotnet"
               KeyPath="yes"
-              Source="$(var.SolutionDir)\..\externals\HDF5DotNet\HDF5DotNet.dll"/>
+              Source="$(var.SolutionDir)..\..\externals\HDF5DotNet\HDF5DotNet.dll"/>
       </Component>
 
       <Component Id="C.szip">
         <File Id="F.szip"
               KeyPath="yes"
-              Source="$(var.SolutionDir)\..\externals\HDF5DotNet\szip.dll"/>
+              Source="$(var.SolutionDir)..\..\externals\HDF5DotNet\szip.dll"/>
       </Component>
 
       <Component Id="C.zlib1">
         <File Id="F.zlib1"
               KeyPath="yes"
-              Source="$(var.SolutionDir)\..\externals\HDF5DotNet\zlib1.dll"/>
+              Source="$(var.SolutionDir)..\..\externals\HDF5DotNet\zlib1.dll"/>
       </Component>
       
     </DirectoryRef>

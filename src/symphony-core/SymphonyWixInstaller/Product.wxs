@@ -22,7 +22,7 @@
 		<UIRef Id="WixUI_Minimal"/>
 		<UIRef Id="WixUI_ErrorProgressText"/>
 
-		<WixVariable Id="WixUILicenseRtf" Value="$(var.SolutionDir)\..\docs\EULA.rtf" />
+		<WixVariable Id="WixUILicenseRtf" Value="$(var.SolutionDir)..\..\docs\EULA.rtf" />
 
     <!-- Property to detect an Ovation installation; should be repaired by repair/reinstall-->
     <Property Id="SYMPHONYINSTALLED">
