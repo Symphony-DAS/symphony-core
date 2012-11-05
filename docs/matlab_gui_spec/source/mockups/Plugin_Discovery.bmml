@@ -1,0 +1,9 @@
+<mockup version="1.0" skin="sketch" measuredW="236" measuredH="245" mockupW="166" mockupH="225">
+  <controls>
+    <control controlID="0" controlTypeID="com.balsamiq.mockups::Tree" x="60" y="10" w="166" h="225" measuredW="300" measuredH="225" zOrder="0" locked="false" isInGroup="-1">
+      <controlProperties>
+        <text>F%20plugins_folder%0A%09F%20plugin1%0A%09%09-%20fn1.m%0A%09%09-%20fn2.m%0A%09F%20plugin2%0A%09%09-%20fn1.m%0A%09%09-%20fn2.m</text>
+      </controlProperties>
+    </control>
+  </controls>
+</mockup>

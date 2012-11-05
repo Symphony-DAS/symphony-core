@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+
+  <Product Id="91316499-c419-40f5-85a2-8c2203dc07dd"
+           Name="Symphony"
+           Language="1033"
+           Version="1.0.0.6"
+           Manufacturer="Physion Consulting"
+           UpgradeCode="f7bb5072-5e4d-4730-a302-b87efe519c9b">
+    <Package
+      Description="Physion Symphony package"
+      Comments="This is the Physion Symphony installer package."
+      Manufacturer="Physion Consulting"
+      InstallerVersion="300" Compressed="yes" />
+
+    <Media Id="1" Cabinet="symphony.cab" EmbedCab="yes" />
+
+    <Directory Id="TARGETDIR" Name="SourceDir">
+      <Directory Id="ProgramFilesFolder">
+        <Directory Id="PhysionFolder" Name="Physion">
+          <Directory Id="APPLICATIONROOTDIRECTORY" Name="Symphony">
+            <Component Id="readme" Guid="bab0bcdf-a13f-4010-9dc0-03d5b5f18e85">
+              <File Id="Readme" Name="readme.txt" Source="Readme.txt" />
+            </Component>
+            <Component Id="HDF5DotNet">
+              <File Id="HDF5DotNet" Name="HDF5DotNet.dll"
+                    Source="..\$(var.Configuration)\HDF5DotNet.dll"
+                    KeyPath="yes"/>
+            </Component>
+            <Component Id="Sprache">
+              <File Id="Sprache" Name="Sprache.dll"
+                    Source="..\..\Symphony\packages\Sprache.1.9.1.31\lib\NET40\Sprache.dll"
+                    KeyPath="yes" />
+            </Component>
+            <Component Id="Symphony.Core">
+              <File Id="Symphony.Core" Name="Symphony.Core.dll"
+                    Source="..\Symphony.Core\bin\$(var.Configuration)\Symphony.Core.dll"
+                    KeyPath="yes" />
+            </Component>
+            <Component Id="Symphony.ExtDev">
+              <File Id="Symphony.ExtDev" Name="Symphony.ExternalDevices.dll"
+                    Source="..\Symphony.ExternalDevices\bin\$(var.Configuration)\Symphony.ExternalDevices.dll"
+                  KeyPath="yes" />
+            </Component>
+            <Component Id="HekaDAQController">
+              <File Id="HekaDAQController" Name="HekaDAQInterface.dll"
+                    Source="..\HekkaDAQInterface\bin\$(var.Configuration)\HekaDAQInterface.dll"
+                    KeyPath="yes" />
+            </Component>
+            <Component Id="HekaIOBridge">
+              <File Id="HekaIOBridge" Name="HekaIOBridge.dll"
+                    Source="..\$(var.Configuration)\HekaIOBridge.dll"
+                    KeyPath="yes" />
+            </Component>
+            <Component Id="HeakNativeInterop">
+              <File Id="HekaNativeInterop" Name="HekaNativeInterop.dll"
+                    Source="..\HekaNativeInterop\bin\$(var.Configuration)\HekaNativeInterop.dll"
+                    KeyPath="yes" />
+            </Component>
+            <Component Id="SimulationDAQController">
+              <File Id="SimulationDAQController" Name="Symphony.SimulationDAQController.dll"
+                    Source="..\SimulationDAQController\bin\$(var.Configuration)\Symphony.SimulationDAQController.dll"
+                    KeyPath="yes"/>
+            </Component>
+          </Directory>
+        </Directory>
+      </Directory>
+      <Directory Id="SystemFolder">
+        <Component Id="hdf5dll">
+          <File Id="hdf5dll" Name="hdf5dll.dll"
+                Source="..\..\externals\hdf5-1.8.5-patch1-win32\dll\hdf5dll.dll"
+                KeyPath="yes" />
+        </Component>
+        <Component Id="hdf5_hldll">
+          <File Id="hdf5_hldll" Name="hdf5_hldll.dll"
+                Source="..\..\externals\hdf5-1.8.5-patch1-win32\dll\hdf5_hldll.dll"
+                KeyPath="yes" />
+        </Component>
+        <Component Id="szip">
+          <File Id="szip" Name="szip.dll"
+                Source="..\..\externals\hdf5-1.8.5-patch1-win32\dll\szip.dll"
+                KeyPath="yes" />
+        </Component>
+        <Component Id="zlib1">
+          <File Id="zlib1" Name="zlib1.dll"
+                Source="..\..\externals\hdf5-1.8.5-patch1-win32\dll\zlib1.dll"
+                KeyPath="yes" />
+        </Component>
+      </Directory>
+    </Directory>
+
+    <Condition Message="You must be an administrator to install Symphony.">
+      AdminUser
+    </Condition>
+
+    <!-- NOTE: Generally each file should have its own Component, according to the manual -->
+    <DirectoryRef Id="APPLICATIONROOTDIRECTORY">
+    </DirectoryRef>
+
+    <!-- DirectoryRef for Windows directory? -->
+    <DirectoryRef Id="SystemFolder">
+    </DirectoryRef>
+
+    <!-- This includes the Visual C++ Redistributable merge modules, according to 
+		 http://wix.sourceforge.net/manual-wix3/install_vcredist.htm 
+		 WARNING: Including the VC CRT merge module generates a LOT of warnings; this is
+		 supposedly known and OK, according to the above URL.
+	  -->
+    <DirectoryRef Id="TARGETDIR">
+      <Merge Id="VCRedist" SourceFile="Microsoft_VC90_CRT_x86.msm" DiskId="1" Language="0"/>
+    </DirectoryRef>
+
+    <Feature Id="VCRedist" Title="Visual C++ 9.0 Runtime" AllowAdvertise="no" Display="hidden" Level="1">
+      <MergeRef Id="VCRedist"/>
+    </Feature>
+
+    <Feature Id="DocFeature" Title="Documentation" Level="1">
+      <!-- TODO: Remove the comments around this ComponentRef element and the Component above 
+           in order to add resources to this installer. -->
+      <ComponentRef Id="readme" />
+    </Feature>
+    <Feature Id="CoreFeature" Title="Core Executables" Level="1">
+      <ComponentRef Id="Sprache"/>
+      <ComponentRef Id="Symphony.Core"/>
+      <ComponentRef Id="Symphony.ExtDev"/>
+      <ComponentRef Id="HekaDAQController"/>
+      <ComponentRef Id="HekaIOBridge"/>
+      <ComponentRef Id="HeakNativeInterop"/>
+      <ComponentRef Id="SimulationDAQController"/>
+    </Feature>
+    <Feature Id="HDF5Feature" Title="HDF5 Libraries" Level="1">
+      <ComponentRef Id="HDF5DotNet"/>
+      <ComponentRef Id="hdf5dll"/>
+      <ComponentRef Id="hdf5_hldll"/>
+      <ComponentRef Id="szip"/>
+      <ComponentRef Id="zlib1"/>
+    </Feature>
+  </Product>
+</Wix>

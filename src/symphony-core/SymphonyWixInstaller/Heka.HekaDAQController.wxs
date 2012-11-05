@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+	<Fragment>
+    <DirectoryRef Id="SYMPHONYBIN">
+      <Component Id="C.HekaDAQ">
+        <File Id="F.HekaDAQ"
+              KeyPath="yes"
+              Source="$(var.HekaDAQController.TargetPath)"/>
+      </Component>
+      <Component Id="C.HekaIOBridge">
+        <File Id="F.HekaIOBridge"
+              KeyPath="yes"
+              Source="$(var.HekaIOBridge.TargetPath)"/>
+      </Component>
+      <Component Id="C.HekaNativeInterop">
+        <File Id="F.HekaNativeInterop"
+              KeyPath="yes"
+              Source="$(var.HekaNativeInterop.TargetPath)"/>
+      </Component>
+    </DirectoryRef>
+
+    <ComponentGroup Id="CG.HekaDAQ">
+      <ComponentRef Id="C.HekaDAQ"/>
+      <ComponentRef Id="C.HekaIOBridge"/>
+      <ComponentRef Id="C.HekaNativeInterop"/>
+    </ComponentGroup>
+	</Fragment>
+</Wix>

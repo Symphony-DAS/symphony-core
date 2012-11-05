@@ -1,0 +1,9 @@
+﻿<NUnitProject>
+  <Settings activeconfig="Debug" />
+  <Config name="Debug" binpathtype="Auto">
+    <assembly path="Symphony.Core.Tests\bin\Debug\Symphony.Core.Tests.dll" />
+  </Config>
+  <Config name="Release" binpathtype="Auto">
+    <assembly path="Symphony.Core.Tests\bin\Release\Symphony.Core.Tests.dll" />
+  </Config>
+</NUnitProject>

@@ -1,0 +1,83 @@
+Controller
+[
+	Clock "Clock"
+	
+	DAQController "Symphony.SimulationDAQController,Symphony.SimulationDAQController.SimulationDAQController,"
+	[
+		Provides Clock "Clock"
+		Clock "Clock"
+		Configuration
+		[
+
+		]
+		InputStream "In0" "Symphony.Core.DAQInputStream"
+		[
+			Clock "Clock"
+			Configuration
+			[
+				MeasurementConversionTarget "V"
+			]
+			SampleRate 1000 Hz
+		]
+		OutputStream "Out0" "Symphony.Core.DAQOutputStream"
+		[
+			Clock "Clock"
+			Configuration
+			[
+				MeasurementConversionTarget "V"
+			]
+			SampleRate 1000 Hz
+		]
+		InputStream "In1" "Symphony.Core.DAQInputStream"
+		[
+			Clock "Clock"
+			Configuration
+			[
+				MeasurementConversionTarget "V"
+			]
+			SampleRate 1000 Hz
+		]
+		OutputStream "Out1" "Symphony.Core.DAQOutputStream"
+		[
+			Clock "Clock"
+			Configuration
+			[
+				MeasurementConversionTarget "V"
+			]
+			SampleRate 1000 Hz
+		]
+		ExternalDevice "Device0" "Manufacturer" "Symphony.Core.UnitConvertingExternalDevice"
+		[
+			Clock "Clock"
+			Background 0 V
+			Bind "Out0"
+			Bind "In0"
+			Configuration
+			[
+				MeasurementConversionTarget "V"
+			]
+		]
+		ExternalDevice "Device1" "Manufacturer" "Symphony.Core.UnitConvertingExternalDevice"
+		[
+			Clock "Clock"
+			Background 0 V
+			Bind "Out1"
+			Bind "In1"
+			Configuration
+			[
+				MeasurementConversionTarget "V"
+			]
+		]
+	]
+
+	VideoController
+	[
+		Provides Clock "VideoClock"
+		Clock "Clock"
+		Configuration
+		[
+			key1 "value1"
+			key2 "value2" key3 "value3"
+		]
+	]
+]

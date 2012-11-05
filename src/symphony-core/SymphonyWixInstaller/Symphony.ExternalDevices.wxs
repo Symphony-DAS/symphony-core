@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+  <Fragment>
+    <DirectoryRef Id="SYMPHONYBIN">
+      <Component Id="C.SymphonyExternalDevices">
+        <File Id="F.SymphonyExternalDevices"
+              KeyPath="yes"
+              Source="$(var.Symphony.ExternalDevices.TargetPath)"/>
+      </Component>
+    </DirectoryRef>
+
+    <ComponentGroup Id="CG.SymphonyExternalDevices">
+      <ComponentRef Id="C.SymphonyExternalDevices"/>
+    </ComponentGroup>
+  </Fragment>
+</Wix>

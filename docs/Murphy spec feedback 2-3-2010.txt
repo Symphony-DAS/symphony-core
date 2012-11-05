@@ -1,0 +1,9 @@
+Notes with Gabe 2/3/2010
+
+Hardware dynamic clamp test by next week
+
+pause in the middle of an epoch should skip to next epoch (discarding data)
+
+allow protocols to tag epochs
+
+allow to set "sticky" tag on all epochs in the future (this obviates the need for coverflow)

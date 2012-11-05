@@ -1,0 +1,36 @@
+<mockup version="1.0" skin="sketch" measuredW="906" measuredH="797" mockupW="877" mockupH="783">
+  <controls>
+    <control controlID="3" controlTypeID="com.balsamiq.mockups::Tree" x="19" y="9" w="633" h="778" measuredW="300" measuredH="682" zOrder="0" locked="false" isInGroup="-1">
+      <controlProperties>
+        <verticalScrollbar>false</verticalScrollbar>
+        <text>-%20%3Cuser%20defined%3E.xml%0A._%20%3CepochGroup%20label%3D%22%u2026%22%20identifier%3D%22%u2026%22%20startTime%3D%22%u2026%22%20timeZone%3D%22%u2026%22%3E%0A.._%20%3Cparents%3E%0A..._%20%3Cparent%3Elabel%3C/parent%3E%0A.._%20%3CsourceHierarchy%3E%0A..._%20%3Csource%3Elabel%3C/source%3E%0A.._%20%3Ckeywords%3E%0A.._%20%3Cproperties%3E%0A..._%20%3Cproperty%3E%0A...._%20%3Ckey%3Evalue%3C/key%3E%0A.._%20%3Cepoch%20protocolID%3D%22%u2026%22%20UUID%3D%22%u2026%22%20startTime%3D%22%u2026%22%20fileTag%3D%22%u2026%22%3E%0A..._%20%3Cbackground%3E%0A..._%20%3CprotocolParameters%3E%0A...._%20%3Cparam%3Evalue%3C/param%3E%0A..._%20%3Cstimuli%3E%0A...._%20%3Cstimulus%20device%3D%22%u2026%22%20stimulusID%3D%22%u2026%22%3E%0A....._%20%3Cparameters%3E%0A......_%20%3Cparam%3Evalue%3C/param%3E%0A..._%20%3Cresponses%3E%0A...._%20%3Cresponse%20response%3D%22%u2026%22%3E%0A....._%20%3CinputTime%3EMM/DD/YYYY%20HH%3AMM%3ASS%20AM/PM%20+HH%3AMM%3C/inputTime%3E%0A....._%20%3CsampleRate%3E%3Cmeasurement.../%3E%3C/sampleRate%3E%0A....._%20%3Cdata%3E%0A......_%20%3Cmeasurement.../%3E%0A......_%20%3Cmeasurement.../%3E%0A......_%20...%0A.._%20%3Cepoch%3E%0A.._%20...</text>
+        <borderStyle>square</borderStyle>
+      </controlProperties>
+    </control>
+    <control controlID="5" controlTypeID="com.balsamiq.mockups::CallOut" x="503" y="18" w="-1" h="-1" measuredW="34" measuredH="40" zOrder="1" locked="false" isInGroup="-1">
+      <controlProperties>
+        <text>1</text>
+      </controlProperties>
+    </control>
+    <control controlID="7" controlTypeID="com.balsamiq.mockups::StickyNote" x="605" y="4" w="291" h="196" measuredW="109" measuredH="123" zOrder="2" locked="false" isInGroup="-1">
+      <controlProperties>
+        <text>1.%20identifier%20is%20a%20GUID%0A2.%20parent%20is%20either%20label%20or%20GUID%20%28unspecified%20yet%29%0A3.%20fileTag%20is%20a%20string%20field%20for%20matching%20this%20epoch%20to%20an%20external%20file%20%28e.g.%20a%20file%20prefix%20for%20Prairie%20system%20output%29</text>
+      </controlProperties>
+    </control>
+    <control controlID="8" controlTypeID="com.balsamiq.mockups::CallOut" x="294" y="93" w="-1" h="-1" measuredW="37" measuredH="40" zOrder="3" locked="false" isInGroup="-1">
+      <controlProperties>
+        <text>2</text>
+      </controlProperties>
+    </control>
+    <control controlID="9" controlTypeID="com.balsamiq.mockups::CallOut" x="503" y="259" w="-1" h="-1" measuredW="36" measuredH="40" zOrder="4" locked="false" isInGroup="-1">
+      <controlProperties>
+        <text>3</text>
+      </controlProperties>
+    </control>
+    <control controlID="10" controlTypeID="com.balsamiq.mockups::StickyNote" x="610" y="233" w="286" h="95" measuredW="109" measuredH="123" zOrder="5" locked="false" isInGroup="-1">
+      <controlProperties>
+        <text>Closing%20element%20tags%20%28e.g.%20%3C/parents%3E%29%20not%20shown</text>
+      </controlProperties>
+    </control>
+  </controls>
+</mockup>

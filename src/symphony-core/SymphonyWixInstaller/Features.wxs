@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+  <Fragment>
+
+    <Feature Id="FE.SymphonyCore"
+             Title="Symphony"
+             Description="Symphony Core Components"
+             Level="1"
+             Absent="disallow"
+             >
+
+      <!-- Remove the Ovation folder on uninstall -->
+      <Component Directory="SYMPHONYROOT">
+        <RemoveFolder Id="SYMPHONYROOT" On="uninstall"/>
+        <RegistryValue Root="HKLM"
+                       Key="Software\Physion\Symphony"
+                       Type="string"
+                       Value="SymphonyInstalled"
+                       KeyPath="yes"/>
+      </Component>
+
+      <ComponentGroupRef Id="CG.SymphonyCore"/>
+      <ComponentGroupRef Id="CG.SimulationDAQ"/>
+      <ComponentGroupRef Id="CG.HDF5"/>
+      <ComponentGroupRef Id="CG.log4net"/>
+      <ComponentGroupRef Id="CG.EnvVars"/>
+
+      <Feature Id="FE.ExternalDevices"
+         Title="External Device Definitions"
+         Description="External device plugins"
+         Level="1"
+         Absent="disallow"
+         InstallDefault="followParent">
+
+        <ComponentGroupRef Id="CG.SymphonyExternalDevices"/>
+      </Feature>
+
+      <Feature Id="FE.HekaDAQ"
+     Title="Heka DAQ"
+     Description="Heka DAQ Hardware Support"
+     Level="1"
+     Absent="allow"
+     InstallDefault="followParent">
+        <ComponentGroupRef Id="CG.HekaDAQ"/>
+      </Feature>
+      
+    </Feature>
+
+  </Fragment>
+</Wix>

@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+	<Fragment>
+    <ComponentGroup Id="CG.EnvVars">
+
+      <Component Directory="SYMPHONYROOT">
+        <Environment Id="ENV.SYMPHONY_ROOT"
+                     Name="SYMPHONY_ROOT"
+                     Value="[SYMPHONYROOT]"
+                     Action="create"
+                     System="yes"
+                     Permanent="no"/>
+        <RegistryValue Root="HKLM"
+                 Key="Software\Physion\Symphony\SymphonyRootEnv"
+                 Type="string"
+                 Value="SymphonyRootEnvInstalled"
+                 KeyPath="yes"/>
+      </Component>
+
+      <Component Directory="SYMPHONYROOT">
+        <Environment Id="ENV.Path1"
+                     Name="Path"
+                     Value="[SYMPHONYROOT]bin"
+                     Action="set"
+                     Part="last"
+                     Permanent="no"
+                     System="yes"/>
+        <RegistryValue Root="HKLM"
+                 Key="Software\Physion\Symphony\SymphonyPathEnv"
+                 Type="string"
+                 Value="SymphonyPathEnvInstalled"
+                 KeyPath="yes"/>
+      </Component>
+    </ComponentGroup>
+	</Fragment>
+</Wix>

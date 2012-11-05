@@ -1,0 +1,359 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<ClassDiagram MajorVersion="1" MinorVersion="1" MembersFormat="NameAndType">
+  <Class Name="Symphony.Core.Controller" Collapsed="true" BaseTypeListCollapsed="true">
+    <Position X="15.75" Y="0.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>EAAQAIAAAACAAgEAAAAASUAAaAYQYA2AgQACA0gEZgA=</HashCode>
+      <FileName>Controller.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Position="0.2" Collapsed="true" />
+  </Class>
+  <Class Name="Symphony.Core.SymphonyControllerException" Collapsed="true">
+    <Position X="19.25" Y="3.5" Width="2.25" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Controller.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Symphony.Core.DAQControllerBase" Collapsed="true" BaseTypeListCollapsed="true">
+    <Position X="19.25" Y="0.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AKUBAAYICSKAAgiAAoSBKCiAASIAAGAYoAAAAEQAEgA=</HashCode>
+      <FileName>DAQController.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Position="0.2" Collapsed="true" />
+  </Class>
+  <Class Name="Symphony.Core.DAQException" Collapsed="true">
+    <Position X="21" Y="0.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>DAQController.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Symphony.Core.DAQInputStream" Collapsed="true" BaseTypeListCollapsed="true">
+    <Position X="22.75" Y="0.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>BAAAAAQAAACAAgAAAIAAAAQAQAgAAAAggAAAAgAAAgA=</HashCode>
+      <FileName>DAQStream.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Position="0.2" Collapsed="true" />
+  </Class>
+  <Class Name="Symphony.Core.DAQOutputStream" Collapsed="true" BaseTypeListCollapsed="true">
+    <Position X="15.75" Y="1.5" Width="1.75" />
+    <TypeIdentifier>
+      <HashCode>BAAAAAQAAACABgAAAIAACAQCAAgAAACggAAgAgAAAgQ=</HashCode>
+      <FileName>DAQStream.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Position="0.2" Collapsed="true" />
+  </Class>
+  <Class Name="Symphony.Core.Epoch" Collapsed="true">
+    <Position X="17.5" Y="1.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAgAAAAAAABSAAAAQEAACAAhIAAAAACAAAAwAAIAgAA=</HashCode>
+      <FileName>Epoch.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Symphony.Core.Stimulus" Collapsed="true">
+    <Position X="8.5" Y="10.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAACAAAAAAAAAAAAAAAAACAACIAAAAAAAAA=</HashCode>
+      <FileName>Epoch.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Position="0.2" />
+  </Class>
+  <Class Name="Symphony.Core.Response" Collapsed="true">
+    <Position X="17.5" Y="3.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>BAAAAACIAAACAAAEAAACAAAAAAAABBAAAAAAAAAAAAA=</HashCode>
+      <FileName>Epoch.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Symphony.Core.DelegatedStimulus" Collapsed="true">
+    <Position X="9.5" Y="11.75" Width="1.75" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAACAAAAAAAEAAAAAAAACCAAAAAAAAAAAAA=</HashCode>
+      <FileName>Epoch.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Symphony.Core.RenderedStimulus" Collapsed="true">
+    <Position X="7.25" Y="11.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAACAAAAAAAACAAAAAAAADAAAAAAAAAAAAA=</HashCode>
+      <FileName>Epoch.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Symphony.Core.EpochPersistor" Collapsed="true">
+    <Position X="2.5" Y="10.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>QAhAAAAAFQCIAIAAABgAAEAIACCQAAGAYAQAAQKAIII=</HashCode>
+      <FileName>EpochPersistor.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Symphony.Core.EpochHDF5Persistor" Collapsed="true">
+    <Position X="1.25" Y="11.75" Width="1.75" />
+    <TypeIdentifier>
+      <HashCode>AAiRAAEQACAECAAAAIAAAAAAACDQAAAQIkCAQAMQAAA=</HashCode>
+      <FileName>EpochHDF5Persistor.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Position="0.2" />
+  </Class>
+  <Class Name="Symphony.Core.EpochXMLPersistor" Collapsed="true">
+    <Position X="3.75" Y="11.75" Width="1.75" />
+    <TypeIdentifier>
+      <HashCode>CAhAAAAABADIAIAAABgBCEAAAACQAACAKQAAAAIAAII=</HashCode>
+      <FileName>EpochXMLPersistor.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Symphony.Core.PersistanceException" Collapsed="true">
+    <Position X="10.25" Y="2" Width="1.75" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>EpochPersistorException.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Symphony.Core.SymphonyException" Collapsed="true">
+    <Position X="11.75" Y="0.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Exceptions.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Symphony.Core.ExternalDeviceException" Collapsed="true">
+    <Position X="12.75" Y="2" Width="2" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>ExternalDevice.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Symphony.Core.ExternalDeviceBase" Collapsed="true">
+    <Position X="11" Y="7.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAABAAAAAQCEAgAAAAAACAQAAAACAACAgAAgAAAAAgA=</HashCode>
+      <FileName>ExternalDevice.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Position="0.2" />
+  </Class>
+  <Class Name="Symphony.Core.CoalescingDevice" Collapsed="true">
+    <Position X="11" Y="8.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAACAAgAAAABACIAAAAAAAAAAAAAAAAAAAAg=</HashCode>
+      <FileName>ExternalDevice.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Symphony.Core.DataSplit&lt;T&gt;" Collapsed="true">
+    <Position X="9.5" Y="4.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAIAAAAAAAAAAACAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>IOData.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Symphony.Core.ExistingConfigurationException" Collapsed="true">
+    <Position X="19.25" Y="1.5" Width="2.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>IOData.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Symphony.Core.IOData" Collapsed="true">
+    <Position X="2.25" Y="7.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>BAAAAAEAAAACAAAAAAAQAEAAAAAAABAAgAAAAAAAgQY=</HashCode>
+      <FileName>IOData.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Position="0.2" />
+  </Class>
+  <Class Name="Symphony.Core.OutputData" Collapsed="true">
+    <Position X="1.25" Y="8.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>EAAAAAAAABAgAAAQAAAggAAAACYAAAACAAQAAgAAABA=</HashCode>
+      <FileName>IOData.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Position="0.2" />
+  </Class>
+  <Class Name="Symphony.Core.InputData" Collapsed="true">
+    <Position X="3.5" Y="8.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAgAABAgAAAAAAAggAAAACIABABAAAAAAAAAAAA=</HashCode>
+      <FileName>IOData.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Position="0.2" />
+  </Class>
+  <Class Name="Symphony.Core.Measurement" Collapsed="true">
+    <Position X="17.5" Y="2.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAACAAAAAAAAAEoAAAAAAAAgAAAIAIEAAAgAAAAjA=</HashCode>
+      <FileName>Measurement.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Symphony.Core.MeasurementIncompatibilityException" Collapsed="true">
+    <Position X="19.25" Y="2.5" Width="2.75" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Measurement.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Symphony.Core.Maybe&lt;T&gt;" Collapsed="true">
+    <Position X="15.75" Y="2.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAQAAAAAAAAACAAACAAQAAAAAAAIAEAAAA=</HashCode>
+      <FileName>Misc.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Symphony.Core.Option&lt;T&gt;" Collapsed="true" BaseTypeListCollapsed="true">
+    <Position X="22.75" Y="1.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>ACAAACAAAAAAABBAAAAAACAAAAAAQAAAAAAAIAEAQAA=</HashCode>
+      <FileName>Misc.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Position="0.2" Collapsed="true" />
+  </Class>
+  <Class Name="Symphony.Core.TimeSpanExtensions" Collapsed="true">
+    <Position X="22.75" Y="3.5" Width="1.75" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAIAAAAAAAAAAAAAAAAAgAAAAAAAAAAA=</HashCode>
+      <FileName>Misc.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Symphony.Core.Converters" Collapsed="true">
+    <Position X="17.5" Y="0.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAIAAAAAAAAABAAAQAAIACABAgAA=</HashCode>
+      <FileName>Misc.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Symphony.Core.Parser" Collapsed="true">
+    <Position X="22.75" Y="2.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAABAEAAAAIAgQAAAAAAAAgUIQIAAACACGAEQEQAAAI=</HashCode>
+      <FileName>Parser.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Symphony.Core.ParserException" Collapsed="true">
+    <Position X="15.75" Y="3.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>ParserException.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Symphony.Core.SystemClock" Collapsed="true" BaseTypeListCollapsed="true">
+    <Position X="23" Y="4.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAACAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>SystemClock.cs</FileName>
+    </TypeIdentifier>
+    <Lollipop Position="0.2" Collapsed="true" />
+  </Class>
+  <Class Name="Symphony.Core.TimeStampedEventArgs" Collapsed="true">
+    <Position X="3" Y="4.5" Width="2" />
+    <TypeIdentifier>
+      <HashCode>AAAAAACAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>TimeStampedEventArgs.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Symphony.Core.TimeStampedExceptionEventArgs" Collapsed="true">
+    <Position X="1.25" Y="6" Width="2.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAAAAAAAA=</HashCode>
+      <FileName>TimeStampedEventArgs.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Symphony.Core.TimeStampedEpochEventArgs" Collapsed="true">
+    <Position X="4.5" Y="6" Width="2.25" />
+    <TypeIdentifier>
+      <HashCode>ABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>TimeStampedEventArgs.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Class Name="Symphony.Core.ValidationException" Collapsed="true">
+    <Position X="15.75" Y="4.5" Width="1.75" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>ValidationException.cs</FileName>
+    </TypeIdentifier>
+  </Class>
+  <Interface Name="Symphony.Core.IClock" Collapsed="true">
+    <Position X="15.75" Y="5.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAACAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Clock.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="Symphony.Core.IDAQController" Collapsed="true">
+    <Position X="1.75" Y="1.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAABAAAAAACAAgAAAIQBIAAAAAAAAAAAAAAAAEAAEAA=</HashCode>
+      <FileName>DAQController.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="Symphony.Core.IDAQStream" Collapsed="true">
+    <Position X="6" Y="1.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>BAAAAAAAAACAAAAAAIAAAAQAAAgAAAAggAAAAgAAAAA=</HashCode>
+      <FileName>DAQStream.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="Symphony.Core.IDAQInputStream" Collapsed="true">
+    <Position X="7.25" Y="3.25" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAgAAAAAAAAAAQAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>DAQStream.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="Symphony.Core.IDAQOutputStream" Collapsed="true">
+    <Position X="4.75" Y="3.25" Width="1.75" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAABgAAAAAAAAACAAAAAACAAAAgAAAAAAA=</HashCode>
+      <FileName>DAQStream.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="Symphony.Core.IStimulus" Collapsed="true">
+    <Position X="17.5" Y="5.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAACAAAAAAAAAAAAAAAAACAACIAAAAAAAAA=</HashCode>
+      <FileName>Epoch.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="Symphony.Core.IHardwareController" Collapsed="true">
+    <Position X="0.5" Y="0.5" Width="1.75" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAQACCIAAAAAAAAAAAAAAAIAAAAIoAAAAAAAAAA=</HashCode>
+      <FileName>IHardwareController.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="Symphony.Core.IIOData" Collapsed="true">
+    <Position X="7.25" Y="7.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>BAAAAAAAAAACAAAAAAAQAAAAAAAAABAAgAAAAAAAAAQ=</HashCode>
+      <FileName>IOData.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="Symphony.Core.IOutputData" Collapsed="true">
+    <Position X="8.5" Y="8.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>EAAAAAAAABAAAAAQAAAggAAAACYAAAACAAAAAAAAAAA=</HashCode>
+      <FileName>IOData.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="Symphony.Core.IInputData" Collapsed="true">
+    <Position X="6" Y="8.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAABAAAAAAAAAggAAAACIABAAAAAAAAAAAAAA=</HashCode>
+      <FileName>IOData.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Interface Name="Symphony.Core.ITimelineProducer" Collapsed="true">
+    <Position X="3.75" Y="0.5" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgA=</HashCode>
+      <FileName>TimelineProducer.cs</FileName>
+    </TypeIdentifier>
+  </Interface>
+  <Delegate Name="Symphony.Core.ConvertProc" Collapsed="true">
+    <Position X="15.75" Y="6.75" Width="1.5" />
+    <TypeIdentifier>
+      <HashCode>AAgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=</HashCode>
+      <FileName>Misc.cs</FileName>
+    </TypeIdentifier>
+  </Delegate>
+  <Font Name="Segoe UI" Size="9" />
+</ClassDiagram>
