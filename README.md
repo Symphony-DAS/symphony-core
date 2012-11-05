@@ -40,4 +40,7 @@ All rights reserved.
 See externals\fused_gtest\gtest\license.txt for license
 
 **Heka ITCMM**
-??
+
+Copyright 2007-2012 Heka Instruments, Inc.
+
+See externals\ITCMM\license.txt for license
