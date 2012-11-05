@@ -12,6 +12,8 @@
     <AssemblyName>HekkaDAQController.Tests</AssemblyName>
     <TargetFrameworkVersion>v4.0</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
+    <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\</SolutionDir>
+    <RestorePackages>true</RestorePackages>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -146,9 +148,7 @@
   <PropertyGroup>
     <PostBuildEvent>REM "C:\Program Files\NUnit 2.5.5\bin\net-2.0\nunit-console-x86.exe" "$(TargetPath)"</PostBuildEvent>
   </PropertyGroup>
-  <PropertyGroup>
-    <PreBuildEvent>"$(SolutionDir)tools\NuGet.exe" install "$(ProjectDir)packages.config" -o "$(SolutionDir)packages"</PreBuildEvent>
-  </PropertyGroup>
+  <Import Project="$(SolutionDir)\.nuget\nuget.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">
