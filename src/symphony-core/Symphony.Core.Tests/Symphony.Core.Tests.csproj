@@ -82,8 +82,8 @@
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\ApprovalTests.2.1\lib\ApprovalUtilities.dll</HintPath>
     </Reference>
-    <Reference Include="HDF5DotNet">
-      <HintPath>..\..\externals\HDF5DotNet\HDF5DotNet.dll</HintPath>
+    <Reference Include="HDF5DotNet, Version=1.8.7.0, Culture=neutral, processorArchitecture=x86">
+      <HintPath>..\..\..\externals\HDF5DotNet\HDF5DotNet.dll</HintPath>
     </Reference>
     <Reference Include="Moq">
       <HintPath>..\packages\Moq.4.0.10827\lib\NET40\Moq.dll</HintPath>
@@ -171,6 +171,9 @@
       <SubType>Designer</SubType>
     </Content>
     <None Include="Resources\ExternalDeviceBlock.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <WCFMetadata Include="Service References\" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
