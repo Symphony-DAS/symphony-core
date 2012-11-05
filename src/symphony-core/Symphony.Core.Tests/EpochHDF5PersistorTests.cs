@@ -12,7 +12,7 @@ namespace Symphony.Core
 {
 
     [TestFixture]
-    [UseReporter(typeof(NUnitReporter), typeof(ClipboardReporter))]
+    //[UseReporter(typeof(NUnitReporter), typeof(ClipboardReporter))]
     class EpochHDF5PersistorTests
     {
 
@@ -202,7 +202,7 @@ namespace Symphony.Core
 
             H5.Close();
 
-            var startInfo = new ProcessStartInfo(@"..\..\..\..\..\externals\HDF5\bin\h5dump", @" --xml ..\..\..\ShouldAllowLongStringEpochParameters.h5");
+            var startInfo = new ProcessStartInfo(@"..\..\..\..\..\..\externals\HDF5\bin\h5dump", @" --xml ..\..\..\ShouldAllowLongStringEpochParameters.h5");
             startInfo.RedirectStandardOutput = true;
             startInfo.UseShellExecute = false;
             var proc = Process.Start(startInfo);
