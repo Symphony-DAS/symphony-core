@@ -104,7 +104,7 @@
     <Compile Include="SimulationIntegration.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\HekkaDAQInterface\HekaDAQController.csproj">
+    <ProjectReference Include="..\HekaDAQController\HekaDAQController.csproj">
       <Project>{BC4ED219-1122-4148-8398-C869805F4BBA}</Project>
       <Name>HekaDAQController</Name>
     </ProjectReference>

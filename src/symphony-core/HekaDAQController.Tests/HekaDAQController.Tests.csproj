@@ -117,7 +117,7 @@
       <Project>{7FAECDDE-827D-49D4-A4FE-55BF9C986FD6}</Project>
       <Name>HekaNativeInterop</Name>
     </ProjectReference>
-    <ProjectReference Include="..\HekkaDAQInterface\HekaDAQController.csproj">
+    <ProjectReference Include="..\HekaDAQController\HekaDAQController.csproj">
       <Project>{BC4ED219-1122-4148-8398-C869805F4BBA}</Project>
       <Name>HekaDAQController</Name>
     </ProjectReference>

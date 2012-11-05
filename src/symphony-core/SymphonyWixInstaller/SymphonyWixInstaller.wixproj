@@ -60,14 +60,6 @@
       <RefProjectOutputGroups>Binaries;Content;Satellites</RefProjectOutputGroups>
       <RefTargetDir>INSTALLLOCATION</RefTargetDir>
     </ProjectReference>
-    <ProjectReference Include="..\HekkaDAQInterface\HekaDAQController.csproj">
-      <Name>HekaDAQController</Name>
-      <Project>{bc4ed219-1122-4148-8398-c869805f4bba}</Project>
-      <Private>True</Private>
-      <DoNotHarvest>True</DoNotHarvest>
-      <RefProjectOutputGroups>Binaries;Content;Satellites</RefProjectOutputGroups>
-      <RefTargetDir>INSTALLLOCATION</RefTargetDir>
-    </ProjectReference>
     <ProjectReference Include="..\SimulationDAQController\Symphony.SimulationDAQController.csproj">
       <Name>Symphony.SimulationDAQController</Name>
       <Project>{895efc6d-8b2a-4b6e-8152-b391ba5000de}</Project>
