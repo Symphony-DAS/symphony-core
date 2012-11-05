@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+	<Fragment>
+    <DirectoryRef Id="SYMPHONYBIN">
+      <Component Id="C.hdf5_hl">
+        <File Id="F.hdf5_hl"
+              KeyPath="yes"
+              Source="$(var.SolutionDir)\..\externals\HDF5DotNet\hdf5_hldll.dll"/>
+      </Component>
+
+      <Component Id="C.hdf5">
+        <File Id="F.hdf5"
+              KeyPath="yes"
+              Source="$(var.SolutionDir)\..\externals\HDF5DotNet\hdf5dll.dll"/>
+      </Component>
+
+      <Component Id="C.hdf5dotnet">
+        <File Id="F.hdf5dotnet"
+              KeyPath="yes"
+              Source="$(var.SolutionDir)\..\externals\HDF5DotNet\HDF5DotNet.dll"/>
+      </Component>
+
+      <Component Id="C.szip">
+        <File Id="F.szip"
+              KeyPath="yes"
+              Source="$(var.SolutionDir)\..\externals\HDF5DotNet\szip.dll"/>
+      </Component>
+
+      <Component Id="C.zlib1">
+        <File Id="F.zlib1"
+              KeyPath="yes"
+              Source="$(var.SolutionDir)\..\externals\HDF5DotNet\zlib1.dll"/>
+      </Component>
+      
+    </DirectoryRef>
+
+    <ComponentGroup Id="CG.HDF5">
+      <ComponentRef Id="C.hdf5_hl"/>
+      <ComponentRef Id="C.hdf5"/>
+      <ComponentRef Id="C.hdf5dotnet"/>
+      <ComponentRef Id="C.szip"/>
+      <ComponentRef Id="C.zlib1"/>
+    </ComponentGroup>
+	</Fragment>
+</Wix>

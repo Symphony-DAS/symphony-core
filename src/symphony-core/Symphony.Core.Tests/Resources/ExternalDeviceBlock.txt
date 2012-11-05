@@ -1,0 +1,13 @@
+ExternalDevice "LED" "Manufacturer" "Symphony.Core.ExternalDevice"
+[
+	Clock "CLOCK"
+	Background 1 V
+	Bind "In0"
+	Bind "In1"
+	Connect ("In0" "In1")
+	Configuration
+	[
+		key1 "value1"
+		key2 "value2" key3 "value3"
+	]
+]

@@ -1,0 +1,104 @@
+Controller
+[
+	Clock "HekkaClock"
+	
+	DAQController "Symphony.Core.Tests,Symphony.Core.SimpleDAQController"
+	[
+		Provides Clock "HekkaClock"
+		Clock "HekkaClock"
+		Configuration
+		[
+			key1 "value1"
+			key2 "value2"
+		]
+		InputStream "In0" "Symphony.Core.DAQInputStream"
+		[
+			Clock "HekkaClock"
+			Configuration
+			[
+				MeasurementConversionTarget "units"
+			]
+			SampleRate 1000 Hz
+		]
+		InputStream "In1" "Symphony.Core.DAQInputStream"
+		[
+			Clock "HekkaClock"
+			Configuration
+			[
+				MeasurementConversionTarget "units"
+			]
+			SampleRate 1000 Hz
+		]
+		InputStream "In2" "Symphony.Core.DAQInputStream"
+		[
+			Clock "HekkaClock"
+			Configuration
+			[
+				MeasurementConversionTarget "units"
+			]
+			SampleRate 1000 Hz
+		]
+		OutputStream "Out0" "Symphony.Core.DAQOutputStream"
+		[
+			Clock "HekkaClock"
+			Configuration
+			[
+				MeasurementConversionTarget "units"
+			]
+			SampleRate 1000 Hz
+		]
+		OutputStream "Out1" "Symphony.Core.DAQOutputStream"
+		[
+			Clock "HekkaClock"
+			Configuration
+			[
+				MeasurementConversionTarget "units"
+			]
+			SampleRate 1000 Hz
+		]
+		ExternalDevice "Amp" "Manufacturer" "Symphony.Core.CoalescingDevice"
+		[
+			Clock "HekkaClock"
+			Background 0 V
+			Bind "In0"
+			Bind "In1"
+			Bind "Out1"
+			Connect ("In0" "In1")
+			Configuration
+			[
+				CoalesceProc "Symphony.Core.CoalescingDevice.OneItemCoalesce"
+				MeasurementConversionTarget "units"
+			]
+		]
+		ExternalDevice "LED" "SomeCo" "Symphony.Core.UnitConvertingExternalDevice"
+		[
+			Clock "HekkaClock"
+			Background 0 V
+			Bind "Out0"
+			Configuration
+			[
+				MeasurementConversionTarget "units"
+			]
+		]
+		ExternalDevice "Temp" "SomeCo" "Symphony.Core.UnitConvertingExternalDevice"
+		[
+			Clock "HekkaClock"
+			Background 0 V
+			Bind "In2"
+			Configuration
+			[
+				MeasurementConversionTarget "units"
+			]
+		]
+	]
+	VideoController
+	[
+		Provides Clock "VideoClock"
+		Clock "HekkaClock"
+		Configuration
+		[
+			key1 "value1"
+			key2 "value2" key3 "value3"
+		]
+	]
+]

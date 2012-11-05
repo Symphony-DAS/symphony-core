@@ -1,0 +1,1 @@
+﻿Symphony.Core is a framework for scientific data acquisition.

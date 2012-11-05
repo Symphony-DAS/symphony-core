@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+
+	<?include $(sys.CURRENTDIR)\Config.wxi?>
+
+	<Product Id="$(var.msiProductID)"
+					 Name="$(var.ProductName)"
+					 Language="1033"
+					 Version="$(var.SymphonyVersion)"
+					 Manufacturer="Physion Consulting LLC"
+					 UpgradeCode="31b8b098-2788-4e26-9802-4a30ab9f8d38">
+
+
+		<Package InstallerVersion="300" 
+             Compressed="yes"
+             Platform="$(var.Platform)"/>
+
+		<Media Id="1" Cabinet="media1.cab" EmbedCab="yes" />
+
+		<MajorUpgrade DowngradeErrorMessage="A newer version of Symphony is already installed"/>
+
+		<UIRef Id="WixUI_Minimal"/>
+		<UIRef Id="WixUI_ErrorProgressText"/>
+
+		<WixVariable Id="WixUILicenseRtf" Value="$(var.SolutionDir)\..\docs\EULA.rtf" />
+
+    <!-- Property to detect an Ovation installation; should be repaired by repair/reinstall-->
+    <Property Id="SYMPHONYINSTALLED">
+      <RegistrySearch Id="SymphonyInstalled"
+                      Root="HKLM"
+                      Win64="$(var.Win64)"
+                      Key="Software\Physion\Symphony"
+                      Name="SymphonyInstalled"
+                      Type="raw"/>
+    </Property>
+
+		<!--    Property to record Symphony installation root folder-->
+		<Property Id="SYMPHONYROOT">
+			<RegistrySearch Id="SymphonyRoot"
+											Type="raw"
+											Root="HKLM"
+											Win64="$(var.Win64)"
+											Key="Software\Physion\Symphony"
+											Name="SymphonyRoot" />
+		</Property>
+
+		<!--Directory structure-->
+		<Directory Id="TARGETDIR" Name="SourceDir">
+			<Merge Id="VCRedist"
+						 SourceFile="C:\Program Files (x86)\Common Files\Merge Modules\Microsoft_VC100_CRT_$(var.Platform).msm"
+						 DiskId="1"
+						 Language="0"/>
+
+			<Directory Id="$(var.PlatformProgramFilesFolder)">
+				<Directory Id="PHYSIONINSTALLROOT" Name="Physion">
+					<Directory Id="SYMPHONYROOT" Name="Symphony">
+            <Directory Id="SYMPHONYBIN" Name="bin">
+              
+            </Directory>
+					</Directory>
+				</Directory>
+			</Directory>
+		</Directory>
+
+    <FeatureRef Id="FE.SymphonyCore"/>
+    
+		<!--VC10 Runtime merge module-->
+		<Feature Id="VCRedist" Title="Visual C++ 10.0 Runtime" AllowAdvertise="no" Display="hidden" Level="1">
+			<MergeRef Id="VCRedist"/>
+		</Feature>
+		
+	</Product>
+</Wix>

@@ -1,0 +1,26 @@
+<mockup version="1.0" skin="sketch" measuredW="856" measuredH="372" mockupW="717" mockupH="305">
+  <controls>
+    <control controlID="0" controlTypeID="com.balsamiq.mockups::TitleWindow" x="129" y="57" w="717" h="305" measuredW="450" measuredH="400" zOrder="0" locked="false" isInGroup="-1">
+      <controlProperties>
+        <topheight>26</topheight>
+        <text>Responses</text>
+      </controlProperties>
+    </control>
+    <control controlID="1" controlTypeID="com.balsamiq.mockups::LineChart" x="210" y="126" w="609" h="175" measuredW="187" measuredH="175" zOrder="1" locked="false" isInGroup="-1"/>
+    <control controlID="3" controlTypeID="com.balsamiq.mockups::Label" x="451" y="316" w="51" h="22" measuredW="51" measuredH="23" zOrder="2" locked="false" isInGroup="-1">
+      <controlProperties>
+        <text>Time%20%28s%29</text>
+      </controlProperties>
+    </control>
+    <control controlID="4" controlTypeID="com.balsamiq.mockups::Label" x="129" y="189" w="87" h="23" measuredW="87" measuredH="23" zOrder="3" locked="false" isInGroup="-1">
+      <controlProperties>
+        <text>Response%20%28pA%29</text>
+      </controlProperties>
+    </control>
+    <control controlID="5" controlTypeID="com.balsamiq.mockups::List" x="238" y="105" w="100" h="69" measuredW="100" measuredH="126" zOrder="4" locked="false" isInGroup="-1">
+      <controlProperties>
+        <text>Channel%201%0AChannel%202%0A...</text>
+      </controlProperties>
+    </control>
+  </controls>
+</mockup>

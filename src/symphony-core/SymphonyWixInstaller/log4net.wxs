@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+  <Fragment>
+    <DirectoryRef Id="SYMPHONYBIN">
+      <Component Id="C.log4net">
+        <File Id="F.log4net"
+              KeyPath="yes"
+              Source="$(var.SolutionDir)\..\Symphony\Symphony.ExternalDevices\bin\x86\Release\log4net.dll"/>
+      </Component>
+
+    </DirectoryRef>
+
+    <ComponentGroup Id="CG.log4net">
+      <ComponentRef Id="C.log4net"/>
+    </ComponentGroup>
+  </Fragment>
+</Wix>

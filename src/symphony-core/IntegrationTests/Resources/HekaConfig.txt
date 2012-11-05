@@ -1,0 +1,57 @@
+Controller
+[
+	Clock "Clock"
+	
+	DAQController "HekaDAQInterface,Heka.HekaDAQController,"
+	[
+		Provides Clock "Clock"
+		Clock "Clock"
+		Configuration
+		[
+			DeviceType "1"
+			DeviceNumber "0"
+		]
+		InputStream "ANALOG_IN.0" "HekaDAQInterface,Heka.HekaDAQInputStream"
+		[
+			Clock "Clock"
+			Configuration
+			[
+				MeasurementConversionTarget "V"
+			]
+			SampleRate 1000 Hz
+		]
+		OutputStream "ANALOG_OUT.0" "HekaDAQInterface,Heka.HekaDAQOutputStream"
+		[
+			Clock "Clock"
+			Configuration
+			[
+				MeasurementConversionTarget "V"
+				ChannelNumber "0"
+				ChannelType "1"
+			]
+			SampleRate 1000 Hz
+		]
+		ExternalDevice "Device0" "Manufacturer" "Symphony.Core.UnitConvertingExternalDevice"
+		[
+			Clock "Clock"
+			Background 0 V
+			Bind "ANALOG_OUT.0"
+			Bind "ANALOG_IN.0"
+			Configuration
+			[
+				MeasurementConversionTarget "V"
+			]
+		]
+	]
+
+	VideoController
+	[
+		Provides Clock "VideoClock"
+		Clock "Clock"
+		Configuration
+		[
+			key1 "value1"
+			key2 "value2" key3 "value3"
+		]
+	]
+]

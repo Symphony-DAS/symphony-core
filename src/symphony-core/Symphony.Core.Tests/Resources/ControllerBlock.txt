@@ -1,0 +1,38 @@
+DAQController "Symphony.Core.Tests,Symphony.Core.SimpleDAQController"
+[
+	Provides Clock "HekkaClock"
+	Clock "HekkaClock"
+	Configuration
+	[
+		key1 "value1"
+		key2 "value2"
+	]
+	InputStream "In0" "Symphony.Core.DAQInputStream"
+	[
+		Clock "HekkaClock"
+		Configuration
+		[
+			MeasurementConversionTarget "units"
+		]
+		SampleRate 1000 Hz
+	]
+	OutputStream "Out0" "Symphony.Core.DAQOutputStream"
+	[
+		Clock "HekkaClock"
+		Configuration
+		[
+			MeasurementConversionTarget "units"
+		]
+		SampleRate 1000 Hz
+	]
+	ExternalDevice "LED" "Manufacturer" "Symphony.Core.ExternalDevice"
+	[
+		Clock "HekkaClock"
+		Background 0 V
+		Bind "Out0"
+		Configuration
+		[
+			MeasurementConversionTarget "units"
+		]
+	]
+]

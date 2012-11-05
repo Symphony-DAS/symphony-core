@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Wix xmlns="http://schemas.microsoft.com/wix/2006/wi">
+	<Fragment>
+    <DirectoryRef Id="SYMPHONYBIN">
+      <Component Id="C.SimulationDAQ">
+        <File Id="F.SimulationDAQ"
+              KeyPath="yes"
+              Source="$(var.Symphony.SimulationDAQController.TargetPath)"/>
+      </Component>
+    </DirectoryRef>
+
+    <ComponentGroup Id="CG.SimulationDAQ">
+      <ComponentRef Id="C.SimulationDAQ"/>
+    </ComponentGroup>
+	</Fragment>
+</Wix>
