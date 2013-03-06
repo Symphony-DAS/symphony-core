@@ -4,22 +4,24 @@
 #Build
 bin
 obj
-Symphony/SymphonyInstaller/SymphonyInstaller
+src/symphony-core/SymphonyInstaller/SymphonyInstaller
 /docs/doxygen
 docs/sphinx/build
 
 
 # VS
-Symphony/Symphony.sln.DotSettings.user
+src/symphony-core/Symphony.sln.DotSettings.user
 
 # Codesign
-Symphony/Symphony.Core/physion_authenticode.pfx
+src/symphony-core/Symphony.Core/physion_authenticode.pfx
 
 #Test artifacts
-Symphony/IntegrationTests/*.received.txt
-Symphony/Symphony.*Tests.xml
-Symphony/Symphony.Core.Tests/*.h5
-Symphony/IntegrationTests/*.h5
+src/symphony-core/IntegrationTests/*.received.txt
+src/symphony-core/Symphony.*Tests.xml
+src/symphony-core/Symphony.Core.Tests/*.h5
+src/symphony-core/Symphony.Core.Tests/*.received.xml
+src/symphony-core/IntegrationTests/*.h5
+
 
 # JetBrains settings
 *DotSettings*
