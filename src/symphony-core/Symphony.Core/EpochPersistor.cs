@@ -71,9 +71,15 @@ namespace Symphony.Core
 
         public void Close()
         {
+            DateTimeOffset endTime = DateTimeOffset.Now;
+            Close(endTime);
+        }
+
+        public void Close(DateTimeOffset endTime)
+        {
             while (EpochGroupNestCount > 0)
             {
-                EndEpochGroup();
+                EndEpochGroup(endTime);
             }
 
             CloseDocument();

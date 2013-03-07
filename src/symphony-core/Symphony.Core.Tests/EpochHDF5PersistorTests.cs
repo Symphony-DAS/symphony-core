@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using ApprovalTests;
+using ApprovalTests.Reporters;
 using HDF5DotNet;
 using NUnit.Framework;
 
@@ -182,13 +183,7 @@ namespace Symphony.Core
 
             H5.Close();
 
-            var startInfo = new ProcessStartInfo(@"..\..\..\..\..\..\externals\HDF5\bin\h5dump",
-                                                 @" --xml ..\..\..\ShouldAllowLongStringEpochParameters.h5");
-            startInfo.RedirectStandardOutput = true;
-            startInfo.UseShellExecute = false;
-            Process proc = Process.Start(startInfo);
-
-            Approvals.VerifyXml(proc.StandardOutput.ReadToEnd());
+            VerifyHDF5File(@"..\..\..\ShouldAllowLongStringEpochParameters.h5");
         }
 
         [Test]
@@ -225,17 +220,17 @@ namespace Symphony.Core
                                        time);
 
                     p2.Serialize(testEpoch);
-                    p2.EndEpochGroup();
-                    p2.EndEpochGroup();
+                    p2.EndEpochGroup(time.AddMilliseconds(100));
+                    p2.EndEpochGroup(time.AddMilliseconds(100));
                 }
 
                 p1.Serialize(testEpoch);
-                p1.EndEpochGroup();
-                p1.EndEpochGroup();
+                p1.EndEpochGroup(time.AddMilliseconds(100));
+                p1.EndEpochGroup(time.AddMilliseconds(100));
             }
 
-            Approvals.VerifyFile("..\\..\\..\\ShouldAllowMultipleOpenPersistors1.h5");
-            Approvals.VerifyFile("..\\..\\..\\ShouldAllowMultipleOpenPersistors2.h5");
+            VerifyHDF5File(@"..\..\..\ShouldAllowMultipleOpenPersistors1.h5");
+            VerifyHDF5File(@"..\..\..\ShouldAllowMultipleOpenPersistors2.h5");
         }
 
         [Test]
@@ -260,12 +255,12 @@ namespace Symphony.Core
                                     time);
 
                 exp.Serialize(testEpoch);
-                exp.EndEpochGroup();
-                exp.EndEpochGroup();
+                exp.EndEpochGroup(time.AddMilliseconds(100));
+                exp.EndEpochGroup(time.AddMilliseconds(100));
                 exp.Close();
             }
 
-            Approvals.VerifyFile("..\\..\\..\\ShouldAllowNestedEpochGroupsInHDF5.h5");
+            VerifyHDF5File(@"..\..\..\ShouldAllowNestedEpochGroupsInHDF5.h5");
         }
 
         [Test]
@@ -353,12 +348,12 @@ namespace Symphony.Core
                 exp.BeginEpochGroup("label", "source identifier", new[] {"keyword1", "keyword2"}, props, guid,
                                     time);
                 exp.Serialize(e);
-                exp.EndEpochGroup();
+                exp.EndEpochGroup(time.AddMilliseconds(100));
                 exp.Close();
             }
 
             H5.Close();
-            Approvals.VerifyFile("..\\..\\..\\ShouldAllowNumericEpochParameters.h5");
+            VerifyHDF5File(@"..\..\..\ShouldAllowNumericEpochParameters.h5");
         }
 
         [Test]
@@ -381,8 +376,8 @@ namespace Symphony.Core
                                     time);
 
                 exp.Serialize(testEpoch);
-                exp.EndEpochGroup();
-                exp.EndEpochGroup();
+                exp.EndEpochGroup(time.AddMilliseconds(100));
+                exp.EndEpochGroup(time.AddMilliseconds(100));
             }
 
             using (var exp = new EpochHDF5Persistor("..\\..\\..\\ShouldAppendToExistingFile.h5", null, () => gID))
@@ -398,11 +393,11 @@ namespace Symphony.Core
                                     time);
 
                 exp.Serialize(testEpoch);
-                exp.EndEpochGroup();
-                exp.EndEpochGroup();
+                exp.EndEpochGroup(time.AddMilliseconds(100));
+                exp.EndEpochGroup(time.AddMilliseconds(100));
             }
 
-            Approvals.VerifyFile("..\\..\\..\\ShouldAppendToExistingFile.h5");
+            VerifyHDF5File(@"..\..\..\ShouldAppendToExistingFile.h5");
         }
 
         [Test]
@@ -429,10 +424,10 @@ namespace Symphony.Core
                                     time);
 
                 exp.Serialize(testEpoch);
-                exp.Close();
+                exp.Close(time.AddMilliseconds(100));
             }
 
-            Approvals.VerifyFile("..\\..\\..\\ShouldAutomaticallyCloseOpenEpochGroupsOnPersistorClose.h5");
+            VerifyHDF5File(@"..\..\..\ShouldAutomaticallyCloseOpenEpochGroupsOnPersistorClose.h5");
         }
 
         [Test]
@@ -456,7 +451,7 @@ namespace Symphony.Core
                     exp.BeginEpochGroup("label", "source identifier", new[] {"keyword1", "keyword2"}, props, guid,
                                         time);
                     exp.Serialize(testEpoch);
-                    exp.EndEpochGroup();
+                    exp.EndEpochGroup(time.AddMilliseconds(100));
                     exp.Close();
                 }
 
@@ -481,7 +476,7 @@ namespace Symphony.Core
                     exp.BeginEpochGroup("label", "source identifier", new[] {"keyword1", "keyword2"}, props, guid,
                                         time);
                     exp.Serialize(testEpoch);
-                    exp.EndEpochGroup();
+                    exp.EndEpochGroup(time.AddMilliseconds(100));
                     exp.Close();
                 }
 
@@ -536,12 +531,12 @@ namespace Symphony.Core
                 exp.BeginEpochGroup("label", "source identifier", new[] {"keyword1", "keyword2"}, props, guid,
                                     time);
                 exp.Serialize(testEpoch);
-                exp.EndEpochGroup();
+                exp.EndEpochGroup(time.AddMilliseconds(100));
                 exp.Close();
             }
 
             H5.Close();
-            Approvals.VerifyFile("..\\..\\..\\ShouldPersistToHDF5.h5");
+            VerifyHDF5File(@"..\..\..\ShouldPersistToHDF5");
         }
 
         [Test]
@@ -566,6 +561,20 @@ namespace Symphony.Core
             {
                 Assert.That(() => exp.EndEpochGroup(), Throws.InvalidOperationException);
             }
+        }
+
+        private static void VerifyHDF5File(string file)
+        {
+            // Directly comparing HDF5 files does not work because of some
+            // unknown discrepancies in the binary files. We'll compare the 
+            // XML dump via h5dump instead.
+            var startInfo = new ProcessStartInfo(@"..\..\..\..\..\..\externals\HDF5\bin\h5dump",
+                                                 @" --xml " + file);
+            startInfo.RedirectStandardOutput = true;
+            startInfo.UseShellExecute = false;
+            Process proc = Process.Start(startInfo);
+
+            Approvals.VerifyXml(proc.StandardOutput.ReadToEnd());
         }
     }
 }
