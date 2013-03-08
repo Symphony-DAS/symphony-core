@@ -78,6 +78,25 @@ namespace Symphony.Core
         public DateTimeOffset Now { get { return DateTimeOffset.Now; } }
     }
 
+    public class IncrementingClock : IClock
+    {
+        private DateTimeOffset _time;
+        
+        public IncrementingClock()
+        {
+            _time = DateTimeOffset.MinValue;
+        }
+
+        public DateTimeOffset Now
+        {
+            get
+            {
+                _time = _time.AddTicks(1);
+                return _time;
+            }
+        }
+    }
+
     /// <summary>
     /// This DAQController fake provides a rudimentary loop-back style controller.
     /// Test setup must explictly create stream mappings by calling AddStreamMapping().

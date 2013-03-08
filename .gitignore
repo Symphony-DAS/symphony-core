@@ -17,6 +17,7 @@ src/symphony-core/Symphony.Core/physion_authenticode.pfx
 
 #Test artifacts
 src/symphony-core/IntegrationTests/*.received.txt
+src/symphony-core/IntegrationTests/*.received.xml
 src/symphony-core/Symphony.*Tests.xml
 src/symphony-core/Symphony.Core.Tests/*.h5
 src/symphony-core/Symphony.Core.Tests/*.received.xml
