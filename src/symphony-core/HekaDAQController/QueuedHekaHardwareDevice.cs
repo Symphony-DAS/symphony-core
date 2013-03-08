@@ -132,8 +132,8 @@ namespace Heka
 
                 var inData =
                     new InputData(
-                        new List<IMeasurement> {new Measurement(channelData[0].Value, HekaDAQInputStream.DAQCountUnits)},
-                        new Measurement(0, "Hz"),
+                        new List<IMeasurement> {new Measurement(channelData[0].Value, 0, HekaDAQInputStream.DAQCountUnits)},
+                        new Measurement(0, 0, "Hz"),
                         DateTimeOffset.Now)
                         .DataWithStreamConfiguration(stream, stream.Configuration);
 

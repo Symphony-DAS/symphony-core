@@ -501,7 +501,7 @@ namespace Symphony.ExternalDevices
             }
 
             return deviceParams.OperatingMode == MultiClampInterop.OperatingMode.I0 ?
-                new Measurement(0, "V") :
+                new Measurement(0, 0, "V") :
                 new Measurement(sample.QuantityInBaseUnit / (decimal)deviceParams.ExternalCommandSensitivity, sample.Exponent, "V");
         }
 

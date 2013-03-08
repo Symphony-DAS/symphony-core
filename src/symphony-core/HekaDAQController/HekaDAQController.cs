@@ -458,7 +458,7 @@ namespace Heka
 
                                             IInputData rawData = new InputData(
                                                 kvp.Value.Select(
-                                                    v => new Measurement(v, HekaDAQInputStream.DAQCountUnits)).
+                                                    v => new Measurement(v, 0, HekaDAQInputStream.DAQCountUnits)).
                                                     ToList(),
                                                 StreamWithIdentifier(kvp.Key).SampleRate,
                                                 Clock.Now
