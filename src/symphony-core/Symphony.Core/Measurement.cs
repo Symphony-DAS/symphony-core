@@ -133,7 +133,12 @@ namespace Symphony.Core
         /// <returns>IList of Measurements</returns>
         public static IList<IMeasurement> FromArray(decimal[] quantities, string unit)
         {
-            return quantities.AsEnumerable().Select(q => new Measurement(q, unit) as IMeasurement)
+            var siUnits = new InternationalSystem();
+
+            var exponent = siUnits.Exponent(unit);
+            var baseUnit = siUnits.BaseUnit(unit);
+
+            return quantities.AsEnumerable().Select(q => new Measurement(q, exponent, baseUnit) as IMeasurement)
                 .ToList();
         }
 
@@ -318,7 +323,19 @@ namespace Symphony.Core
             return _exponentToPrefix[exponent];
         }
 
-        private IDictionary<string, string> _baseUnitsCache = new Dictionary<string, string>(); 
+        private readonly IDictionary<string, string> _baseUnitsCache = new Dictionary<string, string>()
+            {
+                // preload with common units
+                {"V", "V"},
+                {"mV", "V"},
+                {"µV", "V"},
+                {"A", "A"},
+                {"mA", "A"},
+                {"µA", "A"},
+                {"nA", "A"},
+                {"pA", "A"}
+            };
+
         public string BaseUnit(string units)
         {
             if(_baseUnitsCache.ContainsKey(units))
@@ -347,7 +364,19 @@ namespace Symphony.Core
         }
 
 
-        private readonly IDictionary<string,string> _unitPrefixCache = new Dictionary<string, string>(); 
+        private readonly IDictionary<string, string> _unitPrefixCache = new Dictionary<string, string>()
+            {
+                // preload with common units
+                {"V", null},
+                {"mV", "m"},
+                {"µV", "µ"},
+                {"A", null},
+                {"mA", "m"},
+                {"µA", "µ"},
+                {"nA", "n"},
+                {"pA", "p"}
+            };
+
         private string UnitPrefix(string units)
         {
             if(_unitPrefixCache.ContainsKey(units))
