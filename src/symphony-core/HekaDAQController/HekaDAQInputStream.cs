@@ -67,7 +67,7 @@ namespace Heka
         {
             Converters.Register(DAQCountUnits,
                                 "V",
-                                (m) => new Measurement(m.QuantityInBaseUnit / (decimal) ITCMM.ANALOGVOLT, "V")
+                                (m) => new Measurement(m.QuantityInBaseUnit / (decimal) ITCMM.ANALOGVOLT, 0, "V")
                 );
 
             Converters.Register(DAQCountUnits,

@@ -20,9 +20,15 @@ namespace Heka.NativeInterop
 
                 Marshal.Copy(textPtr, text, 0, size);
 
+                int end = Array.FindIndex(text, 0, (x) => x == 0);
+                if (end == -1)
+                {
+                    end = size;
+                }
+
                 System.Text.ASCIIEncoding enc = new System.Text.ASCIIEncoding();
 
-                result = enc.GetString(text);
+                result = enc.GetString(text, 0, end);
             }
             finally
             {

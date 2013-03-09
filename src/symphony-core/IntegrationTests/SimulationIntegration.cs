@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -67,7 +68,7 @@ namespace IntegrationTests
 
             exp.BeginEpochGroup("label", "source", new string[0], new Dictionary<string, object>(), g1ID, startTime1);
             RunSingleEpoch(5, 2, exp);
-            exp.EndEpochGroup();
+            exp.EndEpochGroup(startTime1.AddMilliseconds(100));
 
             exp.Close();
 
@@ -97,13 +98,12 @@ namespace IntegrationTests
                     time);
 
                 RunSingleEpoch(5000, 2, exp);
-                exp.EndEpochGroup();
+                exp.EndEpochGroup(time.AddMilliseconds(100));
                 
                 exp.Close();
             }
 
-            Approvals.VerifyFile("SingleEpochHDF5Persistence.h5");
-
+            VerifyHDF5File("SingleEpochHDF5Persistence.h5");
         }
 
         [Test]
@@ -127,7 +127,7 @@ namespace IntegrationTests
                     time);
 
                 RunSingleEpoch(5000, 2, exp);
-                exp.EndEpochGroup();
+                exp.EndEpochGroup(time.AddMilliseconds(100));
 
                 exp.Close();
             }
@@ -146,13 +146,13 @@ namespace IntegrationTests
                     time);
 
                 RunSingleEpoch(5000, 2, exp);
-                exp.EndEpochGroup();
+                exp.EndEpochGroup(time.AddMilliseconds(100));
 
                 exp.Close();
             }
 
 
-            Approvals.VerifyFile("AppendToExistingHDF5.h5");
+            VerifyHDF5File("AppendToExistingHDF5.h5");
         }
 
 
@@ -225,8 +225,12 @@ namespace IntegrationTests
 
             Controller controller = new Parser().ParseConfiguration(Resources.LowGainConfig);
 
+            // use an incrementing clock so timestamps are predictable
+            var incrementingClock = new IncrementingClock();
+            controller.Clock = incrementingClock;
+
             var daq = (SimulationDAQController)controller.DAQController;
-            daq.Clock = daq;
+            daq.Clock = incrementingClock;
             foreach (var stream in daq.Streams)
             {
                 stream.SampleRate = new Measurement((decimal) sampleRate, "Hz");
@@ -246,7 +250,7 @@ namespace IntegrationTests
                                                                              var data = outData.DataWithUnits("V").Data;
                                                                              var inData = new InputData(data,
                                                                                                         outData.SampleRate,
-                                                                                                        DateTimeOffset.Now)
+                                                                                                        incrementingClock.Now)
                                                                                                         .DataWithNodeConfiguration("SimulationController",daq.Configuration);
 
                                                                              input[inStream] = inData;
@@ -294,6 +298,20 @@ namespace IntegrationTests
             e.Background[dev0] = new Epoch.EpochBackground(new Measurement(0, "V"), srate);
 
             return controller;
+        }
+
+        private static void VerifyHDF5File(string file)
+        {
+            // Directly comparing HDF5 files does not work because of some
+            // unknown discrepancies in the binary files. We'll compare the 
+            // XML dump via h5dump instead.
+            var startInfo = new ProcessStartInfo(@"..\..\..\..\..\..\externals\HDF5\bin\h5dump",
+                                                 @" --xml " + file);
+            startInfo.RedirectStandardOutput = true;
+            startInfo.UseShellExecute = false;
+            Process proc = Process.Start(startInfo);
+
+            Approvals.VerifyXml(proc.StandardOutput.ReadToEnd());
         }
     }
 }
