@@ -589,6 +589,7 @@ namespace Symphony.Core
             get { return DurationDelegate(Parameters); }
         }
     }
+
     /// <summary>
     /// A simple IStimulus implementation that holds arbitrary data, prerendered from a plugin.
     /// </summary>
@@ -641,5 +642,67 @@ namespace Symphony.Core
         }
 
         private static readonly ILog log = LogManager.GetLogger(typeof(Epoch));
+    }
+
+    /// <summary>
+    /// A simple IStimulus implementation that holds arbitrary data, prerendered from a plugin, 
+    /// and repeats it for a specified duration.
+    /// </summary>
+    public class RepeatingRenderedStimulus : Stimulus
+    {
+        private readonly IOutputData _data;
+        private readonly Option<TimeSpan> _duration;
+
+        /// <summary>
+        /// Constructs a new RepeatingRenderedStimulus instance.
+        /// </summary>
+        /// <param name="stimulusID">Stimulus plugin ID</param>
+        /// <param name="parameters">Stimulus parameters</param>
+        /// <param name="data">Pre-rendered stimulus data to repeat</param>
+        /// <param name="duration">Duration to repeat the stimulus data</param>
+        /// <exception cref="MeasurementIncompatibilityException">If data measurements do not have homogenous BaseUnits</exception>
+        public RepeatingRenderedStimulus(string stimulusID, IDictionary<string, object> parameters, IOutputData data, Option<TimeSpan> duration)
+            : base(stimulusID, data.Data.BaseUnits(), parameters)
+        {
+            if (data == null)
+                throw new ArgumentException("Data may not be null", "data");
+
+            if (parameters == null)
+                throw new ArgumentException("Parameters may not be null", "parameters");
+
+            if (duration == null)
+                throw new ArgumentException("Duration may not be null", "duration");
+
+            _data = data;
+            _duration = duration;
+        }
+
+        public override IEnumerable<IOutputData> DataBlocks(TimeSpan blockDuration)
+        {
+            var local = (IOutputData)_data.Clone();
+            var index = TimeSpan.Zero;
+
+            while (index < Duration || (!(bool)Duration))
+            {
+                var dur = blockDuration <= Duration - index ? blockDuration : Duration - index;
+
+                while (local.Duration < dur)
+                {
+                    local = local.Concat(_data);
+                }
+
+                var cons = local.SplitData(dur);
+                local = cons.Rest;
+
+                index = index.Add(dur);
+
+                yield return new OutputData(cons.Head, index >= Duration && ((bool)Duration));
+            }
+        }
+
+        public override Option<TimeSpan> Duration
+        {
+            get { return _duration; }
+        }
     }
 }

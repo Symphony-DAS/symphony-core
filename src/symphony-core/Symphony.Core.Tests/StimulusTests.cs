@@ -310,4 +310,115 @@ namespace Symphony.Core
         }
 
     }
+
+    [TestFixture]
+    class RepeatingRenderedStimulusTests
+    {
+        [Test]
+        public void HoldsParameters()
+        {
+            var parameters = new Dictionary<string, object>();
+            parameters["key1"] = "value1";
+            parameters["key2"] = 2;
+
+            var measurements = new List<IMeasurement> {new Measurement(1, "V")};
+            var data = new OutputData(measurements, new Measurement(1, "Hz"), false);
+            var s = new RepeatingRenderedStimulus("RepeatingRenderedStimulus", 
+                parameters, 
+                data, 
+                Option<TimeSpan>.Some(TimeSpan.FromMilliseconds(0)));
+
+            Assert.That(s.Parameters, Is.EqualTo(parameters));
+        }
+
+        [Test]
+        public void HoldsStimulusID()
+        {
+            var parameters = new Dictionary<string, object>();
+            const string stimID = "my.ID";
+
+            var measurements = new List<IMeasurement> { new Measurement(1, "V") };
+            var data = new OutputData(measurements, new Measurement(1, "Hz"), false);
+            var s = new RepeatingRenderedStimulus(stimID, 
+                parameters, 
+                data,
+                Option<TimeSpan>.Some(TimeSpan.FromMilliseconds(0)));
+
+            Assert.That(s.StimulusID, Is.EqualTo(stimID));
+        }
+
+        [Test]
+        public void EnumeratesDataBlocks(
+            [Values(100, 500, 1000, 5000)] double blockMilliseconds,
+            [Values(1000, 5000, 10000)] double sampleRateHz
+            )
+        {
+            var parameters = new Dictionary<string, object>();
+            var sampleRate = new Measurement((decimal)sampleRateHz, "Hz");
+
+            IOutputData repeatingData = new OutputData(Enumerable.Range(0, (int)TimeSpan.FromSeconds(1).Samples(new Measurement((decimal)sampleRateHz, "Hz")))
+                .Select(i => new Measurement(i, "units")).ToList(),
+                sampleRate,
+                false);
+
+            IOutputData outputData = repeatingData.Concat(repeatingData).Concat(repeatingData);
+
+            var s = new RepeatingRenderedStimulus("RepeatingRenderedStimulus", parameters, repeatingData, Option<TimeSpan>.Some(outputData.Duration));
+
+            var blockSpan = TimeSpan.FromMilliseconds(blockMilliseconds);
+            IEnumerator<IOutputData> iter = s.DataBlocks(blockSpan).GetEnumerator();
+            while (iter.MoveNext())
+            {
+                var cons = outputData.SplitData(blockSpan);
+                outputData = cons.Rest;
+                Assert.That(iter.Current.Duration, Is.EqualTo(cons.Head.Duration));
+                Assert.That(iter.Current.Data, Is.EqualTo(cons.Head.Data));
+            }
+        }
+
+        [Test]
+        public void LastDataIsLast()
+        {
+            var parameters = new Dictionary<string, object>();
+            var sampleRate = new Measurement(1000, "Hz");
+
+            IOutputData repeatingData = new OutputData(Enumerable.Range(0, 1000).Select(i => new Measurement(i, "units")).ToList(),
+                sampleRate,
+                false);
+
+            IOutputData outputData = repeatingData.Concat(repeatingData).Concat(repeatingData);
+
+            var s = new RepeatingRenderedStimulus("RepeatingRenderedStimulus", parameters, repeatingData, Option<TimeSpan>.Some(outputData.Duration));
+
+            var block = TimeSpan.FromMilliseconds(100);
+            IEnumerator<IOutputData> iter = s.DataBlocks(block).GetEnumerator();
+            IOutputData current = null;
+            while (iter.MoveNext())
+            {
+                current = iter.Current;
+            }
+
+            Assert.That(current.IsLast, Is.True);
+        }
+
+        [Test]
+        public void MarksAsNotLastIfMoreBlocks()
+        {
+            var parameters = new Dictionary<string, object>();
+            var sampleRate = new Measurement(1000, "Hz");
+
+            IOutputData repeatingData = new OutputData(Enumerable.Range(0, 1000).Select(i => new Measurement(i, "units")).ToList(),
+                sampleRate,
+                true);
+
+            IOutputData outputData = repeatingData.Concat(repeatingData).Concat(repeatingData);
+
+            var s = new RepeatingRenderedStimulus("RepeatingRenderedStimulus", parameters, repeatingData, Option<TimeSpan>.Some(outputData.Duration));
+
+            var block = TimeSpan.FromMilliseconds(100);
+            IEnumerator<IOutputData> iter = s.DataBlocks(block).GetEnumerator();
+            Assert.True(iter.MoveNext());
+            Assert.False(iter.Current.IsLast);
+        }
+    }
 }
