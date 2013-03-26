@@ -118,6 +118,11 @@ namespace Symphony.Core
         }
 
         /// <summary>
+        /// Flag indicating whether the Controller is running.
+        /// </summary>
+        public bool Running { get; protected set; }
+
+        /// <summary>
         /// Add an ExternalDevice to the Controller; take care of performing
         /// whatever wiring up between the Controller and the ExternalDevice
         /// needs to be done, as well.
@@ -233,6 +238,11 @@ namespace Symphony.Core
         /// </summary>
         public event EventHandler<TimeStampedEventArgs> NextEpochRequested;
 
+        /// <summary>
+        /// This controller finished running.
+        /// </summary>
+        public event EventHandler<TimeStampedEventArgs> FinishedRun;
+
         private void OnReceivedInputData(IExternalDevice device, IIOData data)
         {
             FireEvent(ReceivedInputData, device, data);
@@ -261,6 +271,11 @@ namespace Symphony.Core
         private void OnNextEpochRequested()
         {
             FireEvent(NextEpochRequested);
+        }
+
+        private void OnFinishedRun()
+        {
+            FireEvent(FinishedRun);
         }
 
         private void FireEvent(EventHandler<TimeStampedEpochEventArgs> evt, Epoch epoch)
@@ -554,6 +569,57 @@ namespace Symphony.Core
         /// <param name="persistor">EpochPersistor for saving the data. May be null to indicate epoch should not be persisted</param>
         /// <exception cref="ValidationException">Validation failed for this Controller</exception>
         public void RunEpoch(Epoch e, EpochPersistor persistor)
+        {
+            RunEpoch(e, persistor, false);
+        }
+
+        /// <summary>
+        /// The core entry point for the Controller Facade; push an Epoch in here to be processed. 
+        /// 
+        /// <para>This method allows the controller to run an Epoch asyncronously in the background;
+        /// returning control to you immediately. However the Controller will not be availabe to run
+        /// another Epoch until the current run is finished.</para>
+        /// </summary>
+        /// 
+        /// <param name="e">Single Epoch to present</param>
+        /// <param name="persistor">EpochPersistor for saving the data. May be null to indicate epoch should not be persisted</param>
+        /// <param name="asynchronously">Indicates whether the epoch should run asynchronously</param>
+        /// <exception cref="ValidationException">Validation failed for this Controller</exception>
+        public void RunEpoch(Epoch e, EpochPersistor persistor, bool asynchronously)
+        {
+            if (Running)
+                throw new SymphonyControllerException("Controller is running");
+
+            Running = true;
+
+            var process = new Action(delegate()
+                {
+                    try
+                    {
+                        ProcessEpoch(e, persistor);
+                    }
+                    finally
+                    {
+                        OnFinishedRun();
+                        Running = false;
+                    }
+                });
+
+            if (asynchronously)
+            {
+                Task.Factory.StartNew(process, TaskCreationOptions.LongRunning);
+            }
+            else
+            {
+                process();
+            }
+        }
+
+        /// <summary>
+        /// The core method that processes a provided epoch; executing it on the associated
+        /// DAQ Controller and persisting the results.
+        /// </summary>
+        private void ProcessEpoch(Epoch e, EpochPersistor persistor)
         {
             var cts = new CancellationTokenSource();
             var cancellationToken = cts.Token;
