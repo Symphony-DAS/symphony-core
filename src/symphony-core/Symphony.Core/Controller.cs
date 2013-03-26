@@ -772,9 +772,10 @@ namespace Symphony.Core
         }
 
         /// <summary>
-        /// Requests that the Controller abort the current Epoch and stop the input/output pipelines.
+        /// Requests that the Controller abort the current Epoch, stop the input/output pipelines,
+        /// and skip any remaining queued epochs.
         /// </summary>
-        public void CancelEpoch()
+        public void CancelRun()
         {
             SkipCurrentEpoch(false);
         }

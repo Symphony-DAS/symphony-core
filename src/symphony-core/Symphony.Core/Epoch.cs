@@ -53,10 +53,10 @@ namespace Symphony.Core
 
         /// <summary>
         /// Indicates if any Stimulus is indefinite. If so, the Epoch will be presented until
-        /// the user cancels the Epoch or requests the Controller to move to the next queued
+        /// the user cancels the run or requests the Controller to move to the next queued
         /// Epoch.
         /// </summary>
-        /// <see cref="Controller.CancelEpoch"/>
+        /// <see cref="Controller.CancelRun"/>
         /// <see cref="Controller.NextEpoch"/>
         /// <see cref="Stimulus.Duration"/>
         public bool IsIndefinite

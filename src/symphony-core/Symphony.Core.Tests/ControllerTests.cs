@@ -867,7 +867,7 @@ namespace Symphony.Core
             c.DAQController.ProcessIteration += (o, eventArgs) =>
                                        {
                                            Console.WriteLine("Process iteration");
-                                           c.CancelEpoch();
+                                           c.CancelRun();
                                        };
 
             c.RunEpoch(e, new FakeEpochPersistor());
