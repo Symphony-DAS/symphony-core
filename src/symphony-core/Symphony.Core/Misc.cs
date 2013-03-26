@@ -126,6 +126,22 @@ namespace Symphony.Core
     }
 
     /// <summary>
+    /// A convenience class for Matlab. Duration can be provided in place of 
+    /// parameters requiring Option&lt;TimeSpan&gt;.
+    /// </summary>
+    public class Duration : Option<TimeSpan>
+    {
+        public static Duration Indefinite()
+        {
+            return new Duration(false);
+        }
+
+        public Duration(bool b) : base(b) { }
+
+        public Duration(TimeSpan span) : base(true, span) { }
+    }
+
+    /// <summary>
     /// This is the conversion function that Converters must provide so as to
     /// convert from one measurement to another (usually in a different unit
     /// of measure).
