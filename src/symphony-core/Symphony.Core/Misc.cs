@@ -126,19 +126,19 @@ namespace Symphony.Core
     }
 
     /// <summary>
-    /// A convenience class for Matlab. Duration can be provided in place of 
+    /// A convenience class for Matlab. TimeSpanOption can be provided in place of 
     /// parameters requiring Option&lt;TimeSpan&gt;.
     /// </summary>
-    public class Duration : Option<TimeSpan>
+    public class TimeSpanOption : Option<TimeSpan>
     {
-        public static Duration Indefinite()
+        public static TimeSpanOption Indefinite()
         {
-            return new Duration(false);
+            return new TimeSpanOption(false);
         }
 
-        public Duration(bool b) : base(b) { }
+        public TimeSpanOption(bool b) : base(b) { }
 
-        public Duration(TimeSpan span) : base(true, span) { }
+        public TimeSpanOption(TimeSpan span) : base(true, span) { }
     }
 
     /// <summary>
