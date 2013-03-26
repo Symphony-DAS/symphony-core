@@ -317,7 +317,7 @@ namespace Symphony.Core
         IEnumerable<IOutputData> DataBlocks(TimeSpan blockDuration);
 
         /// <summary>
-        /// Duration of this stimulus. May be No (false) to indicate that this Stimulus
+        /// Duration of this stimulus. Option No (false) to indicate that this Stimulus
         /// generates data indefinitely.
         /// </summary>
         Option<TimeSpan> Duration { get; }
@@ -682,9 +682,11 @@ namespace Symphony.Core
             var local = (IOutputData)_data.Clone();
             var index = TimeSpan.Zero;
 
-            while (index < Duration || (!(bool)Duration))
+            bool isIndefinite = !((bool)Duration);
+
+            while (index < Duration || isIndefinite)
             {
-                var dur = blockDuration <= Duration - index ? blockDuration : Duration - index;
+                var dur = blockDuration <= Duration - index || isIndefinite ? blockDuration : Duration - index;
 
                 while (local.Duration < dur)
                 {
@@ -696,7 +698,7 @@ namespace Symphony.Core
 
                 index = index.Add(dur);
 
-                yield return new OutputData(cons.Head, index >= Duration && ((bool)Duration));
+                yield return new OutputData(cons.Head, index >= Duration && !isIndefinite);
             }
         }
 
