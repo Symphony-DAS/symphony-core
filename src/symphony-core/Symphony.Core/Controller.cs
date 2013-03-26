@@ -206,7 +206,12 @@ namespace Symphony.Core
         /// <summary>
         /// This controller received input data.
         /// </summary>
-        public event EventHandler<TimeStampedEpochEventArgs> ReceivedInputData;
+        public event EventHandler<TimeStampedDeviceDataEventArgs> ReceivedInputData;
+
+        /// <summary>
+        /// This controller pushed input data to an Epoch.
+        /// </summary>
+        public event EventHandler<TimeStampedEpochEventArgs> PushedInputData;
 
         /// <summary>
         /// This controller persisted a completed Epoch.
@@ -228,9 +233,14 @@ namespace Symphony.Core
         /// </summary>
         public event EventHandler<TimeStampedEventArgs> NextEpochRequested;
 
-        private void OnReceivedInputData(Epoch epoch)
+        private void OnReceivedInputData(IExternalDevice device, IIOData data)
         {
-            FireEvent(ReceivedInputData, epoch);
+            FireEvent(ReceivedInputData, device, data);
+        }
+
+        private void OnPushedInputData(Epoch epoch)
+        {
+            FireEvent(PushedInputData, epoch);
         }
 
         private void OnSavedEpoch(Epoch epoch)
@@ -256,6 +266,11 @@ namespace Symphony.Core
         private void FireEvent(EventHandler<TimeStampedEpochEventArgs> evt, Epoch epoch)
         {
             FireEvent(evt, new TimeStampedEpochEventArgs(Clock, epoch));
+        }
+
+        private void FireEvent(EventHandler<TimeStampedDeviceDataEventArgs> evt, IExternalDevice device, IIOData data)
+        {
+            FireEvent(evt, new TimeStampedDeviceDataEventArgs(Clock, device, data));
         }
 
         private void FireEvent(EventHandler<TimeStampedEventArgs> evt)
@@ -309,6 +324,15 @@ namespace Symphony.Core
         {
             //TODO update this to let Epoch use _completionLock around Response duration and appending
 
+            try
+            {
+                OnReceivedInputData(device, inData);
+            }
+            catch (Exception e)
+            {
+                log.ErrorFormat("Unable to notify observers of incoming data: {0}", e);
+            }
+            
             var currentEpoch = CurrentEpoch;
 
             if (currentEpoch != null &&
@@ -366,11 +390,11 @@ namespace Symphony.Core
 
                     try
                     {
-                        OnReceivedInputData(currentEpoch);
+                        OnPushedInputData(currentEpoch);
                     }
                     catch (Exception e)
                     {
-                        log.ErrorFormat("Unable to notify observers of incoming data: {0}", e);
+                        log.ErrorFormat("Unable to notify observers of pushed input data: {0}", e);
                     }
                 }
             }
@@ -556,7 +580,7 @@ namespace Symphony.Core
             };
 
             bool epochPersisted = false;
-            EventHandler<TimeStampedEpochEventArgs> inputReceived = (c, args) =>
+            EventHandler<TimeStampedEpochEventArgs> inputPushed = (c, args) =>
             {
                 if (CurrentEpoch != null &&
                     CurrentEpoch.IsComplete)
@@ -605,7 +629,7 @@ namespace Symphony.Core
             try
             {
                 NextEpochRequested += nextRequested;
-                ReceivedInputData += inputReceived;
+                PushedInputData += inputPushed;
                 DAQController.ExceptionalStop += exceptionalStop;
 
                 e.StartTime = Maybe<DateTimeOffset>.Some(this.Clock.Now);
@@ -617,7 +641,7 @@ namespace Symphony.Core
             {
                 CurrentEpoch = cEpoch;
                 NextEpochRequested -= nextRequested;
-                ReceivedInputData -= inputReceived;
+                PushedInputData -= inputPushed;
                 DAQController.ExceptionalStop -= exceptionalStop;
 
                 DAQController.WaitForInputTasks();
