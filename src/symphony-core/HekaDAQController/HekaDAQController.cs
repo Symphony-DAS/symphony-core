@@ -114,7 +114,7 @@ namespace Heka
 
                 if(rateProcessInterval != ProcessInterval)
                 {
-                    ProcessInterval = TimeSpan.FromSeconds(2*DEFAULT_TRANSFER_BLOCK_SECONDS);
+                    ProcessInterval = rateProcessInterval;
                     log.Info("Updating process loop duration: " + ProcessInterval);
                 }
 
