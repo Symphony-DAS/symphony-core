@@ -506,6 +506,37 @@ namespace Symphony.Core
         }
 
         [Test]
+        [Timeout(5 * 1000)]
+        public void RunEpochThrowsWhenRunningSimultaneousEpochs()
+        {
+            Converters.Register("V", "V",
+                // just an identity conversion for now, to pass Validate()
+                                (IMeasurement m) => m);
+
+            var c = new Controller { DAQController = new SimpleDAQController2() };
+            c.DAQController.Clock = c.DAQController as IClock;
+
+            var e = new Epoch(UNUSED_PROTOCOL);
+            var dev1 = new UnitConvertingExternalDevice("dev1", "co", c, new Measurement(0, "V"))
+            {
+                MeasurementConversionTarget = "V",
+                Clock = c.Clock
+            };
+
+            var sampleRate = new Measurement(1, "Hz");
+
+            e.Stimuli[dev1] = new DelegatedStimulus("ID1", "units", new Dictionary<string, object>(),
+                                                    (parameters, duration) =>
+                                                    new OutputData(new List<IMeasurement>(), sampleRate, false),
+                                                    objects => Option<TimeSpan>.None());
+
+
+            c.RunEpoch(e, new FakeEpochPersistor(), true);
+
+            Assert.That(() => c.RunEpoch(e, new FakeEpochPersistor()), Throws.Exception.TypeOf<SymphonyControllerException>());
+        }
+
+        [Test]
         public void EpochValidates()
         {
             var c = new Controller();
