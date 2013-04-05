@@ -504,7 +504,23 @@ namespace Symphony.Core
             e.Close();
         }
 
+        private void PrepareRun()
+        {
+            if (!Validate())
+                throw new ValidationException(Validate());
 
+            if (Running)
+                throw new SymphonyControllerException("Controller is running");
+
+            Running = true;           
+        }
+
+        private void FinishRun()
+        {
+            Running = false;
+            OnFinishedRun();
+        }
+        
         /// <summary>
         /// Matlab-friendly factory method to run a single Epoch.
         /// </summary>
@@ -561,8 +577,7 @@ namespace Symphony.Core
         /// The core entry point for the Controller Facade; push an Epoch in here, and when the
         /// Epoch is finished processing, control will be returned to you. 
         /// 
-        /// <para>In other words, this
-        /// method is blocking--the Controller cannot run more than one Epoch at a time.</para>
+        /// <para>In other words, this method is blocking.</para>
         /// </summary>
         /// 
         /// <param name="e">Single Epoch to present</param>
@@ -570,74 +585,56 @@ namespace Symphony.Core
         /// <exception cref="ValidationException">Validation failed for this Controller</exception>
         public void RunEpoch(Epoch e, EpochPersistor persistor)
         {
-            RunEpoch(e, persistor, false);
+            PrepareRun();
+            CommonRunEpoch(e, persistor);
         }
 
         /// <summary>
-        /// The core entry point for the Controller Facade; push an Epoch in here to be processed. 
+        /// The core entry point for the Controller Facade; push an Epoch in here, and control
+        /// is returned to you immediately while the Epoch runs in the background. 
         /// 
-        /// <para>This method allows the controller to run an Epoch asyncronously in the background;
-        /// returning control to you immediately. However the Controller will not be availabe to run
-        /// another Epoch until the current run is finished.</para>
+        /// <para>In other words, this method is nonblocking, however the Controller cannot run 
+        /// more than one Epoch at a time.</para>
         /// </summary>
         /// 
         /// <param name="e">Single Epoch to present</param>
         /// <param name="persistor">EpochPersistor for saving the data. May be null to indicate epoch should not be persisted</param>
-        /// <param name="asynchronously">Indicates whether the epoch should run asynchronously</param>
         /// <exception cref="ValidationException">Validation failed for this Controller</exception>
-        public void RunEpoch(Epoch e, EpochPersistor persistor, bool asynchronously)
+        public Task RunEpochAsync(Epoch e, EpochPersistor persistor)
         {
-            if (Running)
-                throw new SymphonyControllerException("Controller is running");
-
-            Running = true;
-
-            var process = new Action(delegate()
-                {
-                    try
-                    {
-                        ProcessEpoch(e, persistor);
-                    }
-                    finally
-                    {
-                        OnFinishedRun();
-                        Running = false;
-                    }
-                });
-
-            if (asynchronously)
-            {
-                Task.Factory.StartNew(process, TaskCreationOptions.LongRunning);
-            }
-            else
-            {
-                process();
-            }
+            PrepareRun();
+            return Task.Factory.StartNew(() => CommonRunEpoch(e, persistor), TaskCreationOptions.LongRunning);
         }
 
+        private void CommonRunEpoch(Epoch e, EpochPersistor persistor)
+        {
+            var cEpoch = CurrentEpoch;
+
+            try
+            {
+                if (!ValidateEpoch(e))
+                    throw new ArgumentException("Epoch is not valid");
+                
+                CurrentEpoch = e;
+                RunCurrentEpoch(persistor);
+            }
+            finally
+            {
+                CurrentEpoch = cEpoch;
+                FinishRun();
+            }
+        }
+        
         /// <summary>
-        /// The core method that processes a provided epoch; executing it on the associated
+        /// The core method that runs this Controller's CurrentEpoch; executing it on the associated
         /// DAQ Controller and persisting the results.
         /// </summary>
-        private void ProcessEpoch(Epoch e, EpochPersistor persistor)
+        private void RunCurrentEpoch(EpochPersistor persistor)
         {
             var cts = new CancellationTokenSource();
             var cancellationToken = cts.Token;
 
             Task persistenceTask = null;
-
-            if (!ValidateEpoch(e))
-                throw new ArgumentException("Epoch is not valid");
-
-
-            if (!Validate())
-                throw new ValidationException(Validate());
-
-
-            // Starting with this Epoch
-
-            var cEpoch = CurrentEpoch;
-            CurrentEpoch = e;
 
             EventHandler<TimeStampedEventArgs> nextRequested = (c, args) =>
             {
@@ -698,14 +695,13 @@ namespace Symphony.Core
                 PushedInputData += inputPushed;
                 DAQController.ExceptionalStop += exceptionalStop;
 
-                e.StartTime = Maybe<DateTimeOffset>.Some(this.Clock.Now);
+                CurrentEpoch.StartTime = Maybe<DateTimeOffset>.Some(this.Clock.Now);
 
                 log.DebugFormat("Starting epoch: {0}", CurrentEpoch.ProtocolID);
                 DAQController.Start(false);
             }
             finally
             {
-                CurrentEpoch = cEpoch;
                 NextEpochRequested -= nextRequested;
                 PushedInputData -= inputPushed;
                 DAQController.ExceptionalStop -= exceptionalStop;
