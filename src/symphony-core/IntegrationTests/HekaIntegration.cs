@@ -401,7 +401,7 @@ namespace IntegrationTests
                     new TaskFactory().StartNew(() =>
                                                    {
                                                        Thread.Sleep(TimeSpan.FromSeconds(epochDuration));
-                                                       controller.CancelEpoch();
+                                                       controller.CancelRun();
                                                    },
                                                TaskCreationOptions.LongRunning
                         );

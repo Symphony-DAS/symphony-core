@@ -53,10 +53,10 @@ namespace Symphony.Core
 
         /// <summary>
         /// Indicates if any Stimulus is indefinite. If so, the Epoch will be presented until
-        /// the user cancels the Epoch or requests the Controller to move to the next queued
+        /// the user cancels the run or requests the Controller to move to the next queued
         /// Epoch.
         /// </summary>
-        /// <see cref="Controller.CancelEpoch"/>
+        /// <see cref="Controller.CancelRun"/>
         /// <see cref="Controller.NextEpoch"/>
         /// <see cref="Stimulus.Duration"/>
         public bool IsIndefinite
@@ -317,7 +317,7 @@ namespace Symphony.Core
         IEnumerable<IOutputData> DataBlocks(TimeSpan blockDuration);
 
         /// <summary>
-        /// Duration of this stimulus. May be No (false) to indicate that this Stimulus
+        /// Duration of this stimulus. Option No (false) to indicate that this Stimulus
         /// generates data indefinitely.
         /// </summary>
         Option<TimeSpan> Duration { get; }
@@ -589,6 +589,7 @@ namespace Symphony.Core
             get { return DurationDelegate(Parameters); }
         }
     }
+
     /// <summary>
     /// A simple IStimulus implementation that holds arbitrary data, prerendered from a plugin.
     /// </summary>
@@ -641,5 +642,69 @@ namespace Symphony.Core
         }
 
         private static readonly ILog log = LogManager.GetLogger(typeof(Epoch));
+    }
+
+    /// <summary>
+    /// A simple IStimulus implementation that holds arbitrary data, prerendered from a plugin, 
+    /// and repeats it for a specified duration.
+    /// </summary>
+    public class RepeatingRenderedStimulus : Stimulus
+    {
+        private readonly IOutputData _data;
+        private readonly Option<TimeSpan> _duration;
+
+        /// <summary>
+        /// Constructs a new RepeatingRenderedStimulus instance.
+        /// </summary>
+        /// <param name="stimulusID">Stimulus plugin ID</param>
+        /// <param name="parameters">Stimulus parameters</param>
+        /// <param name="data">Pre-rendered stimulus data to repeat</param>
+        /// <param name="duration">Duration to repeat the stimulus data</param>
+        /// <exception cref="MeasurementIncompatibilityException">If data measurements do not have homogenous BaseUnits</exception>
+        public RepeatingRenderedStimulus(string stimulusID, IDictionary<string, object> parameters, IOutputData data, Option<TimeSpan> duration)
+            : base(stimulusID, data.Data.BaseUnits(), parameters)
+        {
+            if (data == null)
+                throw new ArgumentException("Data may not be null", "data");
+
+            if (parameters == null)
+                throw new ArgumentException("Parameters may not be null", "parameters");
+
+            if (duration == null)
+                throw new ArgumentException("Duration may not be null", "duration");
+
+            _data = data;
+            _duration = duration;
+        }
+
+        public override IEnumerable<IOutputData> DataBlocks(TimeSpan blockDuration)
+        {
+            var local = (IOutputData)_data.Clone();
+            var index = TimeSpan.Zero;
+
+            bool isIndefinite = !((bool)Duration);
+
+            while (index < Duration || isIndefinite)
+            {
+                var dur = blockDuration <= Duration - index || isIndefinite ? blockDuration : Duration - index;
+
+                while (local.Duration < dur)
+                {
+                    local = local.Concat(_data);
+                }
+
+                var cons = local.SplitData(dur);
+                local = cons.Rest;
+
+                index = index.Add(dur);
+
+                yield return new OutputData(cons.Head, index >= Duration && !isIndefinite);
+            }
+        }
+
+        public override Option<TimeSpan> Duration
+        {
+            get { return _duration; }
+        }
     }
 }

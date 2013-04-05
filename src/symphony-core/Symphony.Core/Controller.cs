@@ -118,6 +118,11 @@ namespace Symphony.Core
         }
 
         /// <summary>
+        /// Flag indicating whether the Controller is running.
+        /// </summary>
+        public bool Running { get; protected set; }
+
+        /// <summary>
         /// Add an ExternalDevice to the Controller; take care of performing
         /// whatever wiring up between the Controller and the ExternalDevice
         /// needs to be done, as well.
@@ -206,7 +211,12 @@ namespace Symphony.Core
         /// <summary>
         /// This controller received input data.
         /// </summary>
-        public event EventHandler<TimeStampedEpochEventArgs> ReceivedInputData;
+        public event EventHandler<TimeStampedDeviceDataEventArgs> ReceivedInputData;
+
+        /// <summary>
+        /// This controller pushed input data to an Epoch.
+        /// </summary>
+        public event EventHandler<TimeStampedEpochEventArgs> PushedInputData;
 
         /// <summary>
         /// This controller persisted a completed Epoch.
@@ -228,9 +238,19 @@ namespace Symphony.Core
         /// </summary>
         public event EventHandler<TimeStampedEventArgs> NextEpochRequested;
 
-        private void OnReceivedInputData(Epoch epoch)
+        /// <summary>
+        /// This controller finished running.
+        /// </summary>
+        public event EventHandler<TimeStampedEventArgs> FinishedRun;
+
+        private void OnReceivedInputData(IExternalDevice device, IIOData data)
         {
-            FireEvent(ReceivedInputData, epoch);
+            FireEvent(ReceivedInputData, device, data);
+        }
+
+        private void OnPushedInputData(Epoch epoch)
+        {
+            FireEvent(PushedInputData, epoch);
         }
 
         private void OnSavedEpoch(Epoch epoch)
@@ -253,9 +273,19 @@ namespace Symphony.Core
             FireEvent(NextEpochRequested);
         }
 
+        private void OnFinishedRun()
+        {
+            FireEvent(FinishedRun);
+        }
+
         private void FireEvent(EventHandler<TimeStampedEpochEventArgs> evt, Epoch epoch)
         {
             FireEvent(evt, new TimeStampedEpochEventArgs(Clock, epoch));
+        }
+
+        private void FireEvent(EventHandler<TimeStampedDeviceDataEventArgs> evt, IExternalDevice device, IIOData data)
+        {
+            FireEvent(evt, new TimeStampedDeviceDataEventArgs(Clock, device, data));
         }
 
         private void FireEvent(EventHandler<TimeStampedEventArgs> evt)
@@ -309,6 +339,15 @@ namespace Symphony.Core
         {
             //TODO update this to let Epoch use _completionLock around Response duration and appending
 
+            try
+            {
+                OnReceivedInputData(device, inData);
+            }
+            catch (Exception e)
+            {
+                log.ErrorFormat("Unable to notify observers of incoming data: {0}", e);
+            }
+            
             var currentEpoch = CurrentEpoch;
 
             if (currentEpoch != null &&
@@ -366,11 +405,11 @@ namespace Symphony.Core
 
                     try
                     {
-                        OnReceivedInputData(currentEpoch);
+                        OnPushedInputData(currentEpoch);
                     }
                     catch (Exception e)
                     {
-                        log.ErrorFormat("Unable to notify observers of incoming data: {0}", e);
+                        log.ErrorFormat("Unable to notify observers of pushed input data: {0}", e);
                     }
                 }
             }
@@ -465,7 +504,23 @@ namespace Symphony.Core
             e.Close();
         }
 
+        private void PrepareRun()
+        {
+            if (!Validate())
+                throw new ValidationException(Validate());
 
+            if (Running)
+                throw new SymphonyControllerException("Controller is running");
+
+            Running = true;           
+        }
+
+        private void FinishRun()
+        {
+            Running = false;
+            OnFinishedRun();
+        }
+        
         /// <summary>
         /// Matlab-friendly factory method to run a single Epoch.
         /// </summary>
@@ -522,8 +577,7 @@ namespace Symphony.Core
         /// The core entry point for the Controller Facade; push an Epoch in here, and when the
         /// Epoch is finished processing, control will be returned to you. 
         /// 
-        /// <para>In other words, this
-        /// method is blocking--the Controller cannot run more than one Epoch at a time.</para>
+        /// <para>In other words, this method is blocking.</para>
         /// </summary>
         /// 
         /// <param name="e">Single Epoch to present</param>
@@ -531,23 +585,56 @@ namespace Symphony.Core
         /// <exception cref="ValidationException">Validation failed for this Controller</exception>
         public void RunEpoch(Epoch e, EpochPersistor persistor)
         {
+            PrepareRun();
+            CommonRunEpoch(e, persistor);
+        }
+
+        /// <summary>
+        /// The core entry point for the Controller Facade; push an Epoch in here, and control
+        /// is returned to you immediately while the Epoch runs in the background. 
+        /// 
+        /// <para>In other words, this method is nonblocking, however the Controller cannot run 
+        /// more than one Epoch at a time.</para>
+        /// </summary>
+        /// 
+        /// <param name="e">Single Epoch to present</param>
+        /// <param name="persistor">EpochPersistor for saving the data. May be null to indicate epoch should not be persisted</param>
+        /// <exception cref="ValidationException">Validation failed for this Controller</exception>
+        public Task RunEpochAsync(Epoch e, EpochPersistor persistor)
+        {
+            PrepareRun();
+            return Task.Factory.StartNew(() => CommonRunEpoch(e, persistor), TaskCreationOptions.LongRunning);
+        }
+
+        private void CommonRunEpoch(Epoch e, EpochPersistor persistor)
+        {
+            var cEpoch = CurrentEpoch;
+
+            try
+            {
+                if (!ValidateEpoch(e))
+                    throw new ArgumentException("Epoch is not valid");
+                
+                CurrentEpoch = e;
+                RunCurrentEpoch(persistor);
+            }
+            finally
+            {
+                CurrentEpoch = cEpoch;
+                FinishRun();
+            }
+        }
+        
+        /// <summary>
+        /// The core method that runs this Controller's CurrentEpoch; executing it on the associated
+        /// DAQ Controller and persisting the results.
+        /// </summary>
+        private void RunCurrentEpoch(EpochPersistor persistor)
+        {
             var cts = new CancellationTokenSource();
             var cancellationToken = cts.Token;
 
             Task persistenceTask = null;
-
-            if (!ValidateEpoch(e))
-                throw new ArgumentException("Epoch is not valid");
-
-
-            if (!Validate())
-                throw new ValidationException(Validate());
-
-
-            // Starting with this Epoch
-
-            var cEpoch = CurrentEpoch;
-            CurrentEpoch = e;
 
             EventHandler<TimeStampedEventArgs> nextRequested = (c, args) =>
             {
@@ -556,7 +643,7 @@ namespace Symphony.Core
             };
 
             bool epochPersisted = false;
-            EventHandler<TimeStampedEpochEventArgs> inputReceived = (c, args) =>
+            EventHandler<TimeStampedEpochEventArgs> inputPushed = (c, args) =>
             {
                 if (CurrentEpoch != null &&
                     CurrentEpoch.IsComplete)
@@ -605,19 +692,18 @@ namespace Symphony.Core
             try
             {
                 NextEpochRequested += nextRequested;
-                ReceivedInputData += inputReceived;
+                PushedInputData += inputPushed;
                 DAQController.ExceptionalStop += exceptionalStop;
 
-                e.StartTime = Maybe<DateTimeOffset>.Some(this.Clock.Now);
+                CurrentEpoch.StartTime = Maybe<DateTimeOffset>.Some(this.Clock.Now);
 
                 log.DebugFormat("Starting epoch: {0}", CurrentEpoch.ProtocolID);
                 DAQController.Start(false);
             }
             finally
             {
-                CurrentEpoch = cEpoch;
                 NextEpochRequested -= nextRequested;
-                ReceivedInputData -= inputReceived;
+                PushedInputData -= inputPushed;
                 DAQController.ExceptionalStop -= exceptionalStop;
 
                 DAQController.WaitForInputTasks();
@@ -682,9 +768,10 @@ namespace Symphony.Core
         }
 
         /// <summary>
-        /// Requests that the Controller abort the current Epoch and stop the input/output pipelines.
+        /// Requests that the Controller abort the current Epoch, stop the input/output pipelines,
+        /// and skip any remaining queued epochs.
         /// </summary>
-        public void CancelEpoch()
+        public void CancelRun()
         {
             SkipCurrentEpoch(false);
         }
