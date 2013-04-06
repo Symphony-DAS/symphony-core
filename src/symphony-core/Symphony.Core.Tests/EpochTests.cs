@@ -45,6 +45,7 @@ namespace Symphony.Core
             Assert.IsNotNull(e.Responses);
             Assert.IsNotNull(e.ProtocolParameters);
             Assert.IsNotNull(e.Background);
+            Assert.IsFalse(e.WaitForTrigger);
         }
 
         [Test]
