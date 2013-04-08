@@ -48,6 +48,7 @@ namespace Symphony.Core
             Background = new Dictionary<IExternalDevice, EpochBackground>();
             StartTime = Maybe<DateTimeOffset>.No();
             Keywords = new HashSet<string>();
+            WaitForTrigger = false;
         }
 
 
@@ -63,6 +64,14 @@ namespace Symphony.Core
         {
             get { return Stimuli.Values.Where(s => !(bool)s.Duration).Any(); }
         }
+
+        /// <summary>
+        /// Indicates if this Epoch should wait for an external trigger before running. If this value
+        /// is false, the Epoch will begin immediately after being pushed to the Controller. If this value
+        /// is true, the Epoch will begin following the next external trigger after being pushed to the
+        /// Controller.  
+        /// </summary>
+        public bool WaitForTrigger { get; set; }
 
         /// <summary>
         /// Responses for this epoch, indexd by the ExternalDevice from which they were recorded.

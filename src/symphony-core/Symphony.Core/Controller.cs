@@ -698,7 +698,7 @@ namespace Symphony.Core
                 CurrentEpoch.StartTime = Maybe<DateTimeOffset>.Some(this.Clock.Now);
 
                 log.DebugFormat("Starting epoch: {0}", CurrentEpoch.ProtocolID);
-                DAQController.Start(false);
+                DAQController.Start(CurrentEpoch.WaitForTrigger);
             }
             finally
             {

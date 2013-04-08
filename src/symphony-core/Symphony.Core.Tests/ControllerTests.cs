@@ -929,6 +929,22 @@ namespace Symphony.Core
             Assert.True(epochDiscarded);
         }
 
+        [Test]
+        public void RunEpochShouldRespectEpochWaitForTrigger()
+        {
+            var c = new Controller();
+            
+            var daq = new DynamicMock(typeof (IDAQController));
+            daq.Expect("Start", true);
+            c.DAQController = daq.MockInstance as IDAQController;
+
+            var e = new Epoch(UNUSED_PROTOCOL) { WaitForTrigger = true };
+
+            c.RunEpoch(e, new FakeEpochPersistor());
+
+            daq.Verify();
+        }
+
     }
 
 
