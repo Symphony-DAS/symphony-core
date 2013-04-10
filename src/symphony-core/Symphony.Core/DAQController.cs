@@ -361,7 +361,7 @@ namespace Symphony.Core
         {
             if (DateTimeOffset.Now < (iterationStart + iterationDuration))
             {
-                while (DateTimeOffset.Now < (iterationStart + iterationDuration)) { }
+                while (DateTimeOffset.Now < (iterationStart + iterationDuration) && !ShouldStop()) { }
             }
 
             return DateTimeOffset.Now - (iterationStart + iterationDuration);
