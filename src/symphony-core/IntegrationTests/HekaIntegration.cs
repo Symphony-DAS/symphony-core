@@ -27,10 +27,10 @@ namespace IntegrationTests
         [Test, Sequential]
         [Timeout(30*1000)]
         public void MaxBandwidth(
-            [Values(25000,50000)] decimal sampleRate,
-            [Values(1,1)] int nEpochs,
-            [Values(4,4)] int nOut,
-            [Values(8,4)] int nIn
+            [Values(10000,25000,50000)] decimal sampleRate,
+            [Values(1,1,1)] int nEpochs,
+            [Values(4,4,4)] int nOut,
+            [Values(8,8,4)] int nIn
             )
         {
             Logging.ConfigureConsole();
