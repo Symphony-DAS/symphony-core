@@ -708,22 +708,54 @@ namespace Symphony.ExternalDevices
 
         private IMultiClampCommander Commander { get; set; }
 
+        /// <summary>
+        /// Indicates if the device has received any input parameters from the Commander. Call this method
+        /// before calling CurrentDeviceInputParameters for the first time.
+        /// </summary>
+        public bool HasDeviceInputParameters
+        {
+            get
+            {
+                bool b = InputParameters.Any();
+
+                if (!b)
+                {
+                    Commander.RequestTelegraphValue();
+                    b = InputParameters.Any();
+                }
+
+                return b;
+            }
+        }
+
         public MultiClampParametersChangedArgs CurrentDeviceInputParameters
         {
             get
             {
-                var result = MostRecentDeviceParameterPreceedingDate(InputParameters, DateTimeOffset.Now);
-                
-                if (result == null)
-                {
-                    Commander.RequestTelegraphValue();
-                    result = MostRecentDeviceParameterPreceedingDate(OutputParameters, DateTimeOffset.Now);
-                }
-
-                if (result == null)
+                if (!HasDeviceInputParameters)
                     throw new MultiClampDeviceException("No current device input parameters.");
 
-                return result;
+                return MostRecentDeviceParameterPreceedingDate(InputParameters, DateTimeOffset.Now);
+            }
+        }
+
+        /// <summary>
+        /// Indicates if the device has received any output parameters from the Commander. Call this method
+        /// before calling CurrentDeviceOutputParameters for the first time.
+        /// </summary>
+        public bool HasDeviceOutputParameters
+        {
+            get
+            {
+                bool b = OutputParameters.Any();
+
+                if (!b)
+                {
+                    Commander.RequestTelegraphValue();
+                    b = OutputParameters.Any();
+                }
+
+                return b;
             }
         }
 
@@ -731,18 +763,10 @@ namespace Symphony.ExternalDevices
         {
             get
             {
-                var result = MostRecentDeviceParameterPreceedingDate(OutputParameters, DateTimeOffset.Now);
-                
-                if (result == null)
-                {
-                    Commander.RequestTelegraphValue();
-                    result = MostRecentDeviceParameterPreceedingDate(OutputParameters, DateTimeOffset.Now);
-                }
-
-                if(result == null)
+                if (!HasDeviceOutputParameters)
                     throw new MultiClampDeviceException("No current device output parameters.");
 
-                return result;
+                return MostRecentDeviceParameterPreceedingDate(OutputParameters, DateTimeOffset.Now);
             }
         }
 
