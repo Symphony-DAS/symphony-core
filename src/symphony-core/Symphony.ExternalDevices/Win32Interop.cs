@@ -94,8 +94,9 @@ namespace Symphony.ExternalDevices
             private static SynchronizationContext context;
 
             /// <summary>
-            /// Assign the event handler "handler" to be fired when a Windows message matching the
-            /// value passed in "message" is fired.
+            /// Assign an event handler "handler" to be fired when a Windows message matching the
+            /// value passed in "message" is fired. Multiple handlers can be assigned to a single
+            /// message.
             /// </summary>
             /// <param name="message"></param>
             /// <param name="handler"></param>
@@ -103,6 +104,17 @@ namespace Symphony.ExternalDevices
             {
                 EnsureInitialized();
                 window.RegisterEventForMessage(message, handler);
+            }
+
+            /// <summary>
+            /// Unregister an event handler previously assigned to a message.
+            /// </summary>
+            /// <param name="message"></param>
+            /// <param name="handler"></param>
+            public static void UnwatchMessage(int message, EventHandler<MessageReceivedEventArgs> handler)
+            {
+                EnsureInitialized();
+                window.UnregisterEventForMessage(message, handler);
             }
 
             /// <summary>
@@ -146,21 +158,44 @@ namespace Symphony.ExternalDevices
             private class MessageWindow : Form
             {
                 private ReaderWriterLock rwLock = new ReaderWriterLock();
-                private Dictionary<int, EventHandler<MessageReceivedEventArgs>> handlers =
-                    new Dictionary<int, EventHandler<MessageReceivedEventArgs>>();
+                private Dictionary<int, ISet<EventHandler<MessageReceivedEventArgs>>> messageHandlers =
+                    new Dictionary<int, ISet<EventHandler<MessageReceivedEventArgs>>>();
 
                 public void RegisterEventForMessage(int messageID, EventHandler<MessageReceivedEventArgs> handler)
                 {
                     Thread.Sleep(TimeSpan.FromMilliseconds(100));
                     rwLock.AcquireWriterLock(Timeout.Infinite);
-                    handlers[messageID] = handler;
+
+                    ISet<EventHandler<MessageReceivedEventArgs>> handlers;
+                    if (!messageHandlers.TryGetValue(messageID, out handlers))
+                        messageHandlers.Add(messageID, handlers = new HashSet<EventHandler<MessageReceivedEventArgs>>());
+                    
+                    handlers.Add(handler);
+                    
+                    rwLock.ReleaseWriterLock();
+                }
+
+                public void UnregisterEventForMessage(int messageID, EventHandler<MessageReceivedEventArgs> handler)
+                {
+                    Thread.Sleep(TimeSpan.FromMilliseconds(100));
+                    rwLock.AcquireWriterLock(Timeout.Infinite);
+
+                    ISet<EventHandler<MessageReceivedEventArgs>> handlers;
+                    if (!messageHandlers.TryGetValue(messageID, out handlers))
+                        throw new ArgumentException("Handler is not registered");
+
+                    handlers.Remove(handler);
+                    
                     rwLock.ReleaseWriterLock();
                 }
 
                 protected override void WndProc(ref Message m)
                 {
                     rwLock.AcquireReaderLock(Timeout.Infinite);
-                    bool handleMessage = handlers.ContainsKey(m.Msg);
+
+                    ISet<EventHandler<MessageReceivedEventArgs>> handlers;
+                    bool handleMessage = messageHandlers.TryGetValue(m.Msg, out handlers) && handlers.Any();
+
                     rwLock.ReleaseReaderLock();
 
                     Message msg = m;
@@ -172,9 +207,10 @@ namespace Symphony.ExternalDevices
                             (object state) =>
                             {
                                 log.DebugFormat("Posting message: {0}", state);
-                                EventHandler<MessageReceivedEventArgs> handler = handlers[msg.Msg];
-                                if (handler != null)
-                                    handler(null, new MessageReceivedEventArgs((Message)state));
+                                foreach (var h in handlers)
+                                {
+                                    h(null, new MessageReceivedEventArgs((Message)state));
+                                }
                             },
                         msg);
                     }

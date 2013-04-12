@@ -64,7 +64,7 @@ namespace Symphony.ExternalDevices
             var lParam = DeviceLParam();
 
             RegisterForWmCopyDataEvents();
-            RegisterForReconnectEvent(lParam);
+            RegisterForReconnectEvents();
             
             OpenMultiClampConversation(lParam);
             RequestTelegraphValue(lParam);
@@ -77,25 +77,31 @@ namespace Symphony.ExternalDevices
             return lParam;
         }
 
-        private void RegisterForReconnectEvent(uint lParam)
+        private void ReceiveReconnectEvent(object sender, Win32Interop.MessageReceivedEventArgs evtArgs)
+        {
+            log.DebugFormat("Received MCTG_RECONNECT_MESSAGE: {0}", evtArgs.Message);
+
+            var lParam = DeviceLParam();
+            if ((IntPtr) lParam == evtArgs.Message.LParam)
+            {
+                OpenMultiClampConversation(lParam);
+                RegisterForWmCopyDataEvents();
+                RequestTelegraphValue((uint) lParam);
+            }            
+        }
+
+        private void RegisterForReconnectEvents()
         {
             log.Debug("Registering for MCTG_RECONNECT_MESSAGE messages...");
-            Win32Interop.MessageEvents.WatchMessage(MultiClampInterop.MCTG_RECONNECT_MESSAGE, (sender, evtArgs) =>
-                                                                                                  {
-                                                                                                      log.DebugFormat(
-                                                                                                          "Received MCTG_RECONNECT_MESSAGE: {0}",
-                                                                                                          evtArgs.Message);
 
-                                                                                                      if ((IntPtr) lParam ==
-                                                                                                          evtArgs.Message.LParam)
-                                                                                                      {
-                                                                                                          OpenMultiClampConversation
-                                                                                                              (lParam);
-                                                                                                          RegisterForWmCopyDataEvents
-                                                                                                              ();
-                                                                                                          RequestTelegraphValue((uint)lParam);
-                                                                                                      }
-                                                                                                  });
+            Win32Interop.MessageEvents.WatchMessage(MultiClampInterop.MCTG_RECONNECT_MESSAGE, ReceiveReconnectEvent);
+        }
+
+        private void UnregisterForReconnectEvents()
+        {
+            log.Debug("Unregistering for MCTG_RECONNECT_MESSAGE messages...");
+
+            Win32Interop.MessageEvents.UnwatchMessage(MultiClampInterop.MCTG_RECONNECT_MESSAGE, ReceiveReconnectEvent);
         }
 
         public void RequestTelegraphValue()
@@ -119,61 +125,47 @@ namespace Symphony.ExternalDevices
             log.DebugFormat("  result = {0}", result);
         }
 
+        private void ReceiveWmCopyDataEvent(object sender, Win32Interop.MessageReceivedEventArgs evtArgs)
+        {
+            // WM_COPYDATA LPARAM is a pointer to a COPYDATASTRUCT structure
+            Win32Interop.COPYDATASTRUCT cds;
+            cds = (Win32Interop.COPYDATASTRUCT) Marshal.PtrToStructure(evtArgs.Message.LParam, typeof (Win32Interop.COPYDATASTRUCT));
+
+            // WM_COPYDATA structure (COPYDATASTRUCT)
+            // dwData -- RegisterWindowMessage(MCTG_REQUEST_MESSAGE_STR)
+            // cbData -- size (in bytes) of the MC_TELEGRAPH_DATA structure being sent
+            // lpData -- MC_TELEGRAPH_DATA*
+            try
+            {
+                if (cds.lpData != IntPtr.Zero)
+                {
+                    var mtd = (MultiClampInterop.MC_TELEGRAPH_DATA) Marshal.PtrToStructure(cds.lpData, typeof (MultiClampInterop.MC_TELEGRAPH_DATA));
+                    var md = new MultiClampInterop.MulticlampData(mtd);
+
+                    log.Debug("WM_COPYDATA message received from MCCommander");
+                    OnParametersChanged(md);
+                }
+            }
+            catch (ArgumentOutOfRangeException)
+            {
+                log.ErrorFormat("WM_COPYDATA message received from MCCommander, but operating mode is not valid.");
+                RequestTelegraphValue((uint) evtArgs.Message.LParam);
+            }
+        }
+
         private void RegisterForWmCopyDataEvents()
         {
             log.Debug("Registering from WM_COPYDATA messages");
 
-            Win32Interop.MessageEvents.WatchMessage(Win32Interop.WM_COPYDATA, (sender, evtArgs) =>
-                                                                                  {   
-                                                                                      // WM_COPYDATA LPARAM is a pointer to a COPYDATASTRUCT structure
-                                                                                      Win32Interop.COPYDATASTRUCT cds;
-                                                                                      cds = (Win32Interop.COPYDATASTRUCT)
-                                                                                            Marshal.PtrToStructure(
-                                                                                                evtArgs.Message.LParam,
-                                                                                                typeof(
-                                                                                                    Win32Interop.COPYDATASTRUCT));
-
-                                                                                      // WM_COPYDATA structure (COPYDATASTRUCT)
-                                                                                      // dwData -- RegisterWindowMessage(MCTG_REQUEST_MESSAGE_STR)
-                                                                                      // cbData -- size (in bytes) of the MC_TELEGRAPH_DATA structure being sent
-                                                                                      // lpData -- MC_TELEGRAPH_DATA*
-                                                                                      try
-                                                                                      {
-                                                                                          if (cds.lpData != IntPtr.Zero)
-                                                                                          {
-                                                                                              MultiClampInterop.
-                                                                                                  MC_TELEGRAPH_DATA mtd
-                                                                                                      =
-                                                                                                      (
-                                                                                                      MultiClampInterop.
-                                                                                                          MC_TELEGRAPH_DATA
-                                                                                                      )
-                                                                                                      Marshal.
-                                                                                                          PtrToStructure
-                                                                                                          (cds.lpData,
-                                                                                                           typeof (
-                                                                                                               MultiClampInterop
-                                                                                                               .
-                                                                                                               MC_TELEGRAPH_DATA
-                                                                                                               ));
-                                                                                              var md =
-                                                                                                  new MultiClampInterop.
-                                                                                                      MulticlampData(
-                                                                                                      mtd);
-
-                                                                                              log.Debug(
-                                                                                                  "WM_COPYDATA message recieved from MCCommander");
-                                                                                              OnParametersChanged(md);
-                                                                                          }
-                                                                                      }
-                                                                                      catch (ArgumentOutOfRangeException)
-                                                                                      {
-                                                                                          log.ErrorFormat("WM_COPYDATA message received from MCCommander, but operating mode is not valid.");
-                                                                                          RequestTelegraphValue((uint)evtArgs.Message.LParam);
-                                                                                      }
-                                                                                  });
+            Win32Interop.MessageEvents.WatchMessage(Win32Interop.WM_COPYDATA, ReceiveWmCopyDataEvent);
         }
 
+        private void UnregisterForWmCopyDataEvents()
+        {
+            log.Debug("Unregistering from WM_COPYDATA messages");
+
+            Win32Interop.MessageEvents.UnwatchMessage(Win32Interop.WM_COPYDATA, ReceiveWmCopyDataEvent);
+        }
 
         private void OnParametersChanged(MultiClampInterop.MulticlampData data)
         {
@@ -204,6 +196,10 @@ namespace Symphony.ExternalDevices
                     // from executing a second time.
                     GC.SuppressFinalize(this);
                 }
+
+                // Remove references from static Win32Interop class or this object will exist indefinitely
+                UnregisterForWmCopyDataEvents();
+                UnregisterForReconnectEvents();
 
                 UInt32 lParam = MultiClampInterop.MCTG_Pack700BSignalIDs(this.SerialNumber, this.Channel); // Pack the above two into an UInt32
                 int result = Win32Interop.PostMessage(Win32Interop.HWND_BROADCAST, MultiClampInterop.MCTG_CLOSE_MESSAGE, (IntPtr)Win32Interop.MessageEvents.WindowHandle, (IntPtr)lParam);
