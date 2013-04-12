@@ -184,15 +184,17 @@ namespace Symphony.ExternalDevices
         {
             get
             {
-                var bg = Backgrounds[CurrentDeviceOutputParameters.Data.OperatingMode];
+                var parameters = CurrentDeviceOutputParameters;
+
+                var bg = Backgrounds[parameters.Data.OperatingMode];
 
                 log.DebugFormat("Desired background value: {0} ({1} {2})", bg, bg.Quantity, bg.DisplayUnit);
                 log.DebugFormat("  Current parameters:");
-                log.DebugFormat("     Mode: {0}", CurrentDeviceOutputParameters.Data.OperatingMode);
-                log.DebugFormat("     ExtCmdSensitivity: {0}", CurrentDeviceOutputParameters.Data.ExternalCommandSensitivity);
-                log.DebugFormat("     ExtCmdUnits: {0}", CurrentDeviceOutputParameters.Data.ExternalCommandSensitivityUnits);
-
-
+                log.DebugFormat("     Mode: {0}", parameters.Data.OperatingMode);
+                log.DebugFormat("     ExtCmdSensitivity: {0}", parameters.Data.ExternalCommandSensitivity);
+                log.DebugFormat("     ExtCmdUnits: {0}", parameters.Data.ExternalCommandSensitivityUnits);
+                log.DebugFormat("  Parameters timestamp: {0}", parameters.TimeStamp);
+                
                 return bg;
             }
             set
@@ -216,11 +218,14 @@ namespace Symphony.ExternalDevices
             {
                 var bg = base.OutputBackground;
 
+                var parameters = CurrentDeviceOutputParameters;
+
                 log.DebugFormat("Output background value: {0} ({1} {2})", bg, bg.Quantity, bg.DisplayUnit);
                 log.DebugFormat("  Current parameters:");
-                log.DebugFormat("     Mode: {0}", CurrentDeviceOutputParameters.Data.OperatingMode);
-                log.DebugFormat("     ExtCmdSensitivity: {0}", CurrentDeviceOutputParameters.Data.ExternalCommandSensitivity);
-                log.DebugFormat("     ExtCmdUnits: {0}", CurrentDeviceOutputParameters.Data.ExternalCommandSensitivityUnits);
+                log.DebugFormat("     Mode: {0}", parameters.Data.OperatingMode);
+                log.DebugFormat("     ExtCmdSensitivity: {0}", parameters.Data.ExternalCommandSensitivity);
+                log.DebugFormat("     ExtCmdUnits: {0}", parameters.Data.ExternalCommandSensitivityUnits);
+                log.DebugFormat("  Parameters timestamp: {0}", parameters.TimeStamp);
 
                 return base.OutputBackground;
             }
@@ -600,7 +605,7 @@ namespace Symphony.ExternalDevices
                 IOutputData data = this.Controller.PullOutputData(this, duration);
 
 
-                var deviceParameters = DeviceParametersForOutput(DateTimeOffset.Now.UtcDateTime).Data;
+                var deviceParameters = DeviceParametersForOutput(Clock.Now.UtcDateTime).Data;
                 var config = MergeDeviceParametersIntoConfiguration(Configuration, deviceParameters);
 
                 log.DebugFormat("Pulling OutputData with parameters {0} (units {1})",
@@ -627,7 +632,7 @@ namespace Symphony.ExternalDevices
         {
             try
             {
-                var deviceParameters = DeviceParametersForInput(DateTimeOffset.Now.UtcDateTime).Data;
+                var deviceParameters = DeviceParametersForInput(Clock.Now.UtcDateTime).Data;
 
                 IInputData convertedData = inData.DataWithConversion(
                     m => ConvertInput(m, deviceParameters)
@@ -735,7 +740,7 @@ namespace Symphony.ExternalDevices
                 if (!HasDeviceInputParameters)
                     throw new MultiClampDeviceException("No current device input parameters.");
 
-                return MostRecentDeviceParameterPreceedingDate(InputParameters, DateTimeOffset.Now);
+                return MostRecentDeviceParameterPreceedingDate(InputParameters, Clock.Now);
             }
         }
 
@@ -766,7 +771,7 @@ namespace Symphony.ExternalDevices
                 if (!HasDeviceOutputParameters)
                     throw new MultiClampDeviceException("No current device output parameters.");
 
-                return MostRecentDeviceParameterPreceedingDate(OutputParameters, DateTimeOffset.Now);
+                return MostRecentDeviceParameterPreceedingDate(OutputParameters, Clock.Now);
             }
         }
 
