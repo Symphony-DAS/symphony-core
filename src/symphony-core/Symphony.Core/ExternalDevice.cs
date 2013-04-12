@@ -246,6 +246,11 @@ namespace Symphony.Core
         /// </summary>
         public virtual IMeasurement Background { get; set; }
 
+        /// <summary>
+        /// The "true" background value applied to the IOutputStreams bound to this
+        /// device. You do not set this value. The device determines the "true"
+        /// output value to use based on the set Background value.
+        /// </summary>
         public virtual IMeasurement OutputBackground
         {
             get { return ConvertOutput(Background); }
