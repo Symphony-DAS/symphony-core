@@ -317,7 +317,7 @@ namespace Symphony.Core
                         }
                     }  
 
-                    if (!task.Value.IsCompleted && !warningShown)
+                    if (!task.Value.IsCompleted && !start && !warningShown)
                     {
                         log.Debug("At least one DAQ output task has not completed. This may cause an output underrun.");
                         warningShown = true;
@@ -361,7 +361,7 @@ namespace Symphony.Core
         {
             if (DateTimeOffset.Now < (iterationStart + iterationDuration))
             {
-                while (DateTimeOffset.Now < (iterationStart + iterationDuration)) { }
+                while (DateTimeOffset.Now < (iterationStart + iterationDuration) && !ShouldStop()) { }
             }
 
             return DateTimeOffset.Now - (iterationStart + iterationDuration);

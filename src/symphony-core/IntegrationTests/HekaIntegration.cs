@@ -17,19 +17,20 @@ namespace IntegrationTests
         const double MAX_VOLTAGE_DIFF = 0.1; //Volts. This is completely arbitrary and dependent on the quality of the patch cable. Just something "close" to 0.
 
         /// <summary>
-        /// The Symphony.Core pipeline must handle max usage (4 Analog Out, 8 Analog in on the Heka device at max 50k sampling rate.
+        /// The Symphony.Core pipeline must handle max usage (4 Analog Out, 8 Analog in on the Heka device
+        /// at max 25k sampling rate (200k ITC max sample interval / 8 in channels = 25k max per channel).
         /// </summary>
         /// <param name="sampleRate"></param>
         /// <param name="nEpochs"></param>
         /// <param name="nOut"></param>
         /// <param name="nIn"></param>
-        [Test]
+        [Test, Sequential]
         [Timeout(30*1000)]
         public void MaxBandwidth(
-            [Values(20000)] decimal sampleRate,
-            [Values(1)] int nEpochs,
-            [Values(4)] int nOut,
-            [Values(8)] int nIn
+            [Values(10000,25000,50000)] decimal sampleRate,
+            [Values(1,1,1)] int nEpochs,
+            [Values(4,4,4)] int nOut,
+            [Values(8,8,4)] int nIn
             )
         {
             Logging.ConfigureConsole();

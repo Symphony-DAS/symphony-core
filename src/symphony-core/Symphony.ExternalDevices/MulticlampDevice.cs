@@ -184,15 +184,17 @@ namespace Symphony.ExternalDevices
         {
             get
             {
-                var bg = Backgrounds[CurrentDeviceOutputParameters.Data.OperatingMode];
+                var parameters = CurrentDeviceOutputParameters;
+
+                var bg = Backgrounds[parameters.Data.OperatingMode];
 
                 log.DebugFormat("Desired background value: {0} ({1} {2})", bg, bg.Quantity, bg.DisplayUnit);
                 log.DebugFormat("  Current parameters:");
-                log.DebugFormat("     Mode: {0}", CurrentDeviceOutputParameters.Data.OperatingMode);
-                log.DebugFormat("     ExtCmdSensitivity: {0}", CurrentDeviceOutputParameters.Data.ExternalCommandSensitivity);
-                log.DebugFormat("     ExtCmdUnits: {0}", CurrentDeviceOutputParameters.Data.ExternalCommandSensitivityUnits);
-
-
+                log.DebugFormat("     Mode: {0}", parameters.Data.OperatingMode);
+                log.DebugFormat("     ExtCmdSensitivity: {0}", parameters.Data.ExternalCommandSensitivity);
+                log.DebugFormat("     ExtCmdUnits: {0}", parameters.Data.ExternalCommandSensitivityUnits);
+                log.DebugFormat("  Parameters timestamp: {0}", parameters.TimeStamp);
+                
                 return bg;
             }
             set
@@ -216,11 +218,14 @@ namespace Symphony.ExternalDevices
             {
                 var bg = base.OutputBackground;
 
+                var parameters = CurrentDeviceOutputParameters;
+
                 log.DebugFormat("Output background value: {0} ({1} {2})", bg, bg.Quantity, bg.DisplayUnit);
                 log.DebugFormat("  Current parameters:");
-                log.DebugFormat("     Mode: {0}", CurrentDeviceOutputParameters.Data.OperatingMode);
-                log.DebugFormat("     ExtCmdSensitivity: {0}", CurrentDeviceOutputParameters.Data.ExternalCommandSensitivity);
-                log.DebugFormat("     ExtCmdUnits: {0}", CurrentDeviceOutputParameters.Data.ExternalCommandSensitivityUnits);
+                log.DebugFormat("     Mode: {0}", parameters.Data.OperatingMode);
+                log.DebugFormat("     ExtCmdSensitivity: {0}", parameters.Data.ExternalCommandSensitivity);
+                log.DebugFormat("     ExtCmdUnits: {0}", parameters.Data.ExternalCommandSensitivityUnits);
+                log.DebugFormat("  Parameters timestamp: {0}", parameters.TimeStamp);
 
                 return base.OutputBackground;
             }
@@ -600,7 +605,7 @@ namespace Symphony.ExternalDevices
                 IOutputData data = this.Controller.PullOutputData(this, duration);
 
 
-                var deviceParameters = DeviceParametersForOutput(DateTimeOffset.Now.UtcDateTime).Data;
+                var deviceParameters = DeviceParametersForOutput(Clock.Now.UtcDateTime).Data;
                 var config = MergeDeviceParametersIntoConfiguration(Configuration, deviceParameters);
 
                 log.DebugFormat("Pulling OutputData with parameters {0} (units {1})",
@@ -627,7 +632,7 @@ namespace Symphony.ExternalDevices
         {
             try
             {
-                var deviceParameters = DeviceParametersForInput(DateTimeOffset.Now.UtcDateTime).Data;
+                var deviceParameters = DeviceParametersForInput(Clock.Now.UtcDateTime).Data;
 
                 IInputData convertedData = inData.DataWithConversion(
                     m => ConvertInput(m, deviceParameters)
@@ -708,22 +713,54 @@ namespace Symphony.ExternalDevices
 
         private IMultiClampCommander Commander { get; set; }
 
+        /// <summary>
+        /// Indicates if the device has received any input parameters from the Commander. Call this method
+        /// before calling CurrentDeviceInputParameters for the first time.
+        /// </summary>
+        public bool HasDeviceInputParameters
+        {
+            get
+            {
+                bool b = InputParameters.Any();
+
+                if (!b)
+                {
+                    Commander.RequestTelegraphValue();
+                    b = InputParameters.Any();
+                }
+
+                return b;
+            }
+        }
+
         public MultiClampParametersChangedArgs CurrentDeviceInputParameters
         {
             get
             {
-                var result = MostRecentDeviceParameterPreceedingDate(InputParameters, DateTimeOffset.Now);
-                
-                if (result == null)
-                {
-                    Commander.RequestTelegraphValue();
-                    result = MostRecentDeviceParameterPreceedingDate(OutputParameters, DateTimeOffset.Now);
-                }
-
-                if (result == null)
+                if (!HasDeviceInputParameters)
                     throw new MultiClampDeviceException("No current device input parameters.");
 
-                return result;
+                return MostRecentDeviceParameterPreceedingDate(InputParameters, Clock.Now);
+            }
+        }
+
+        /// <summary>
+        /// Indicates if the device has received any output parameters from the Commander. Call this method
+        /// before calling CurrentDeviceOutputParameters for the first time.
+        /// </summary>
+        public bool HasDeviceOutputParameters
+        {
+            get
+            {
+                bool b = OutputParameters.Any();
+
+                if (!b)
+                {
+                    Commander.RequestTelegraphValue();
+                    b = OutputParameters.Any();
+                }
+
+                return b;
             }
         }
 
@@ -731,18 +768,10 @@ namespace Symphony.ExternalDevices
         {
             get
             {
-                var result = MostRecentDeviceParameterPreceedingDate(OutputParameters, DateTimeOffset.Now);
-                
-                if (result == null)
-                {
-                    Commander.RequestTelegraphValue();
-                    result = MostRecentDeviceParameterPreceedingDate(OutputParameters, DateTimeOffset.Now);
-                }
-
-                if(result == null)
+                if (!HasDeviceOutputParameters)
                     throw new MultiClampDeviceException("No current device output parameters.");
 
-                return result;
+                return MostRecentDeviceParameterPreceedingDate(OutputParameters, Clock.Now);
             }
         }
 

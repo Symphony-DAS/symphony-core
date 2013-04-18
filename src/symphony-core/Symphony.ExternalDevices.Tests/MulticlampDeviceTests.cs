@@ -407,6 +407,7 @@ namespace Symphony.ExternalDevices
             var mc = new FakeMulticlampCommander();
 
             var mcd = new MultiClampDevice(mc, c, UNUSED_BACKGROUND_DICTIONARY);
+            mcd.Clock = new SystemClock();
             mcd.BindStream(new DAQInputStream(UNUSED_NAME));
 
             var expected = new MultiClampInterop.MulticlampData();
@@ -424,6 +425,7 @@ namespace Symphony.ExternalDevices
             var mc = new FakeMulticlampCommander();
 
             var mcd = new MultiClampDevice(mc, c, UNUSED_BACKGROUND_DICTIONARY);
+            mcd.Clock = new SystemClock();
             mcd.BindStream(new DAQInputStream(UNUSED_NAME));
 
             var data1 = new MultiClampInterop.MulticlampData();
@@ -443,6 +445,7 @@ namespace Symphony.ExternalDevices
             var mc = new FakeMulticlampCommander();
 
             var mcd = new MultiClampDevice(mc, c, UNUSED_BACKGROUND_DICTIONARY);
+            mcd.Clock = new SystemClock();
             mcd.BindStream(new DAQOutputStream(UNUSED_NAME));
 
             var expected = new MultiClampInterop.MulticlampData();
@@ -460,6 +463,7 @@ namespace Symphony.ExternalDevices
             var mc = new FakeMulticlampCommander();
 
             var mcd = new MultiClampDevice(mc, c, UNUSED_BACKGROUND_DICTIONARY);
+            mcd.Clock = new SystemClock();
             mcd.BindStream(new DAQOutputStream(UNUSED_NAME));
 
             var data1 = new MultiClampInterop.MulticlampData();
@@ -639,6 +643,7 @@ namespace Symphony.ExternalDevices
 
             var background = new Dictionary<MultiClampInterop.OperatingMode, IMeasurement>() { { operatingMode, bg } };
             var mcd = new MultiClampDevice(mc, c, background);
+            mcd.Clock = new SystemClock();
             mcd.BindStream(new DAQOutputStream(UNUSED_NAME));
 
             var data = new MultiClampInterop.MulticlampData()
@@ -758,6 +763,7 @@ namespace Symphony.ExternalDevices
             var background = new Dictionary<MultiClampInterop.OperatingMode, IMeasurement>() { { operatingMode, bg } };
 
             var mcd = new MultiClampDevice(mc, c, background);
+            mcd.Clock = new SystemClock();
             mcd.BindStream(new DAQOutputStream(UNUSED_NAME));
 
             var data = new MultiClampInterop.MulticlampData()
@@ -822,6 +828,7 @@ namespace Symphony.ExternalDevices
                          };
 
             var mcd = new MultiClampDevice(mc, c, bg);
+            mcd.Clock = new SystemClock();
             mcd.BindStream(new DAQOutputStream(UNUSED_NAME));
 
             var data = new MultiClampInterop.MulticlampData()
@@ -879,6 +886,50 @@ namespace Symphony.ExternalDevices
             BackgroundTest(MultiClampInterop.OperatingMode.VClamp,
                 "V",
                 MultiClampInterop.ExternalCommandSensitivityUnits.V_V);
+        }
+
+        [Test]
+        public void ShouldRetrieveCurrentDeviceInputParametersUsingClock()
+        {
+            var c = new Controller();
+            var mc = new FakeMulticlampCommander();
+
+            var time = DateTimeOffset.MinValue.Add(MultiClampDevice.ParameterStalenessInterval);
+
+            var clock = new DynamicMock(typeof(IClock));
+            clock.SetReturnValue("get_Now", time);
+            var mcd = new MultiClampDevice(mc, c, UNUSED_BACKGROUND_DICTIONARY) { Clock = clock.MockInstance as IClock };
+
+            mcd.BindStream(new DAQInputStream(UNUSED_NAME));
+
+            var data = new MultiClampInterop.MulticlampData();
+            var expected = new MultiClampInterop.MulticlampData();
+
+            mc.FireParametersChanged(time, data);
+
+            Assert.That(mcd.CurrentDeviceInputParameters.Data, Is.EqualTo(expected));
+        }
+
+        [Test]
+        public void ShouldRetrieveCurrentDeviceOutputParametersUsingClock()
+        {
+            var c = new Controller();
+            var mc = new FakeMulticlampCommander();
+
+            var time = DateTimeOffset.MinValue.Add(MultiClampDevice.ParameterStalenessInterval);
+
+            var clock = new DynamicMock(typeof(IClock));
+            clock.SetReturnValue("get_Now", time);
+            var mcd = new MultiClampDevice(mc, c, UNUSED_BACKGROUND_DICTIONARY) { Clock = clock.MockInstance as IClock };
+
+            mcd.BindStream(new DAQOutputStream(UNUSED_NAME));
+
+            var data = new MultiClampInterop.MulticlampData();
+            var expected = new MultiClampInterop.MulticlampData();
+
+            mc.FireParametersChanged(time, data);
+
+            Assert.That(mcd.CurrentDeviceOutputParameters.Data, Is.EqualTo(expected));
         }
 
         private const string UNUSED_NAME = "UNUSED";
