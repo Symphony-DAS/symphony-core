@@ -281,7 +281,7 @@ namespace Symphony.Core
             return false;
         }
 
-        private static readonly IUnitSystem _SIUnits = new InternationalSystem();
+        private static readonly IUnitSystem _SIUnits = InternationalSystem.DefaultSystem;
 
         /// <summary>
         /// Convert from one Measurement to another. This takes care of finding
