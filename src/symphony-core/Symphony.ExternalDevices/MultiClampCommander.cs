@@ -137,9 +137,12 @@ namespace Symphony.ExternalDevices
             // lpData -- MC_TELEGRAPH_DATA*
             try
             {
-                if (cds.lpData != IntPtr.Zero)
+                if (cds.lpData == IntPtr.Zero) 
+                    return;
+
+                var mtd = (MultiClampInterop.MC_TELEGRAPH_DATA) Marshal.PtrToStructure(cds.lpData, typeof (MultiClampInterop.MC_TELEGRAPH_DATA));
+                if (mtd.uChannelID == Channel)
                 {
-                    var mtd = (MultiClampInterop.MC_TELEGRAPH_DATA) Marshal.PtrToStructure(cds.lpData, typeof (MultiClampInterop.MC_TELEGRAPH_DATA));
                     var md = new MultiClampInterop.MulticlampData(mtd);
 
                     log.Debug("WM_COPYDATA message received from MCCommander");
@@ -155,14 +158,14 @@ namespace Symphony.ExternalDevices
 
         private void RegisterForWmCopyDataEvents()
         {
-            log.Debug("Registering from WM_COPYDATA messages");
+            log.Debug("Registering for WM_COPYDATA messages");
 
             Win32Interop.MessageEvents.WatchMessage(Win32Interop.WM_COPYDATA, ReceiveWmCopyDataEvent);
         }
 
         private void UnregisterForWmCopyDataEvents()
         {
-            log.Debug("Unregistering from WM_COPYDATA messages");
+            log.Debug("Unregistering for WM_COPYDATA messages");
 
             Win32Interop.MessageEvents.UnwatchMessage(Win32Interop.WM_COPYDATA, ReceiveWmCopyDataEvent);
         }
