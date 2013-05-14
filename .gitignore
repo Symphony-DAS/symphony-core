@@ -11,6 +11,7 @@ docs/sphinx/build
 
 # VS
 src/symphony-core/Symphony.sln.DotSettings.user
+src/symphony-core/ipch
 
 # Codesign
 src/symphony-core/Symphony.Core/physion_authenticode.pfx
