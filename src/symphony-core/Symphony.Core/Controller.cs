@@ -512,7 +512,8 @@ namespace Symphony.Core
             if (Running)
                 throw new SymphonyControllerException("Controller is running");
 
-            Running = true;           
+            Running = true;
+            CancelRunRequested = false;
         }
 
         private void FinishRun()
@@ -740,32 +741,13 @@ namespace Symphony.Core
         /// the EpochQueue. If no next Epoch is available (or if the Controller running a single Epoch via
         /// RunEpoch), this method will stop the input/output pipelines.
         /// </summary>
+        /// <remarks>Calling NextEpoch() on a stopped Controller is a NOP</remarks>
         public void NextEpoch()
         {
-            SkipCurrentEpoch(true);
-        }
-
-        private void SkipCurrentEpoch(bool moveNext)
-        {
-            if (moveNext)
-            {
-                Epoch epoch;
-                if (EpochQueue.TryDequeue(out epoch))
-                {
-                    CurrentEpoch = epoch;
-                }
-                else
-                {
-                    throw new SymphonyControllerException("Cannot dequeue next epoch from Controller queue.");
-                }
-            }
-            else
-            {
-                CurrentEpoch = null;
-            }
-
             OnNextEpochRequested();
         }
+
+        private bool CancelRunRequested { get; set; }
 
         /// <summary>
         /// Requests that the Controller abort the current Epoch, stop the input/output pipelines,
@@ -773,7 +755,8 @@ namespace Symphony.Core
         /// </summary>
         public void CancelRun()
         {
-            SkipCurrentEpoch(false);
+            CancelRunRequested = true;
+            OnNextEpochRequested();
         }
 
 
