@@ -513,7 +513,6 @@ namespace Symphony.Core
                 throw new SymphonyControllerException("Controller is running");
 
             Running = true;
-            CancelRunRequested = false;
         }
 
         private void FinishRun()
@@ -747,15 +746,11 @@ namespace Symphony.Core
             OnNextEpochRequested();
         }
 
-        private bool CancelRunRequested { get; set; }
-
         /// <summary>
-        /// Requests that the Controller abort the current Epoch, stop the input/output pipelines,
-        /// and skip any remaining queued epochs.
+        /// Requests that the Controller abort the current Epoch and stop the input/output pipelines.
         /// </summary>
-        public void CancelRun()
+        public void CancelEpoch()
         {
-            CancelRunRequested = true;
             OnNextEpochRequested();
         }
 

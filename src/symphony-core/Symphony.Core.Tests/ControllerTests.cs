@@ -920,7 +920,7 @@ namespace Symphony.Core
             c.DAQController.ProcessIteration += (o, eventArgs) =>
                                        {
                                            Console.WriteLine("Process iteration");
-                                           c.CancelRun();
+                                           c.CancelEpoch();
                                        };
 
             c.RunEpoch(e, new FakeEpochPersistor());

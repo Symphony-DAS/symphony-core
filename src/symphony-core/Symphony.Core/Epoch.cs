@@ -57,7 +57,7 @@ namespace Symphony.Core
         /// the user cancels the run or requests the Controller to move to the next queued
         /// Epoch.
         /// </summary>
-        /// <see cref="Controller.CancelRun"/>
+        /// <see cref="Controller.CancelEpoch"/>
         /// <see cref="Controller.NextEpoch"/>
         /// <see cref="Stimulus.Duration"/>
         public bool IsIndefinite
