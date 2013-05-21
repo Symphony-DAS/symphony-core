@@ -345,7 +345,7 @@ namespace Symphony.Core
             }
             catch (Exception e)
             {
-                log.ErrorFormat("Unable to notify observers of incoming data: {0}", e);
+                log.ErrorFormat("Unable to notify observers of received input data: {0}", e);
             }
             
             var currentEpoch = CurrentEpoch;
