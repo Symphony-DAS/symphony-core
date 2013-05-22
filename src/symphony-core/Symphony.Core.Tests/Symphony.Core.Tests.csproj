@@ -120,6 +120,7 @@
     <Compile Include="HDF5Tests.cs" />
     <Compile Include="IODataTests.cs" />
     <Compile Include="MeasurementTests.cs" />
+    <Compile Include="MiscTests.cs" />
     <Compile Include="ParserTests.cs" />
     <Compile Include="PipelineTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
