@@ -156,9 +156,13 @@ namespace Symphony.Core
             dev1 = dev2 = null;
         }
 
-        
-       
+        [Test]
+        public void IsDrainedIfNoStimuli()
+        {
+            Epoch e = new Epoch("");
 
+            Assert.That(e.IsDrained, Is.True);
+        }
 
         [Test]
         public void MaybeHasStartTime()
@@ -227,12 +231,18 @@ namespace Symphony.Core
         {
             var e = new Epoch(UNUSED_PROTOCOL_ID);
             var dev = new UnitConvertingExternalDevice("name", "co", new Measurement(1.0m, "units"));
-
-            var bg = new Measurement(1.1m, "units");
-            e.Background[dev] = new Epoch.EpochBackground(bg, new Measurement(1000, "Hz"));
+            var dev2 = new UnitConvertingExternalDevice("name2", "co", new Measurement(1.0m, "units"));
 
             var duration = TimeSpan.FromSeconds(1.1);
-            var data = e.PullOutputData(dev, duration);
+            var rate = new Measurement(1000, "Hz");
+
+            var d = new OutputData(Enumerable.Repeat(new Measurement(0, "units"), (int)duration.Samples(rate)), rate);
+            e.Stimuli[dev] = new RenderedStimulus((string)"stimID", (IDictionary<string, object>)new Dictionary<string, object>(), (IOutputData)d);
+
+            var bg = new Measurement(1.1m, "units");
+            e.Background[dev2] = new Epoch.EpochBackground(bg, rate);
+
+            var data = e.PullOutputData(dev2, duration);
 
             Assert.That(data.Duration, Is.EqualTo(duration));
             Assert.That(data.Data.All(m => m.BaseUnit == bg.BaseUnit));

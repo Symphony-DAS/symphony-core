@@ -44,7 +44,7 @@ namespace Symphony.Core
             ProtocolParameters = parameters;
             Responses = new Dictionary<IExternalDevice, Response>();
             Stimuli = new Dictionary<IExternalDevice, IStimulus>();
-            StimulusDataEnumerators = new ConcurrentDictionary<IExternalDevice, IEnumerator<IOutputData>>();
+            StimulusStreams = new ConcurrentDictionary<IExternalDevice, StimulusStream>();
             Background = new Dictionary<IExternalDevice, EpochBackground>();
             StartTime = Maybe<DateTimeOffset>.No();
             Keywords = new HashSet<string>();
@@ -62,7 +62,7 @@ namespace Symphony.Core
         /// <see cref="Stimulus.Duration"/>
         public bool IsIndefinite
         {
-            get { return Stimuli.Values.Where(s => !(bool)s.Duration).Any(); }
+            get { return Stimuli.Values.Any(s => !(bool)s.Duration); }
         }
 
         /// <summary>
@@ -80,7 +80,7 @@ namespace Symphony.Core
         /// for this property may not (and most likely will not) be the same set of ExternalDevices
         /// in the Stimuli set.
         /// </summary>
-        public IDictionary<IExternalDevice, Response> Responses { get; private set; }
+        public IDictionary<IExternalDevice, Response> Responses { get; set; }
 
         /// <summary>
         /// The stimuli for this epoch, indexed by the ExternalDevice to which the individual
@@ -88,7 +88,7 @@ namespace Symphony.Core
         /// for this property may not (and most likely will not) be the same set of ExternalDevices
         /// in the Responses set.
         /// </summary>
-        public IDictionary<IExternalDevice, IStimulus> Stimuli { get; private set; }
+        public IDictionary<IExternalDevice, IStimulus> Stimuli { get; set; }
 
         /// <summary>
         /// Dictionary of background values to be applied to any external devices for which no stimulus is
@@ -103,6 +103,11 @@ namespace Symphony.Core
             Measurement sampleRate)
         {
             Background[dev] = new EpochBackground(background, sampleRate);
+        }
+
+        public virtual bool IsDrained
+        {
+            get { return !Stimuli.Values.Any() || StimulusStreams.Values.All(s => s.IsDrained); }
         }
 
         /// <summary>
@@ -197,71 +202,117 @@ namespace Symphony.Core
         /// <returns>IOutputData intsance with duration less than or equal to blockDuration</returns>
         public IOutputData PullOutputData(IExternalDevice dev, TimeSpan blockDuration)
         {
-            if (Stimuli.ContainsKey(dev))
-            {
-                var blockIter = StimulusDataEnumerators.GetOrAdd(dev,
-                    (d) => Stimuli[d].DataBlocks(blockDuration).GetEnumerator()
-                );
-
-                IOutputData stimData = null;
-                while (stimData == null || stimData.Duration < blockDuration)
-                {
-                    if (!blockIter.MoveNext())
+            var stream = StimulusStreams.GetOrAdd(dev, 
+                (d) =>
                     {
-                        break;
-                    }
+                        IStimulus stimulus;
+                        var hasStimulus = Stimuli.TryGetValue(d, out stimulus);
 
-                    stimData =
-                        stimData == null ? blockIter.Current : stimData.Concat(blockIter.Current);
-                }
+                        EpochBackground background;
+                        var hasBackground = Background.TryGetValue(d, out background);
 
-                if (stimData == null)
-                {
-                    return BackgroundDataForDevice(dev, blockDuration);
+                        if (!hasStimulus && !hasBackground)
+                            throw new ArgumentException("Epoch does not have a stimulus or background for " + d.Name);
 
-                }
+                        return new StimulusStream(stimulus, background, blockDuration, Duration);
+                    });
 
-                if (stimData.Duration < blockDuration)
-                {
-                    var remainingDuration = blockDuration - stimData.Duration;
-                    stimData = stimData.Concat(BackgroundDataForDevice(dev, remainingDuration));
-                }
+            return stream.PullOutputData();
+        }
 
-                return stimData;
+        private ConcurrentDictionary<IExternalDevice, StimulusStream> StimulusStreams { get; set; } 
+
+        /// <summary>
+        /// A stream around a Stimulus. A stream's duration may be longer (or shorter)
+        /// than the actual duration of the underlying Stimulus. If the stream is longer,
+        /// the contents of the remaining duration will be of the specified background. 
+        /// </summary>
+        private class StimulusStream
+        {
+            private readonly IEnumerator<IOutputData> _stimEnumerator;
+            private readonly EpochBackground _background;
+            private readonly TimeSpan _blockDuration;
+            private readonly Maybe<TimeSpan> _duration;
+
+            private TimeSpan _position;
+
+            // Stimulus may be null to create a Stream of background.
+            // Background may be null if this Stream's duration is less than the Stimulus duration.
+            public StimulusStream(IStimulus stimulus, 
+                EpochBackground background, 
+                TimeSpan blockDuration,
+                Maybe<TimeSpan> duration)
+            {
+                _stimEnumerator = stimulus != null ? 
+                    stimulus.DataBlocks(blockDuration).GetEnumerator() : Enumerable.Empty<IOutputData>().GetEnumerator();
+
+                _background = background;
+                _blockDuration = blockDuration;
+                _duration = duration;
+                _position = TimeSpan.Zero;
             }
 
+            public bool IsDrained { get { return !IsIndefinite && _position >= _duration; } }
 
-            log.DebugFormat("Will send background for device {0} ({1})", dev.Name, blockDuration);
-            return BackgroundDataForDevice(dev, blockDuration);
+            private bool IsIndefinite { get { return (bool)_duration; } }
+
+            /// <summary>
+            /// Pulls output data of duration up to the Stream's block duration, or null if the stream is drained.
+            /// </summary>
+            public IOutputData PullOutputData()
+            {
+                if (IsDrained)
+                    return null;
+
+                IOutputData data = null;
+                var dur = _blockDuration <= _duration - _position || IsIndefinite ? _blockDuration : _duration - _position;
+
+                if (_stimEnumerator.MoveNext())
+                {
+                    data = _stimEnumerator.Current;
+                }
+
+                if (data == null)
+                {
+                    data = BackgroundDataForDuration(dur);
+                }
+
+                if (data.Duration < dur)
+                {
+                    var remainingDuration = dur - data.Duration;
+                    data = data.Concat(BackgroundDataForDuration(remainingDuration));
+                }
+
+                if (data.Duration > dur)
+                {
+                    data = data.SplitData(dur).Head;
+                }
+
+                _position += dur;
+
+                return data;
+            }
+
+            private IOutputData BackgroundDataForDuration(TimeSpan duration)
+            {
+                //Calculate background
+                var srate = _background.SampleRate;
+                var value = _background.Background;
+
+                IOutputData result = new OutputData(ConstantMeasurementList(duration, srate, value),
+                                                    srate,
+                                                    false);
+
+                return result;
+            }
+
+            private static IEnumerable<IMeasurement> ConstantMeasurementList(TimeSpan blockDuration, IMeasurement srate, IMeasurement value)
+            {
+                return Enumerable.Range(0, (int)blockDuration.Samples(srate))
+                    .Select(i => value)
+                    .ToList();
+            }
         }
-
-        private IOutputData BackgroundDataForDevice(IExternalDevice dev, TimeSpan blockDuration)
-        {
-            //log.DebugFormat("Presenting Epoch background for {0}.", dev.Name);
-
-            if (!Background.ContainsKey(dev))
-                throw new ArgumentException("Epoch does not have a stimulus or background for " + dev.Name);
-
-            //Calculate background
-            var srate = Background[dev].SampleRate;
-            var value = Background[dev].Background;
-
-            IOutputData result = new OutputData(ConstantMeasurementList(blockDuration, srate, value),
-                                                srate,
-                                                false);
-
-            return result;
-        }
-
-        private static IEnumerable<IMeasurement> ConstantMeasurementList(TimeSpan blockDuration, IMeasurement srate, IMeasurement value)
-        {
-            //log.DebugFormat("Generating constant measurment: {0} x {1} samles @ {2}", value, blockDuration.Samples(srate), srate);
-            return Enumerable.Range(0, (int)blockDuration.Samples(srate))
-                .Select(i => value)
-                .ToList();
-        }
-
-        private ConcurrentDictionary<IExternalDevice, IEnumerator<IOutputData>> StimulusDataEnumerators { get; set; }
 
         public ISet<string> Keywords { get; private set; }
 
