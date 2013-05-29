@@ -105,6 +105,10 @@ namespace Symphony.Core
             Background[dev] = new EpochBackground(background, sampleRate);
         }
 
+        /// <summary>
+        /// Flag indicating that this epoch is drained. A drained Epoch has had all stimuli pulled as output
+        /// data. This is not an indication that all stimuli have been presented.
+        /// </summary>
         public virtual bool IsDrained
         {
             get { return Stimuli.Count == StimulusStreams.Count && StimulusStreams.Values.All(s => s.IsDrained); }
