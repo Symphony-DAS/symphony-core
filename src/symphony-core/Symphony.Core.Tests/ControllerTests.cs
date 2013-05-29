@@ -245,6 +245,7 @@ namespace Symphony.Core
         {
             var c = new SingleEpochController();
             IExternalDevice dev = new UnitConvertingExternalDevice(UNUSED_DEVICE_NAME, UNUSED_DEVICE_MANUFACTURER, c, UNUSED_BACKGROUND);
+            IExternalDevice dev2 = new UnitConvertingExternalDevice(UNUSED_DEVICE_NAME + "2", UNUSED_DEVICE_MANUFACTURER, c, UNUSED_BACKGROUND);
 
             const int srate = 1000;
             IList<IMeasurement> data = (IList<IMeasurement>) Enumerable.Range(0, srate * 2).Select(i => new Measurement(i, "V") as IMeasurement).ToList();
@@ -256,6 +257,10 @@ namespace Symphony.Core
             e.Stimuli[dev] = new RenderedStimulus((string) "RenderedStimulus", (IDictionary<string, object>) new Dictionary<string, object>(),
                 data1);
             e.Background[dev] = new Epoch.EpochBackground(new Measurement(0, "V"), sampleRate);
+
+            // A stimulus just to increase the duration of the epoch.
+            e.Stimuli[dev2] = new RenderedStimulus((string)"RenderedStimulus", (IDictionary<string, object>)new Dictionary<string, object>(),
+                data1.Concat(data1));
 
             c.SetCurrentEpoch(e);
 
