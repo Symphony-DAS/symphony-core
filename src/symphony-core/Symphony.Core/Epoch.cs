@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Collections.Concurrent;
 using System.Diagnostics;
+using System.Diagnostics.Contracts;
 using System.IO;
 using System.Linq;
 using System.Threading;
@@ -233,12 +234,17 @@ namespace Symphony.Core
         /// </summary>
         private class StimulusStream
         {
-            private readonly IEnumerator<IOutputData> _stimEnumerator;
-            private readonly EpochBackground _background;
-            private readonly TimeSpan _blockDuration;
-            private readonly Maybe<TimeSpan> _duration;
+            public IStimulus Stimulus { get; private set; }
 
-            private TimeSpan _position;
+            public EpochBackground Background { get; private set; }
+
+            public TimeSpan BlockDuration { get; private set; }
+
+            public Maybe<TimeSpan> Duration { get; private set; }
+
+            public TimeSpan Position { get; private set; }
+
+            private IEnumerator<IOutputData> StimulusDataEnumerator { get; set; } 
 
             // Stimulus may be null to create a Stream of background.
             // Background may be null if this Stream's duration is less than the Stimulus duration.
@@ -247,33 +253,32 @@ namespace Symphony.Core
                 TimeSpan blockDuration,
                 Maybe<TimeSpan> duration)
             {
-                _stimEnumerator = stimulus != null ? 
+                Stimulus = stimulus;
+                Background = background;
+                BlockDuration = blockDuration;
+                Duration = duration;
+                Position = TimeSpan.Zero;
+
+                StimulusDataEnumerator = stimulus != null ? 
                     stimulus.DataBlocks(blockDuration).GetEnumerator() : Enumerable.Empty<IOutputData>().GetEnumerator();
-
-                _background = background;
-                _blockDuration = blockDuration;
-                _duration = duration;
-                _position = TimeSpan.Zero;
             }
+            
+            public bool IsDrained { get { return !IsIndefinite && Position >= Duration; } }
 
-            public bool IsDrained { get { return !IsIndefinite && _position >= _duration; } }
-
-            private bool IsIndefinite { get { return !(bool)_duration; } }
+            public bool IsIndefinite { get { return !(bool)Duration; } }
 
             /// <summary>
-            /// Pulls output data of duration up to the Stream's block duration, or null if the stream is drained.
+            /// Pulls output data of duration up to this Stream's block duration.
+            /// If this Stream is drained, output data with zero duration is returned.
             /// </summary>
             public IOutputData PullOutputData()
             {
-                if (IsDrained)
-                    return null;
-
                 IOutputData data = null;
-                var dur = _blockDuration <= _duration - _position || IsIndefinite ? _blockDuration : _duration - _position;
+                var dur = BlockDuration <= Duration - Position || IsIndefinite ? BlockDuration : Duration - Position;
 
-                if (_stimEnumerator.MoveNext())
+                if (StimulusDataEnumerator.MoveNext())
                 {
-                    data = _stimEnumerator.Current;
+                    data = StimulusDataEnumerator.Current;
                 }
 
                 if (data == null)
@@ -289,10 +294,11 @@ namespace Symphony.Core
 
                 if (data.Duration > dur)
                 {
+                    Contract.Assert(Position + dur != Duration, "Splitting stim data before stream's duration is reach.");
                     data = data.SplitData(dur).Head;
                 }
 
-                _position += dur;
+                Position += dur;
 
                 return data;
             }
@@ -300,8 +306,8 @@ namespace Symphony.Core
             private IOutputData BackgroundDataForDuration(TimeSpan duration)
             {
                 //Calculate background
-                var srate = _background.SampleRate;
-                var value = _background.Background;
+                var srate = Background.SampleRate;
+                var value = Background.Background;
 
                 IOutputData result = new OutputData(ConstantMeasurementList(duration, srate, value),
                                                     srate,
