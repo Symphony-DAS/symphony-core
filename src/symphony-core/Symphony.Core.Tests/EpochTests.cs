@@ -157,9 +157,28 @@ namespace Symphony.Core
         }
 
         [Test]
-        public void IsDrainedIfNoStimuli()
+        public void IsDrainedIfAllStimuliAreDrained()
         {
             Epoch e = new Epoch("");
+            var dev = new UnitConvertingExternalDevice("name", "co", new Measurement(1.0m, "units"));
+            var dev2 = new UnitConvertingExternalDevice("name2", "co", new Measurement(1.0m, "units"));
+
+            Assert.That(e.IsDrained, Is.True);
+
+            var rate = new Measurement(1000, "Hz");
+            var duration = TimeSpan.FromSeconds(1);
+
+            var d = new OutputData(Enumerable.Repeat(new Measurement(0, "units"), (int)duration.Samples(rate)), rate);
+            e.Stimuli[dev] = new RenderedStimulus((string)"stimID", (IDictionary<string, object>)new Dictionary<string, object>(), (IOutputData)d);
+            e.Stimuli[dev2] = new RenderedStimulus((string)"stimID", (IDictionary<string, object>)new Dictionary<string, object>(), (IOutputData)d);
+
+            Assert.That(e.IsDrained, Is.False);
+
+            e.PullOutputData(dev, duration);
+
+            Assert.That(e.IsDrained, Is.False);
+
+            e.PullOutputData(dev2, duration);
 
             Assert.That(e.IsDrained, Is.True);
         }

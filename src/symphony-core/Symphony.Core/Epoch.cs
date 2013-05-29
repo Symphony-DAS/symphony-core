@@ -107,7 +107,7 @@ namespace Symphony.Core
 
         public virtual bool IsDrained
         {
-            get { return !Stimuli.Values.Any() || StimulusStreams.Values.All(s => s.IsDrained); }
+            get { return Stimuli.Count == StimulusStreams.Count && StimulusStreams.Values.All(s => s.IsDrained); }
         }
 
         /// <summary>
@@ -254,7 +254,7 @@ namespace Symphony.Core
 
             public bool IsDrained { get { return !IsIndefinite && _position >= _duration; } }
 
-            private bool IsIndefinite { get { return (bool)_duration; } }
+            private bool IsIndefinite { get { return !(bool)_duration; } }
 
             /// <summary>
             /// Pulls output data of duration up to the Stream's block duration, or null if the stream is drained.
