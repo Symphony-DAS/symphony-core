@@ -45,7 +45,7 @@ namespace Symphony.Core
             ProtocolParameters = parameters;
             Responses = new Dictionary<IExternalDevice, Response>();
             Stimuli = new Dictionary<IExternalDevice, IStimulus>();
-            StimulusStreams = new ConcurrentDictionary<IExternalDevice, StimulusStream>();
+            PullStreams = new ConcurrentDictionary<IExternalDevice, PullStream>();
             Background = new Dictionary<IExternalDevice, EpochBackground>();
             StartTime = Maybe<DateTimeOffset>.No();
             Keywords = new HashSet<string>();
@@ -112,7 +112,7 @@ namespace Symphony.Core
         /// </summary>
         public virtual bool IsDrained
         {
-            get { return Stimuli.Count == StimulusStreams.Count && StimulusStreams.Values.All(s => s.IsDrained); }
+            get { return Stimuli.Count == PullStreams.Count && PullStreams.Values.All(s => s.IsDrained); }
         }
 
         /// <summary>
@@ -166,16 +166,16 @@ namespace Symphony.Core
 
         /// <summary>
         /// An Epoch's duration is the duration of its longest stimulus. If
-        /// this Epoch is indefinite, result is a Maybe.No.
+        /// this Epoch is indefinite, result is a Option.None.
         /// </summary>
-        public Maybe<TimeSpan> Duration
+        public Option<TimeSpan> Duration
         {
             get
             {
                 if (IsIndefinite)
-                    return Maybe<TimeSpan>.No();
+                    return Option<TimeSpan>.None();
 
-                return Maybe<TimeSpan>.Yes(Stimuli
+                return Option<TimeSpan>.Some(Stimuli
                     .Values
                     .Max(s => (TimeSpan)s.Duration));
             }
@@ -207,120 +207,100 @@ namespace Symphony.Core
         /// <returns>IOutputData intsance with duration less than or equal to blockDuration</returns>
         public IOutputData PullOutputData(IExternalDevice dev, TimeSpan blockDuration)
         {
-            var stream = StimulusStreams.GetOrAdd(dev, 
+            var stream = PullStreams.GetOrAdd(dev, 
                 (d) =>
                     {
                         IStimulus stimulus;
-                        var hasStimulus = Stimuli.TryGetValue(d, out stimulus);
+                        if (Stimuli.TryGetValue(d, out stimulus))
+                            return new StimulusPullStream(stimulus, blockDuration);
 
                         EpochBackground background;
-                        var hasBackground = Background.TryGetValue(d, out background);
+                        if (Background.TryGetValue(d, out background))
+                            return new BackgroundPullStream(background, blockDuration, Duration);
 
-                        if (!hasStimulus && !hasBackground)
-                            throw new ArgumentException("Epoch does not have a stimulus or background for " + d.Name);
-
-                        return new StimulusStream(stimulus, background, blockDuration, Duration);
+                        throw new ArgumentException("Epoch does not have a stimulus or background for " + d.Name);
                     });
 
             return stream.PullOutputData();
         }
 
-        private ConcurrentDictionary<IExternalDevice, StimulusStream> StimulusStreams { get; set; } 
+        private ConcurrentDictionary<IExternalDevice, PullStream> PullStreams { get; set; } 
 
-        /// <summary>
-        /// A stream around a Stimulus. A stream's duration may be longer (or shorter)
-        /// than the actual duration of the underlying Stimulus. If the stream is longer,
-        /// the contents of the remaining duration will be of the specified background. 
-        /// </summary>
-        private class StimulusStream
+        private abstract class PullStream
         {
-            public IStimulus Stimulus { get; private set; }
-
-            public EpochBackground Background { get; private set; }
-
             public TimeSpan BlockDuration { get; private set; }
+            public Option<TimeSpan> Duration { get; private set; }
+            public TimeSpan Position { get; protected set; }
 
-            public Maybe<TimeSpan> Duration { get; private set; }
-
-            public TimeSpan Position { get; private set; }
-
-            private IEnumerator<IOutputData> StimulusDataEnumerator { get; set; } 
-
-            // Stimulus may be null to create a Stream of background.
-            // Background may be null if this Stream's duration is less than the Stimulus duration.
-            public StimulusStream(IStimulus stimulus, 
-                EpochBackground background, 
-                TimeSpan blockDuration,
-                Maybe<TimeSpan> duration)
+            protected PullStream(TimeSpan blockDuration, Option<TimeSpan> duration)
             {
-                Stimulus = stimulus;
-                Background = background;
                 BlockDuration = blockDuration;
                 Duration = duration;
                 Position = TimeSpan.Zero;
-
-                StimulusDataEnumerator = stimulus != null ? 
-                    stimulus.DataBlocks(blockDuration).GetEnumerator() : Enumerable.Empty<IOutputData>().GetEnumerator();
             }
-            
+
+            /// <summary>
+            /// Indicates if this Stream has been drained of all output data.
+            /// </summary>
             public bool IsDrained { get { return !IsIndefinite && Position >= Duration; } }
 
             public bool IsIndefinite { get { return !(bool)Duration; } }
 
             /// <summary>
             /// Pulls output data of duration up to this Stream's block duration.
-            /// If this Stream is drained, output data with zero duration is returned.
             /// </summary>
-            public IOutputData PullOutputData()
+            public abstract IOutputData PullOutputData();
+        }
+
+        private class StimulusPullStream : PullStream
+        {
+            public IStimulus Stimulus { get; private set; }
+            private IEnumerator<IOutputData> StimulusDataEnumerator { get; set; } 
+
+            public StimulusPullStream(IStimulus stimulus, TimeSpan blockDuration) 
+                : base(blockDuration, stimulus.Duration)
+            {
+                Stimulus = stimulus;
+                StimulusDataEnumerator = stimulus.DataBlocks(blockDuration).GetEnumerator();
+            }
+
+            public override IOutputData PullOutputData()
             {
                 IOutputData data = null;
-                var dur = BlockDuration <= Duration - Position || IsIndefinite ? BlockDuration : Duration - Position;
 
                 if (StimulusDataEnumerator.MoveNext())
                 {
                     data = StimulusDataEnumerator.Current;
+                    Position += data.Duration;
                 }
-
-                if (data == null)
-                {
-                    data = BackgroundDataForDuration(dur);
-                }
-
-                if (data.Duration < dur)
-                {
-                    var remainingDuration = dur - data.Duration;
-                    data = data.Concat(BackgroundDataForDuration(remainingDuration));
-                }
-
-                if (data.Duration > dur)
-                {
-                    Contract.Assert(Position + dur != Duration, "Splitting stim data before stream's duration is reach.");
-                    data = data.SplitData(dur).Head;
-                }
-
-                Position += dur;
 
                 return data;
             }
+        }
 
-            private IOutputData BackgroundDataForDuration(TimeSpan duration)
+        private class BackgroundPullStream : PullStream
+        {
+            public EpochBackground Background { get; private set; }
+
+            public BackgroundPullStream(EpochBackground background, TimeSpan blockDuration, Option<TimeSpan> duration)
+                : base(blockDuration, duration)
             {
-                //Calculate background
-                var srate = Background.SampleRate;
-                var value = Background.Background;
-
-                IOutputData result = new OutputData(ConstantMeasurementList(duration, srate, value),
-                                                    srate,
-                                                    false);
-
-                return result;
+                Background = background;
             }
 
-            private static IEnumerable<IMeasurement> ConstantMeasurementList(TimeSpan blockDuration, IMeasurement srate, IMeasurement value)
+            public override IOutputData PullOutputData()
             {
-                return Enumerable.Range(0, (int)blockDuration.Samples(srate))
-                    .Select(i => value)
-                    .ToList();
+                if (IsDrained)
+                    return null;
+
+                var pullDuration = BlockDuration <= Duration - Position || IsIndefinite ? BlockDuration : Duration - Position;
+
+                var nSamples = (int)pullDuration.Samples(Background.SampleRate);
+                var data = Enumerable.Range(0, nSamples).Select(i => Background.Background);
+
+                Position += pullDuration;
+
+                return new OutputData(data, Background.SampleRate, IsDrained);
             }
         }
 
