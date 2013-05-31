@@ -194,12 +194,12 @@ namespace Symphony.Core
 
 
         /// <summary>
-        /// Pulls IOutputData from the current Epoch destined for a given external deivce.
-        /// Result will have duration greater than zero, but may not equal the requested duration.
+        /// Pulls IOutputData from Epochs destined for a given external device. Result 
+        /// will have duration greater than zero, but may not equal the requested duration.
         /// </summary>
         /// <param name="device">ExternalDevice for this outputdata</param>
         /// <param name="duration">Duration of the data requested</param>
-        /// <returns>Output data for the requested device</returns>
+        /// <returns>Output data for the requested device, or null if the data source is drained.</returns>
         public virtual IOutputData PullOutputData(IExternalDevice device, TimeSpan duration)
         {
             if (CurrentEpoch == null)

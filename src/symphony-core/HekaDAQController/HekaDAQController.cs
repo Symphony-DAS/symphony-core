@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics.Contracts;
 using System.Linq;
 using System.Threading.Tasks;
 using Heka.NativeInterop;
@@ -402,12 +403,21 @@ namespace Heka
 
             IDictionary<ChannelIdentifier, short[]> output = new Dictionary<ChannelIdentifier, short[]>();
             IDictionary<ChannelIdentifier, short[]> deficitOutput = new Dictionary<ChannelIdentifier, short[]>();
-
+            IDictionary<ChannelIdentifier, short[]> background = new Dictionary<ChannelIdentifier, short[]>();
 
 
             foreach (var s in ActiveOutputStreams.Cast<HekaDAQOutputStream>())
             {
                 var outputData = outData[s];
+
+                if (outputData == null)
+                {
+                    background[new ChannelIdentifier { ChannelNumber = s.ChannelNumber, ChannelType = (ushort)s.ChannelType }]
+                        = BackgroundSamplesForStream(s, ProcessInterval);
+                    
+                    continue;
+                }
+
                 var cons = outputData.DataWithUnits(HekaDAQOutputStream.DAQCountUnits).SplitData(deficit);
 
                 short[] outputSamples = cons.Rest.Data.Select((m) => (short)m.QuantityInBaseUnit).ToArray();
@@ -416,6 +426,12 @@ namespace Heka
                     outputSamples;
                 deficitOutput[new ChannelIdentifier { ChannelNumber = s.ChannelNumber, ChannelType = (ushort)s.ChannelType }] =
                     deficitOutputSamples;
+
+                if (outputData.Duration < ProcessInterval)
+                {
+                    background[new ChannelIdentifier { ChannelNumber = s.ChannelNumber, ChannelType = (ushort)s.ChannelType }]
+                        = BackgroundSamplesForStream(s, ProcessInterval - outputData.Duration);
+                }
             }
 
             if(deficitOutput.Any())
@@ -443,6 +459,11 @@ namespace Heka
             }
 
             IEnumerable<KeyValuePair<ChannelIdentifier, short[]>> input = Device.ReadWrite(output, inputChannels, nsamples);
+
+            if (background.Any())
+            {
+                Device.Write(background);
+            }
 
             var result = new ConcurrentDictionary<IDAQInputStream, IInputData>();
             Parallel.ForEach(input, (kvp) =>
@@ -473,8 +494,18 @@ namespace Heka
             return result;
         }
 
+        private static short[] BackgroundSamplesForStream(IDAQOutputStream s, TimeSpan duration)
+        {
+            Contract.Assert(!s.HasMoreData, "Background for a stream with more data!?");
 
+            var srate = s.SampleRate;
+            var value = s.Background;
 
+            var samples = Enumerable.Range(0, (int)duration.Samples(srate)).Select(i => value).ToList();
+
+            return samples.Select((m) => (short)m.QuantityInBaseUnit).ToArray();
+        }
+        
         private HekaDAQStream StreamWithIdentifier(ChannelIdentifier channelIdentifier)
         {
             HekaDAQStream result =

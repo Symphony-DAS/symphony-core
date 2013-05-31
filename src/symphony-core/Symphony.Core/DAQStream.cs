@@ -450,7 +450,7 @@ namespace Symphony.Core
         /// If so, this stream is marked as with LastDataPulled=true.</para>
         /// </summary>
         /// <remarks>Appends this stream's Configuration to the output data.</remarks>
-        /// <returns>The output data to be sent down the output pipeline</returns>
+        /// <returns>The output data to be sent down the output pipeline, or null if the data source is drained.</returns>
         /// <exception cref="DAQException">If Device is null</exception>
         /// <exception cref="DAQException">If the pulled data's SampleRate does match this stream's SampleRate</exception>
         public virtual IOutputData PullOutputData(TimeSpan duration)
@@ -461,6 +461,11 @@ namespace Symphony.Core
             }
 
             IOutputData outData = Device.PullOutputData(this, duration);
+            if (outData == null)
+            {
+                LastDataPulled = true;
+                return null;
+            }
 
             if (!outData.SampleRate.Equals(this.SampleRate))
                 throw new DAQException("Sample rate mismatch.");

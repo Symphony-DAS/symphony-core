@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using HekkaDAQ.Tests.Properties;
 
 namespace Heka
@@ -147,13 +148,9 @@ namespace Heka
             controller.InitHardware();
 
             OutStream = controller.OutputStreams
-                .OfType<HekaDAQOutputStream>()
-                .Where(str => str.ChannelNumber == 0)
-                .First();
+                                  .OfType<HekaDAQOutputStream>().First(str => str.ChannelNumber == 0);
             InputStream = controller.InputStreams
-                .OfType<HekaDAQInputStream>()
-                .Where(str => str.ChannelNumber == 0)
-                .First();
+                                    .OfType<HekaDAQInputStream>().First(str => str.ChannelNumber == 0);
 
             InputStream.Configuration["SampleRate"] = InputStream.SampleRate;
 
@@ -183,7 +180,7 @@ namespace Heka
 
 
             OutDevice = new TestDevice("Output", dataQueue);
-            InputDevice = new TestDevice("Intput", null);
+            InputDevice = new TestDevice("Input", null);
 
             OutDevice.MeasurementConversionTarget = "V";
             InputDevice.MeasurementConversionTarget = "V";
@@ -308,10 +305,10 @@ namespace Heka
         }
 
         /// <summary>
-        /// Controller should exeptional-stop when an output stream's buffer underruns
+        /// Controller should present a stream background to prevent buffer underrun.
         /// </summary>
         [Test]
-        public void ExceptionalStopOnOutputUnderrun()
+        public void ShouldNotUnderrun()
         {
             foreach (HekaDAQController daq in HekaDAQController.AvailableControllers())
             {
@@ -326,9 +323,15 @@ namespace Heka
 
                     daq.ExceptionalStop += (c, args) => receivedExc = true;
 
-                    daq.Start(false);
+                    new TaskFactory().StartNew(() =>
+                    {
+                        Thread.Sleep(TimeSpan.FromSeconds(10.0));
+                        daq.Stop();
+                    }, TaskCreationOptions.LongRunning);
 
-                    Assert.That(receivedExc, Is.True.After(1000,10));
+                    daq.Start(false);
+                    
+                    Assert.That(receivedExc, Is.False);
                 }
                 finally
                 {

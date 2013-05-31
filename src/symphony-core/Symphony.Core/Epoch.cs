@@ -204,7 +204,8 @@ namespace Symphony.Core
         /// </summary>
         /// <param name="dev">Output device requesting data</param>
         /// <param name="blockDuration">Requested duration of the IOutputData</param>
-        /// <returns>IOutputData intsance with duration less than or equal to blockDuration</returns>
+        /// <returns>IOutputData instance with duration less than or equal to blockDuration, 
+        /// or null if data source is drained.</returns>
         public IOutputData PullOutputData(IExternalDevice dev, TimeSpan blockDuration)
         {
             var stream = PullStreams.GetOrAdd(dev, 

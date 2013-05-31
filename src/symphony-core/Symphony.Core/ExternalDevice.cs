@@ -137,7 +137,7 @@ namespace Symphony.Core
         /// <remarks>Appends this Device's Configuration to the IOutputData</remarks>
         /// <param name="stream">Stream for output</param>
         /// <param name="duration">Requested duration</param>
-        /// <returns>IOutputData of duration less than or equal to duration</returns>
+        /// <returns>IOutputData of duration less than or equal to duration, or null if the data source is drained.</returns>
         /// <exception cref="ExternalDeviceException">Requested duration is less than one sample</exception>
         IOutputData PullOutputData(IDAQOutputStream stream, TimeSpan duration);
 
@@ -360,7 +360,7 @@ namespace Symphony.Core
         /// <remarks>Appends this Device's Configuration to the IOutputData</remarks>
         /// <param name="stream">Stream for output</param>
         /// <param name="duration">Requested duration</param>
-        /// <returns>IOutputData of duration less than or equal to duration</returns>
+        /// <returns>IOutputData of duration less than or equal to duration, or null if the source is drained</returns>
         /// <exception cref="ExternalDeviceException">Requested duration is less than one sample</exception>
         public abstract IOutputData PullOutputData(IDAQOutputStream stream, TimeSpan duration);
 
@@ -373,7 +373,7 @@ namespace Symphony.Core
         /// <param name="inData">IInputData to push to the controller</param>
         public abstract void PushInputData(IDAQInputStream stream, IInputData inData);
 
-        public void DidOutputData(IDAQOutputStream stream, DateTimeOffset outputTime, TimeSpan duration, IEnumerable<IPipelineNodeConfiguration> configuration)
+        public virtual void DidOutputData(IDAQOutputStream stream, DateTimeOffset outputTime, TimeSpan duration, IEnumerable<IPipelineNodeConfiguration> configuration)
         {
             Controller.DidOutputData(this, outputTime, duration, configuration);
         }
@@ -462,6 +462,10 @@ namespace Symphony.Core
             try
             {
                 IOutputData data = this.Controller.PullOutputData(this, duration);
+                if (data == null)
+                {
+                    return null;
+                }
 
                 return data.DataWithUnits(MeasurementConversionTarget)
                     .DataWithExternalDeviceConfiguration(this, Configuration);
