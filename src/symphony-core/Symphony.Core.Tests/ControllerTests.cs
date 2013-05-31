@@ -245,7 +245,6 @@ namespace Symphony.Core
         {
             var c = new SingleEpochController();
             IExternalDevice dev = new UnitConvertingExternalDevice(UNUSED_DEVICE_NAME, UNUSED_DEVICE_MANUFACTURER, c, UNUSED_BACKGROUND);
-            IExternalDevice dev2 = new UnitConvertingExternalDevice(UNUSED_DEVICE_NAME + "2", UNUSED_DEVICE_MANUFACTURER, c, UNUSED_BACKGROUND);
 
             const int srate = 1000;
             IList<IMeasurement> data = (IList<IMeasurement>) Enumerable.Range(0, srate * 2).Select(i => new Measurement(i, "V") as IMeasurement).ToList();
@@ -256,11 +255,6 @@ namespace Symphony.Core
             var e = new Epoch("");
             e.Stimuli[dev] = new RenderedStimulus((string) "RenderedStimulus", (IDictionary<string, object>) new Dictionary<string, object>(),
                 data1);
-            e.Background[dev] = new Epoch.EpochBackground(new Measurement(0, "V"), sampleRate);
-
-            // A stimulus just to increase the duration of the epoch.
-            e.Stimuli[dev2] = new RenderedStimulus((string)"RenderedStimulus", (IDictionary<string, object>)new Dictionary<string, object>(),
-                data1.Concat(data1));
 
             c.SetCurrentEpoch(e);
 
@@ -271,19 +265,14 @@ namespace Symphony.Core
             c.NextEpoch();
             var pull1 = c.PullOutputData(dev, d1);
             var pull2 = c.PullOutputData(dev, d1);
-
+            var pull3 = c.PullOutputData(dev, d1);
 
             var samples = (int)d1.Samples(new Measurement(srate, "Hz"));
             Assert.AreEqual(data.Take(samples).ToList(),
                 pull1.Data);
             Assert.AreEqual(data.Skip(samples).Take(samples).ToList(),
                 pull2.Data);
-
-            var pull3 = c.PullOutputData(dev, d1);
-            Assert.AreEqual(data.Skip(2 * samples)
-                .Take(samples)
-                .Concat(Enumerable.Range(0, srate - samples).Select(i => e.Background[dev].Background))
-                .ToList(),
+            Assert.AreEqual(data.Skip(2 * samples).Take(samples).ToList(),
                 pull3.Data);
 
         }

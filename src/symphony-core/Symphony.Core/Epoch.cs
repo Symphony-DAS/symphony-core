@@ -221,33 +221,30 @@ namespace Symphony.Core
                         throw new ArgumentException("Epoch does not have a stimulus or background for " + d.Name);
                     });
 
+            Contract.Assert(!stream.IsDrained, "Pulling from a drained stream");
             return stream.PullOutputData();
         }
 
-        private ConcurrentDictionary<IExternalDevice, PullStream> PullStreams { get; set; } 
+        private ConcurrentDictionary<IExternalDevice, PullStream> PullStreams { get; set; }
 
         private abstract class PullStream
         {
             public TimeSpan BlockDuration { get; private set; }
-            public Option<TimeSpan> Duration { get; private set; }
-            public TimeSpan Position { get; protected set; }
-
-            protected PullStream(TimeSpan blockDuration, Option<TimeSpan> duration)
-            {
-                BlockDuration = blockDuration;
-                Duration = duration;
-                Position = TimeSpan.Zero;
-            }
 
             /// <summary>
             /// Indicates if this Stream has been drained of all output data.
             /// </summary>
-            public bool IsDrained { get { return !IsIndefinite && Position >= Duration; } }
+            public bool IsDrained { get; protected set; }
 
-            public bool IsIndefinite { get { return !(bool)Duration; } }
+            protected PullStream(TimeSpan blockDuration)
+            {
+                BlockDuration = blockDuration;
+                IsDrained = false;
+            }
 
             /// <summary>
-            /// Pulls output data of duration up to this Stream's block duration.
+            /// Returns output data of duration up to this Stream's block duration,
+            /// or null if this Stream is drained.
             /// </summary>
             public abstract IOutputData PullOutputData();
         }
@@ -255,10 +252,10 @@ namespace Symphony.Core
         private class StimulusPullStream : PullStream
         {
             public IStimulus Stimulus { get; private set; }
-            private IEnumerator<IOutputData> StimulusDataEnumerator { get; set; } 
+            private IEnumerator<IOutputData> StimulusDataEnumerator { get; set; }
 
-            public StimulusPullStream(IStimulus stimulus, TimeSpan blockDuration) 
-                : base(blockDuration, stimulus.Duration)
+            public StimulusPullStream(IStimulus stimulus, TimeSpan blockDuration)
+                : base(blockDuration)
             {
                 Stimulus = stimulus;
                 StimulusDataEnumerator = stimulus.DataBlocks(blockDuration).GetEnumerator();
@@ -271,7 +268,14 @@ namespace Symphony.Core
                 if (StimulusDataEnumerator.MoveNext())
                 {
                     data = StimulusDataEnumerator.Current;
-                    Position += data.Duration;
+                    IsDrained = data.IsLast;
+                }
+
+                if (data == null && !IsDrained)
+                {
+                    // Seems OK to correct this instead of throwing (at the moment).
+                    log.Warn("A Stimulus did not properly indicate its last data block.");
+                    IsDrained = true;
                 }
 
                 return data;
@@ -280,25 +284,28 @@ namespace Symphony.Core
 
         private class BackgroundPullStream : PullStream
         {
-            public EpochBackground Background { get; private set; }
+            public EpochBackground Background { get; set; }
+            public Option<TimeSpan> Duration { get; set; }
+            public TimeSpan Elapsed { get; set; }
 
             public BackgroundPullStream(EpochBackground background, TimeSpan blockDuration, Option<TimeSpan> duration)
-                : base(blockDuration, duration)
+                : base(blockDuration)
             {
                 Background = background;
+                Duration = duration;
+                Elapsed = TimeSpan.Zero;
             }
 
             public override IOutputData PullOutputData()
             {
-                if (IsDrained)
-                    return null;
-
-                var pullDuration = BlockDuration <= Duration - Position || IsIndefinite ? BlockDuration : Duration - Position;
+                var isIndefinite = !(bool)Duration;
+                var pullDuration = BlockDuration <= Duration - Elapsed || isIndefinite ? BlockDuration : Duration - Elapsed;
 
                 var nSamples = (int)pullDuration.Samples(Background.SampleRate);
                 var data = Enumerable.Range(0, nSamples).Select(i => Background.Background);
 
-                Position += pullDuration;
+                Elapsed += pullDuration;
+                IsDrained = Elapsed >= Duration;
 
                 return new OutputData(data, Background.SampleRate, IsDrained);
             }
