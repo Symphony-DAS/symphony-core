@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 using System.Collections.Concurrent;
 using System.Threading.Tasks;
 using log4net;
@@ -56,24 +55,27 @@ namespace Symphony.Core
         /// <returns>Stream of given type and name or null if none exists</returns>
         /// <exception cref="InvalidOperationException">More than one stream exists with given name</exception>
         T GetStream<T>(string name) where T : class, IDAQStream;
-
-
+        
         /// <summary>
-        /// Of all Streams assoiated with this DAQController, the IDAQInputStreams
+        /// Of all Streams associated with this DAQController, the IDAQInputStreams
         /// </summary>
         IEnumerable<IDAQInputStream> InputStreams { get; }
 
         /// <summary>
-        /// Of all Streams assoiated with this DAQController, the IDAQOutputStreams
+        /// Of all Streams associated with this DAQController, the IDAQOutputStreams
         /// </summary>
         IEnumerable<IDAQOutputStream> OutputStreams { get; }
-
-
+        
         /// <summary>
         /// Validates the configuration of this IDAQController
         /// </summary>
         /// <returns>A Maybe monad indicating validation (bool) or error (string)</returns>
         Maybe<string> Validate();
+
+        /// <summary>
+        /// The interval this IDAQController attempts to maintain for process iterations.
+        /// </summary>
+        TimeSpan ProcessInterval { get; }
 
         /// <summary>
         /// Event indicating that the DAQController processed a single iteration (typically ProcessInterval in duration)
@@ -96,11 +98,6 @@ namespace Symphony.Core
         /// The name of this controller.
         /// </summary>
         string Name { get; }
-
-        /// <summary>
-        /// Blocks for completion of all asynchronous input tasks (incoming data).
-        /// </summary>
-        void WaitForInputTasks();
 
         /// <summary>
         /// Asynchronously sets the background for the given stream. Stream background given by s.Background.
@@ -172,7 +169,7 @@ namespace Symphony.Core
             this.DAQStreams = new HashSet<IDAQStream>();
             this.Configuration = new Dictionary<string, object>();
             this.InputTasks = new List<Task>();
-
+            this.OutputTasks = new List<Task>();
         }
 
 
@@ -272,7 +269,9 @@ namespace Symphony.Core
             finally
             {
                 if (Running)
+                {
                     Stop();
+                }
 
                 DidEndProcessLoop();
             }
@@ -346,8 +345,7 @@ namespace Symphony.Core
 
                 // Push Output events
                 PushOutputDataEvents(outputTime, outgoingData);
-
-
+                
                 OnProcessIteration();
 
                 //Wait for rest of the process interval
@@ -388,22 +386,17 @@ namespace Symphony.Core
                                                                      }
                                                                  })
                               : Task.Factory.StartNew(() =>
-                                                          {
-                                                              foreach (var kvp in incomingData)
-                                                              {
-                                                                  kvp.Key.PushInputData(kvp.Value);
-                                                              }
-                                                          });
+                                      {
+                                          foreach (var kvp in incomingData)
+                                          {
+                                              kvp.Key.PushInputData(kvp.Value);
+                                          }
+                                      });
 
 
 
             InputTasks = InputTasks.Where(t => !t.IsCompleted).ToList();
             InputTasks.Add(newTask);
-        }
-
-        public void WaitForInputTasks()
-        {
-            Task.WaitAll(InputTasks.ToArray());
         }
 
         public void ApplyStreamBackground(IDAQOutputStream s)
@@ -452,18 +445,25 @@ namespace Symphony.Core
                                      }
                                  });
 
-            if (exceptions.Count() > 0) throw new AggregateException(exceptions);
+            if (exceptions.Any()) throw new AggregateException(exceptions);
         }
+
+        private IList<Task> OutputTasks { get; set; } 
 
         private IEnumerable<KeyValuePair<IDAQOutputStream, Task<IOutputData>>> NextOutgoingData()
         {
-            var outgoingData = ActiveOutputStreams.ToDictionary(
-                s => s,
-                s => Task.Factory.StartNew(
-                    () => NextOutputDataForStream(s),
-                    TaskCreationOptions.PreferFairness
-                    )
-                );
+            var outgoingData = new Dictionary<IDAQOutputStream, Task<IOutputData>>();
+
+            foreach (var stream in ActiveOutputStreams)
+            {
+                var s = stream;
+                var newTask = Task.Factory.StartNew(() => NextOutputDataForStream(s), TaskCreationOptions.PreferFairness);
+                outgoingData.Add(s, newTask);
+                
+                OutputTasks.Add(newTask);
+            }
+
+            OutputTasks = OutputTasks.Where(t => !t.IsCompleted).ToList();
 
             return outgoingData;
         }
@@ -481,7 +481,7 @@ namespace Symphony.Core
         /// <returns>true if the DAQController should stop (e.g. data exausted)</returns>
         protected virtual bool ShouldStop()
         {
-            return (ActiveOutputStreamsWithData.Count() == 0 || StopRequested);
+            return (!ActiveOutputStreamsWithData.Any() || StopRequested);
         }
 
         protected bool StopRequested { get; private set; }
@@ -542,9 +542,13 @@ namespace Symphony.Core
 
 
         protected virtual void CommonStop()
-        {
-            //OutputTaskCTS.Cancel();
+        {           
             RequestStop();
+
+            //OutputTaskCTS.Cancel();
+            Task.WaitAll(OutputTasks.ToArray());
+            Task.WaitAll(InputTasks.ToArray());
+
             SetStreamsBackground();
         }
 

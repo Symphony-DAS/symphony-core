@@ -93,12 +93,17 @@ namespace Symphony.Core
 
             public override Option<TimeSpan> Duration { get { return Option<TimeSpan>.Some(TimeSpan.Zero); } }
 
+            public override IMeasurement SampleRate
+            {
+                get { throw new NotImplementedException(); }
+            }
         }
     }
 
     [TestFixture]
     class DelegatedStimulusTests
     {
+        IMeasurement UNUSED_RATE = new Measurement(1000, "Hz");
 
         [Test]
         public void HoldsParameters()
@@ -107,7 +112,7 @@ namespace Symphony.Core
             parameters["key1"] = "value1";
             parameters["key2"] = 2;
 
-            var s = new DelegatedStimulus("DelegatedStimulus", "units",
+            var s = new DelegatedStimulus("DelegatedStimulus", "units", UNUSED_RATE, 
                 parameters,
                 (p, b) => null,
                 (p) => Option<TimeSpan>.Some(TimeSpan.FromMilliseconds(0)));
@@ -120,7 +125,7 @@ namespace Symphony.Core
             var parameters = new Dictionary<string, object>();
             string stimID = "my.ID";
 
-            var s = new DelegatedStimulus(stimID, "units",
+            var s = new DelegatedStimulus(stimID, "units", UNUSED_RATE,
                 parameters,
                 (p, b) => null,
                 (p) => Option<TimeSpan>.Some(TimeSpan.FromMilliseconds(0)));
@@ -134,7 +139,7 @@ namespace Symphony.Core
             var parameters = new Dictionary<string, object>();
             parameters["duration"] = TimeSpan.FromMilliseconds(617);
 
-            var s = new DelegatedStimulus("DelegatedStimulus", "units",
+            var s = new DelegatedStimulus("DelegatedStimulus", "units", UNUSED_RATE, 
                                           parameters,
                                           (p, b) => null,
                                           (p) => Option<TimeSpan>.Some((TimeSpan)p["duration"]));
@@ -148,10 +153,10 @@ namespace Symphony.Core
             var parameters = new Dictionary<string, object>();
             parameters["sampleRate"] = new Measurement(1000, "Hz");
 
-            var s = new DelegatedStimulus("DelegatedStimulus", "units",
+            var s = new DelegatedStimulus("DelegatedStimulus", "units", (IMeasurement)parameters["sampleRate"],
                                           parameters,
                                           (p, b) => new OutputData(Enumerable.Range(0, (int)(b.TotalSeconds * (double)((IMeasurement)p["sampleRate"]).QuantityInBaseUnit))
-                                                                       .Select(i => new Measurement(i, "units")).ToList(),
+                                                                             .Select(i => new Measurement(i, "units")).ToList(),
                                                                    (IMeasurement)p["sampleRate"],
                                                                    false),
                                           (p) => Option<TimeSpan>.None());
@@ -181,10 +186,10 @@ namespace Symphony.Core
             var parameters = new Dictionary<string, object>();
             parameters["sampleRate"] = new Measurement(1000, "Hz");
 
-            var s = new DelegatedStimulus("DelegatedStimulus", "units",
+            var s = new DelegatedStimulus("DelegatedStimulus", "units", (IMeasurement)parameters["sampleRate"],
                                           parameters,
                                           (p, b) => new OutputData(Enumerable.Range(0, (int)(b.TotalSeconds * (double)((IMeasurement)p["sampleRate"]).QuantityInBaseUnit))
-                                                                       .Select(i => new Measurement(i, "other")).ToList(),
+                                                                             .Select(i => new Measurement(i, "other")).ToList(),
                                                                    (IMeasurement)p["sampleRate"],
                                                                    false),
                                           (p) => Option<TimeSpan>.None());

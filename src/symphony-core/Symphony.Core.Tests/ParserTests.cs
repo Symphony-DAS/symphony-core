@@ -175,6 +175,7 @@ namespace Symphony.Core
         }
 
         [Test]
+        [Ignore("Do we really need to maintain a parser?")]
         public void MinimalRigValidates()
         {
             // How do Converters get registered?

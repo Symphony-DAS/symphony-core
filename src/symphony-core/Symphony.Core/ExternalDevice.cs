@@ -58,6 +58,16 @@ namespace Symphony.Core
         IDictionary<string, IDAQStream> Streams { get; }
 
         /// <summary>
+        /// Of all Streams associated with this ExternalDevice, the IDAQInputStreams
+        /// </summary>
+        IEnumerable<IDAQInputStream> InputStreams { get; }
+
+        /// <summary>
+        /// Of all Streams associated with this ExternalDevice, the IDAQOutputStreams
+        /// </summary>
+        IEnumerable<IDAQOutputStream> OutputStreams { get; }
+
+        /// <summary>
         /// The value, in device  units, that should
         /// be applied to any IOutputStreams bound to this device when stopped.
         /// </summary>
@@ -137,7 +147,7 @@ namespace Symphony.Core
         /// <remarks>Appends this Device's Configuration to the IOutputData</remarks>
         /// <param name="stream">Stream for output</param>
         /// <param name="duration">Requested duration</param>
-        /// <returns>IOutputData of duration less than or equal to duration, or null if the data source is drained.</returns>
+        /// <returns>IOutputData of duration greater than or equal to requested duration.</returns>
         /// <exception cref="ExternalDeviceException">Requested duration is less than one sample</exception>
         IOutputData PullOutputData(IDAQOutputStream stream, TimeSpan duration);
 
@@ -239,6 +249,27 @@ namespace Symphony.Core
         /// Use BindStream and UnbindStream to modify the collection.
         /// </summary>
         public virtual IDictionary<string, IDAQStream> Streams { get; private set; }
+
+        public virtual IEnumerable<IDAQInputStream> InputStreams
+        {
+            get
+            {
+                return StreamsOfType<IDAQInputStream>().OrderBy(s => s.Name);
+            }
+        }
+
+        public virtual IEnumerable<IDAQOutputStream> OutputStreams
+        {
+            get
+            {
+                return StreamsOfType<IDAQOutputStream>().OrderBy(s => s.Name);
+            }
+        }
+
+        private IEnumerable<T> StreamsOfType<T>() where T : IDAQStream
+        {
+            return Streams.Values.OfType<T>();
+        }
 
         /// <summary>
         /// The value, in MeasurementConversionTarget input units, that should
@@ -360,7 +391,7 @@ namespace Symphony.Core
         /// <remarks>Appends this Device's Configuration to the IOutputData</remarks>
         /// <param name="stream">Stream for output</param>
         /// <param name="duration">Requested duration</param>
-        /// <returns>IOutputData of duration less than or equal to duration, or null if the source is drained</returns>
+        /// <returns>IOutputData of duration greater than or equal to the requested duration.</returns>
         /// <exception cref="ExternalDeviceException">Requested duration is less than one sample</exception>
         public abstract IOutputData PullOutputData(IDAQOutputStream stream, TimeSpan duration);
 
@@ -462,10 +493,6 @@ namespace Symphony.Core
             try
             {
                 IOutputData data = this.Controller.PullOutputData(this, duration);
-                if (data == null)
-                {
-                    return null;
-                }
 
                 return data.DataWithUnits(MeasurementConversionTarget)
                     .DataWithExternalDeviceConfiguration(this, Configuration);

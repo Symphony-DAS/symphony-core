@@ -311,7 +311,7 @@ namespace Symphony.Core
             WriteKeywords(epochID, e.Keywords);
 
             // WriteBackground
-            Write(epochID, "background", e.Background);
+            Write(epochID, "background", e.Backgrounds);
 
             // WriteProtocolParams
             WriteDictionary(epochID, "protocolParameters", e.ProtocolParameters);
@@ -623,8 +623,11 @@ namespace Symphony.Core
             H5S.close(spaceId);
         }
 
-        private void Write(H5GroupId parent, string name, IDictionary<IExternalDevice, Epoch.EpochBackground> background)
+        private void Write(H5GroupId parent, string name, IDictionary<IExternalDevice, Background> background)
         {
+            if (!background.Any())
+                return;
+
             H5DataSpaceId spaceId = H5S.create_simple(1, new long[1] { (long)background.Keys.Count });
             H5DataSetId dataSetId = H5D.create(parent, name, extdevmeasurement_t, spaceId);
 
@@ -633,7 +636,7 @@ namespace Symphony.Core
 
             foreach (var ed in background.Keys)
             {
-                IMeasurement m = background[ed].Background;
+                IMeasurement m = background[ed].Value;
                 IMeasurement sr = background[ed].SampleRate;
 
                 emts[count] = Convert(ed, m, sr);

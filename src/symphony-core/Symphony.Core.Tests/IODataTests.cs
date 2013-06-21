@@ -35,6 +35,16 @@ namespace Symphony.Core
                 get { throw new NotImplementedException(); }
             }
 
+            public IEnumerable<IDAQInputStream> InputStreams
+            {
+                get { throw new NotImplementedException(); }
+            }
+
+            public IEnumerable<IDAQOutputStream> OutputStreams
+            {
+                get { throw new NotImplementedException(); }
+            }
+
             public IMeasurement Background
             {
                 get { throw new NotImplementedException(); }

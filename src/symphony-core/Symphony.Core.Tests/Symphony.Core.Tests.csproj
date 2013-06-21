@@ -119,6 +119,7 @@
     <Compile Include="ExternalDeviceTests.cs" />
     <Compile Include="HDF5Tests.cs" />
     <Compile Include="IODataTests.cs" />
+    <Compile Include="IOStreamTests.cs" />
     <Compile Include="MeasurementTests.cs" />
     <Compile Include="MiscTests.cs" />
     <Compile Include="ParserTests.cs" />

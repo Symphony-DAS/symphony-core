@@ -78,7 +78,7 @@ namespace IntegrationTests
 
 
         [Test]
-        //[UseReporter(typeof(FileLauncherReporter))]
+        [UseReporter(typeof(NUnitReporter))]
         public void SingleEpochHDF5Persistence()
         {
             if (File.Exists("SingleEpochHDF5Persistence.h5"))
@@ -197,8 +197,8 @@ namespace IntegrationTests
             e.Responses[dev0] = new Response();
             e.Responses[dev1] = new Response();
 
-            e.Background[dev1] = new Epoch.EpochBackground(new Measurement(0, "V"), srate);
-            e.Background[dev0] = new Epoch.EpochBackground(new Measurement(0, "V"), srate);
+            e.Backgrounds[dev1] = new Background(new Measurement(0, "V"), srate);
+            e.Backgrounds[dev0] = new Background(new Measurement(0, "V"), srate);
 
             Assert.DoesNotThrow(() => controller.RunEpoch(e, new FakeEpochPersistor()));
 
@@ -294,8 +294,11 @@ namespace IntegrationTests
             if (nChannels > 1)
                 e.Responses[dev1] = new Response();
 
-            e.Background[dev1] = new Epoch.EpochBackground(new Measurement(0, "V"), srate);
-            e.Background[dev0] = new Epoch.EpochBackground(new Measurement(0, "V"), srate);
+            controller.BackgroundStreams[dev0] = new BackgroundOutputStream(new Background(new Measurement(0, "V"), srate));
+            controller.BackgroundStreams[dev1] = new BackgroundOutputStream(new Background(new Measurement(0, "V"), srate));
+
+            e.Backgrounds[dev0] = new Background(new Measurement(0, "V"), srate);
+            e.Backgrounds[dev1] = new Background(new Measurement(0, "V"), srate);
 
             return controller;
         }

@@ -25,7 +25,7 @@ namespace Symphony.Core
             Assert.IsNotNull(e.Stimuli);
             Assert.IsNotNull(e.Responses);
             Assert.IsNotNull(e.ProtocolParameters);
-            Assert.IsNotNull(e.Background);
+            Assert.IsNotNull(e.Backgrounds);
         }
 
         [Test]
@@ -44,7 +44,7 @@ namespace Symphony.Core
             Assert.IsNotNull(e.Stimuli);
             Assert.IsNotNull(e.Responses);
             Assert.IsNotNull(e.ProtocolParameters);
-            Assert.IsNotNull(e.Background);
+            Assert.IsNotNull(e.Backgrounds);
             Assert.IsFalse(e.WaitForTrigger);
         }
 
@@ -107,10 +107,10 @@ namespace Symphony.Core
 
             var start = DateTimeOffset.Parse("1/11/2011 6:03:29 PM -08:00");
             // Do this to match the XML stored in the EpochXML.txt resource
-            e.StartTime = Maybe<DateTimeOffset>.Yes(start);
+            //e.StartTime = Maybe<DateTimeOffset>.Yes(start);
 
-            e.Background[dev1] = new Epoch.EpochBackground(new Measurement(0, "V"), new Measurement(1000, "Hz"));
-            e.Background[dev2] = new Epoch.EpochBackground(new Measurement(1, "V"), new Measurement(1000, "Hz"));
+            e.Backgrounds[dev1] = new Background(new Measurement(0, "V"), new Measurement(1000, "Hz"));
+            e.Backgrounds[dev2] = new Background(new Measurement(1, "V"), new Measurement(1000, "Hz"));
 
             e.Responses[dev1] = new Response();
             e.Responses[dev2] = new Response();
@@ -157,41 +157,23 @@ namespace Symphony.Core
         }
 
         [Test]
-        public void IsDrainedIfAllStimuliAreDrained()
-        {
-            Epoch e = new Epoch("");
-            var dev = new UnitConvertingExternalDevice("name", "co", new Measurement(1.0m, "units"));
-            var dev2 = new UnitConvertingExternalDevice("name2", "co", new Measurement(1.0m, "units"));
-
-            Assert.That(e.IsDrained, Is.True);
-
-            var rate = new Measurement(1000, "Hz");
-            var duration = TimeSpan.FromSeconds(1);
-
-            var d = new OutputData(Enumerable.Repeat(new Measurement(0, "units"), (int)duration.Samples(rate)), rate);
-            e.Stimuli[dev] = new RenderedStimulus((string)"stimID", (IDictionary<string, object>)new Dictionary<string, object>(), (IOutputData)d);
-            e.Stimuli[dev2] = new RenderedStimulus((string)"stimID", (IDictionary<string, object>)new Dictionary<string, object>(), (IOutputData)d);
-
-            Assert.That(e.IsDrained, Is.False);
-
-            e.PullOutputData(dev, duration);
-
-            Assert.That(e.IsDrained, Is.False);
-
-            e.PullOutputData(dev2, duration);
-
-            Assert.That(e.IsDrained, Is.True);
-        }
-
-        [Test]
         public void MaybeHasStartTime()
         {
             Epoch e = new Epoch("");
 
             Assert.False(e.StartTime);
 
+            var dev = new UnitConvertingExternalDevice("name", "co", new Measurement(1.0m, "units"));
+
+            var stim = new DelegatedStimulus("stimID", "units", new Measurement(1000, "Hz"),
+                                             new Dictionary<string, object>(),
+                                             (p, b) => null,
+                                             (p) => Option<TimeSpan>.None());
+
+            e.Stimuli[dev] = stim;
+
             var expected = DateTimeOffset.Now;
-            e.StartTime = Maybe<DateTimeOffset>.Yes(expected);
+            stim.StartTime = Maybe<DateTimeOffset>.Yes(expected);
 
             Assert.AreEqual(expected, (DateTimeOffset)e.StartTime);
         }
@@ -205,14 +187,14 @@ namespace Symphony.Core
 
             Assert.That(e.IsIndefinite, Is.False);
 
-            e.Stimuli[dev2] = new DelegatedStimulus("stimID", "units",
+            e.Stimuli[dev2] = new DelegatedStimulus("stimID", "units", new Measurement(1000, "Hz"), 
                                                    new Dictionary<string, object>(),
                                                    (p, b) => null,
                                                    (p) => Option<TimeSpan>.Some(TimeSpan.FromMilliseconds(100)));
 
             Assert.That(e.IsIndefinite, Is.False);
 
-            e.Stimuli[dev] = new DelegatedStimulus("stimID", "units",
+            e.Stimuli[dev] = new DelegatedStimulus("stimID", "units", new Measurement(1000, "Hz"),
                                                    new Dictionary<string, object>(),
                                                    (p, b) => null,
                                                    (p) => Option<TimeSpan>.None());
@@ -225,81 +207,15 @@ namespace Symphony.Core
         }
 
         [Test]
-        public void PullOutputDataShouldThrowForMissingDevice()
+        public void GetOutputStreamShouldProvideNullForMissingDevice()
         {
             var e = new Epoch(UNUSED_PROTOCOL_ID);
             var dev = new UnitConvertingExternalDevice("name", "co", new Measurement(1.0m, "units"));
 
-            ArgumentException caught = null;
-            try
-            {
-                e.PullOutputData(dev, TimeSpan.FromMilliseconds(100));
-            }
-            catch (ArgumentException ex)
-            {
-                caught = ex;
-            }
-
-            Assert.That(caught, Is.Not.Null);
+            Assert.Null(e.GetOutputStream(dev));
         }
 
         private const string UNUSED_PROTOCOL_ID = "UNUSED";
-
-        [Test]
-        public void PullOuputDataShouldReturnBackgroundWhenNoStimulusRegisteredForDevice()
-        {
-            var e = new Epoch(UNUSED_PROTOCOL_ID);
-            var dev = new UnitConvertingExternalDevice("name", "co", new Measurement(1.0m, "units"));
-            var dev2 = new UnitConvertingExternalDevice("name2", "co", new Measurement(1.0m, "units"));
-
-            var duration = TimeSpan.FromSeconds(1.1);
-            var rate = new Measurement(1000, "Hz");
-
-            var d = new OutputData(Enumerable.Repeat(new Measurement(0, "units"), (int)duration.Samples(rate)), rate);
-            e.Stimuli[dev] = new RenderedStimulus((string)"stimID", (IDictionary<string, object>)new Dictionary<string, object>(), (IOutputData)d);
-
-            var bg = new Measurement(1.1m, "units");
-            e.Background[dev2] = new Epoch.EpochBackground(bg, rate);
-
-            var data = e.PullOutputData(dev2, duration);
-
-            Assert.That(data.Duration, Is.EqualTo(duration));
-            Assert.That(data.Data.All(m => m.BaseUnit == bg.BaseUnit));
-            foreach (var m in data.Data)
-            {
-                Assert.That(m.QuantityInBaseUnit, Is.EqualTo(bg.QuantityInBaseUnit).Within(0.0001));
-            }
-            Assert.That(data.Data.All(m => m.QuantityInBaseUnit == bg.QuantityInBaseUnit));
-
-        }
-
-        [Test]
-        public void ShouldPushOutputDataConfigurationToStimuli()
-        {
-            var e = new Epoch(UNUSED_PROTOCOL_ID);
-            var dev = new UnitConvertingExternalDevice("name", "co", new Measurement(0m, "units"));
-
-            const string units = "units";
-
-            var data = new OutputData(Enumerable.Repeat(new Measurement(0, units), 100), new Measurement(10, "Hz"));
-
-            var s = new RenderedStimulus((string) "stimID", (IDictionary<string, object>) new Dictionary<string, object>(), (IOutputData) data);
-
-            e.Stimuli[dev] = s;
-
-            var configuration = new List<IPipelineNodeConfiguration>();
-            var config = new Dictionary<string, object>();
-            config["key"] = "value";
-
-            configuration.Add(new PipelineNodeConfiguration("NODE1", config));
-            var outputTime = DateTimeOffset.Now;
-
-            e.DidOutputData(dev, outputTime, data.Duration, configuration);
-
-            var expected = configuration;
-            Assert.That(e.Stimuli[dev].OutputConfigurationSpans.First().Nodes, Is.EqualTo(expected));
-            Assert.That(e.Stimuli[dev].OutputConfigurationSpans.First().Time, Is.EqualTo(data.Duration));
-        }
         
         [Test]
         public void ShouldAddKeywords()

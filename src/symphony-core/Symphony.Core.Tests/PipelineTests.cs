@@ -61,10 +61,9 @@ namespace Symphony.Core
                                             stimOutputData);
             e.Stimuli[dev] = stim;
             e.Responses[dev] = new Response();
-            e.Background[dev] = new Epoch.EpochBackground(new Measurement(0, "V"), srate);
+            e.Backgrounds[dev] = new Background(new Measurement(0, "V"), srate);
 
             controller.EnqueueEpoch(e);
-            controller.NextEpoch();
 
             var blockSpan = TimeSpan.FromSeconds(blockDurationSeconds);
             foreach (var stimBlock in stim.DataBlocks(blockSpan))

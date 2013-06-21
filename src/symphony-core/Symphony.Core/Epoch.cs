@@ -1,11 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Collections.Concurrent;
-using System.Diagnostics;
-using System.Diagnostics.Contracts;
-using System.IO;
 using System.Linq;
-using System.Threading;
 using log4net;
 
 namespace Symphony.Core
@@ -45,9 +40,7 @@ namespace Symphony.Core
             ProtocolParameters = parameters;
             Responses = new Dictionary<IExternalDevice, Response>();
             Stimuli = new Dictionary<IExternalDevice, IStimulus>();
-            PullStreams = new ConcurrentDictionary<IExternalDevice, PullStream>();
-            Background = new Dictionary<IExternalDevice, EpochBackground>();
-            StartTime = Maybe<DateTimeOffset>.No();
+            Backgrounds = new Dictionary<IExternalDevice, Background>();
             Keywords = new HashSet<string>();
             WaitForTrigger = false;
         }
@@ -55,11 +48,9 @@ namespace Symphony.Core
 
         /// <summary>
         /// Indicates if any Stimulus is indefinite. If so, the Epoch will be presented until
-        /// the user cancels the run or requests the Controller to move to the next queued
-        /// Epoch.
+        /// the user requests the Controller to stop.
         /// </summary>
-        /// <see cref="Controller.CancelEpoch"/>
-        /// <see cref="Controller.NextEpoch"/>
+        /// <see cref="Controller.RequestStop"/>
         /// <see cref="Stimulus.Duration"/>
         public bool IsIndefinite
         {
@@ -93,26 +84,82 @@ namespace Symphony.Core
 
         /// <summary>
         /// Dictionary of background values to be applied to any external devices for which no stimulus is
-        /// supplied. Values are instances of Epoch.EpochBackground. The Symphony.Core output pipeline will
-        /// generate stimulus data for active ExternalDevices without explicit Stimuli according to the 
-        /// value and SamplingRate given in the associated EpochBackground.
+        /// supplied. The Symphony.Core output pipeline will generate stimulus data for active ExternalDevices 
+        /// without explicit Stimuli according to the value and SamplingRate given in the associated Background.
         /// </summary>
-        public IDictionary<IExternalDevice, EpochBackground> Background { get; private set; }
+        public IDictionary<IExternalDevice, Background> Backgrounds { get; private set; }
 
         public void SetBackground(IExternalDevice dev,
             Measurement background,
             Measurement sampleRate)
         {
-            Background[dev] = new EpochBackground(background, sampleRate);
+            Backgrounds[dev] = new Background(background, sampleRate);
+        }
+
+        private const double DEFAULT_BLOCK_SECONDS = 0.5;
+
+        /// <summary>
+        /// Gets a new output stream around the stimulus or background associated with the given device in
+        /// this Epoch. If both a stimulus and background are associated with the same device in this Epoch,
+        /// an output stream around the stimulus will always provided. The stream duration will match the 
+        /// Epoch duration.
+        /// </summary>
+        /// <returns>An output stream for the given device, or null if this Epoch has no stimulus or
+        /// background associated with the given device.</returns>
+        public IOutputStream GetOutputStream(IExternalDevice device)
+        {
+            return GetOutputStream(device, TimeSpan.FromSeconds(DEFAULT_BLOCK_SECONDS));
         }
 
         /// <summary>
-        /// Flag indicating that this epoch is drained. A drained Epoch has had all stimuli pulled as output
-        /// data. This is not an indication that all stimuli have been presented.
+        /// Gets a new output stream around the stimulus or background associated with the given device in
+        /// this Epoch, with a hint of the block duration to use while enumerating the backing store.
         /// </summary>
-        public virtual bool IsDrained
+        /// <param name="blockDuration">A hint of the stream enumerator block duration</param>
+        /// <returns>An output stream for the given device, or null if this Epoch has no stimulus or
+        /// background associated with the given device.</returns>
+        public IOutputStream GetOutputStream(IExternalDevice device, TimeSpan blockDuration)
         {
-            get { return Stimuli.Count == PullStreams.Count && PullStreams.Values.All(s => s.IsDrained); }
+            IOutputStream stream = null;
+
+            if (Stimuli.ContainsKey(device))
+            {
+                IStimulus stimulus;
+                Stimuli.TryGetValue(device, out stimulus);
+
+                stream = new StimulusOutputStream(stimulus, blockDuration);
+            }
+            else if (Backgrounds.ContainsKey(device))
+            {
+                Background background;
+                Backgrounds.TryGetValue(device, out background);
+
+                stream = new BackgroundOutputStream(background, Duration);
+            }
+
+            return stream;
+        }
+
+        /// <summary>
+        /// Gets a new input stream around the response associated with the given device in this Epoch. The
+        /// stream duration will match the Epoch duration.
+        /// </summary>
+        /// <param name="device"></param>
+        /// <returns>An input stream for the given device, or null if this Epoch has no response
+        /// associated with the given device.</returns>
+        public IInputStream GetInputStream(IExternalDevice device)
+        {
+            IInputStream stream = null;
+
+            if (Responses.ContainsKey(device))
+            {
+                Response response;
+                Responses.TryGetValue(device, out response);
+
+                stream = new ResponseInputStream(response, Duration);
+            }
+
+            return stream;
         }
 
         /// <summary>
@@ -123,45 +170,9 @@ namespace Symphony.Core
         {
             get
             {
-                lock (_completeLock)
-                {
-                    return (!IsIndefinite &&
-                            Responses.Values.All(
-                                (r) => r.Duration.Ticks >= ((TimeSpan) Duration).Ticks));
-                }
+                return (!IsIndefinite
+                        && Responses.Values.All((r) => r.Duration.Ticks >= ((TimeSpan) Duration).Ticks));
             }
-        }
-
-        private readonly object _completeLock = new object();
-
-
-        /// <summary>
-        /// Describes the intended "background" for output devices that are "active" but do not have an associated
-        /// Stimulus in this Epoch.
-        /// </summary>
-        public class EpochBackground
-        {
-
-            /// <summary>
-            /// Constructs a new EpochBackground with the given background value and sample rate.
-            /// </summary>
-            /// <param name="background">Background measurement</param>
-            /// <param name="sampleRate">Sampling rate for generated stimulus data</param>
-            public EpochBackground(IMeasurement background,
-                IMeasurement sampleRate)
-            {
-                Background = background;
-                SampleRate = sampleRate;
-            }
-
-            /// <summary>
-            /// Background measurement.
-            /// </summary>
-            public IMeasurement Background { get; private set; }
-            /// <summary>
-            /// Sample rate for generated stimulus data.
-            /// </summary>
-            public IMeasurement SampleRate { get; private set; }
         }
 
         /// <summary>
@@ -192,150 +203,23 @@ namespace Symphony.Core
         public IDictionary<string, object> ProtocolParameters { get; private set; }
 
         /// <summary>
-        /// Epoch has StartTime recorded when stimulis presentation and/or recording starts.
+        /// The earliest Stimulus start time in this Epoch, or Maybe.No if no Stimulus has been started. 
         /// </summary>
-        public Maybe<DateTimeOffset> StartTime { get; set; }
-
-        /// <summary>
-        /// Pulls output data from the given device of the given duration.
-        /// <para>If the given device has an associated Stimulus in this.Stimuli,
-        /// the data is pulled from that Stimulus. If there is no associated Stimulus,
-        /// data is generated according to this.Background[dev].</para>
-        /// </summary>
-        /// <param name="dev">Output device requesting data</param>
-        /// <param name="blockDuration">Requested duration of the IOutputData</param>
-        /// <returns>IOutputData instance with duration less than or equal to blockDuration, 
-        /// or null if data source is drained.</returns>
-        public IOutputData PullOutputData(IExternalDevice dev, TimeSpan blockDuration)
+        public virtual Maybe<DateTimeOffset> StartTime
         {
-            var stream = PullStreams.GetOrAdd(dev, 
-                (d) =>
-                    {
-                        IStimulus stimulus;
-                        if (Stimuli.TryGetValue(d, out stimulus))
-                            return new StimulusPullStream(stimulus, blockDuration);
-
-                        EpochBackground background;
-                        if (Background.TryGetValue(d, out background))
-                            return new BackgroundPullStream(background, blockDuration, Duration);
-
-                        throw new ArgumentException("Epoch does not have a stimulus or background for " + d.Name);
-                    });
-
-            Contract.Assert(!stream.IsDrained, "Pulling from a drained stream");
-            return stream.PullOutputData();
-        }
-
-        private ConcurrentDictionary<IExternalDevice, PullStream> PullStreams { get; set; }
-
-        private abstract class PullStream
-        {
-            public TimeSpan BlockDuration { get; private set; }
-
-            /// <summary>
-            /// Indicates if this Stream has been drained of all output data.
-            /// </summary>
-            public bool IsDrained { get; protected set; }
-
-            protected PullStream(TimeSpan blockDuration)
+            get
             {
-                BlockDuration = blockDuration;
-                IsDrained = false;
-            }
+                var times = Stimuli.Values.Where(s => s.StartTime).Select(s => s.StartTime).ToList();
+                times.Sort((s1, s2) => ((DateTimeOffset)s1).CompareTo(s2));
 
-            /// <summary>
-            /// Returns output data of duration up to this Stream's block duration,
-            /// or null if this Stream is drained.
-            /// </summary>
-            public abstract IOutputData PullOutputData();
-        }
-
-        private class StimulusPullStream : PullStream
-        {
-            public IStimulus Stimulus { get; private set; }
-            private IEnumerator<IOutputData> StimulusDataEnumerator { get; set; }
-
-            public StimulusPullStream(IStimulus stimulus, TimeSpan blockDuration)
-                : base(blockDuration)
-            {
-                Stimulus = stimulus;
-                StimulusDataEnumerator = stimulus.DataBlocks(blockDuration).GetEnumerator();
-            }
-
-            public override IOutputData PullOutputData()
-            {
-                IOutputData data = null;
-
-                if (StimulusDataEnumerator.MoveNext())
-                {
-                    data = StimulusDataEnumerator.Current;
-                    IsDrained = data.IsLast;
-                }
-
-                if (data == null && !IsDrained)
-                {
-                    // Seems OK to correct this instead of throwing (at the moment).
-                    log.Warn("A Stimulus did not properly indicate its last data block.");
-                    IsDrained = true;
-                }
-
-                return data;
-            }
-        }
-
-        private class BackgroundPullStream : PullStream
-        {
-            public EpochBackground Background { get; set; }
-            public Option<TimeSpan> Duration { get; set; }
-            public TimeSpan Elapsed { get; set; }
-
-            public BackgroundPullStream(EpochBackground background, TimeSpan blockDuration, Option<TimeSpan> duration)
-                : base(blockDuration)
-            {
-                Background = background;
-                Duration = duration;
-                Elapsed = TimeSpan.Zero;
-            }
-
-            public override IOutputData PullOutputData()
-            {
-                var isIndefinite = !(bool)Duration;
-                var pullDuration = BlockDuration <= Duration - Elapsed || isIndefinite ? BlockDuration : Duration - Elapsed;
-
-                var nSamples = (int)pullDuration.Samples(Background.SampleRate);
-                var data = Enumerable.Range(0, nSamples).Select(i => Background.Background);
-
-                Elapsed += pullDuration;
-                IsDrained = Elapsed >= Duration;
-
-                return new OutputData(data, Background.SampleRate, IsDrained);
+                return times.Any() ? times.First() : Maybe<DateTimeOffset>.No();
             }
         }
 
         public ISet<string> Keywords { get; private set; }
 
         private static readonly ILog log = LogManager.GetLogger(typeof(Epoch));
-
-        /// <summary>
-        /// Informs this Epoch that stimulus data was output by the Symphony.Core output pipeline.
-        /// </summary>
-        /// <param name="device">ExternalDevice that was the target of the output data</param>
-        /// <param name="outputTime">Approximate time the data was written "to the wire"</param>
-        /// <param name="duration">Duration of the output data segment</param>
-        /// <param name="configuration">Pipeline node configuration(s) for nodes that processed the outgoing data</param>
-        public virtual void DidOutputData(IExternalDevice device, DateTimeOffset outputTime, TimeSpan duration, IEnumerable<IPipelineNodeConfiguration> configuration)
-        {
-            //virtual so that we can mock it
-
-            if (outputTime < StartTime)
-                throw new ArgumentException("Data output time must be after Epoch start time", "outputTime");
-
-            if (Stimuli.ContainsKey(device))
-                Stimuli[device].DidOutputData(duration, configuration);
-        }
     }
-
-
 
     /// <summary>
     /// Interface for objects that can provide data for Stimulus output to the Symphony.Core
@@ -379,7 +263,17 @@ namespace Symphony.Core
         /// generates data indefinitely.
         /// </summary>
         Option<TimeSpan> Duration { get; }
+        
+        /// <summary>
+        /// Sample rate of this stimulus.
+        /// </summary>
+        IMeasurement SampleRate { get; }
 
+        /// <summary>
+        /// The approximate time this stimulus began being processed by the DAQController, or
+        /// Maybe.No if this stimulus has not yet started processing. 
+        /// </summary>
+        Maybe<DateTimeOffset> StartTime { get; set; } 
 
         /// <summary>
         /// BaseUnits for this stimulus' output data
@@ -426,7 +320,7 @@ namespace Symphony.Core
             Parameters = parameters;
             _units = units;
             OutputConfigurationSpanSet = new HashSet<IConfigurationSpan>();
-
+            StartTime = Maybe<DateTimeOffset>.No();
         }
 
         public string Units
@@ -440,13 +334,26 @@ namespace Symphony.Core
         /// Identifier of this Stimulus' data generating algorithm/code/plugin.
         /// </summary>
         public string StimulusID { get; private set; }
+
         /// <summary>
         /// Parameters of stimulus generation for this Stimulus instance
         /// </summary>
         public IDictionary<string, object> Parameters { get; private set; }
 
         public abstract IEnumerable<IOutputData> DataBlocks(TimeSpan blockDuration);
+
         public abstract Option<TimeSpan> Duration { get; }
+
+        /// <summary>
+        /// Sample rate of this stimulus.
+        /// </summary>
+        public abstract IMeasurement SampleRate { get; }
+
+        /// <summary>
+        /// The approximate time this stimulus began being processed by the DAQController, or
+        /// Maybe.No if this stimulus has not yet started processing. 
+        /// </summary>
+        public Maybe<DateTimeOffset> StartTime { get; set; }
 
         private ISet<IConfigurationSpan> OutputConfigurationSpanSet
         {
@@ -469,6 +376,34 @@ namespace Symphony.Core
         {
             OutputConfigurationSpanSet.Add(new ConfigurationSpan(time, configuration));
         }
+    }
+
+    /// <summary>
+    /// Describes a simple "background" for output pipeline.
+    /// </summary>
+    public class Background
+    {
+        /// <summary>
+        /// Constructs a new Background with the given value and sample rate.
+        /// </summary>
+        /// <param name="value">Background measurement</param>
+        /// <param name="sampleRate">Sampling rate for generated stimulus data</param>
+        public Background(IMeasurement value,
+                          IMeasurement sampleRate)
+        {
+            Value = value;
+            SampleRate = sampleRate;
+        }
+
+        /// <summary>
+        /// Background measurement.
+        /// </summary>
+        public IMeasurement Value { get; private set; }
+
+        /// <summary>
+        /// Sample rate for generated stimulus data.
+        /// </summary>
+        public IMeasurement SampleRate { get; private set; }
     }
 
     public class ResponseException : SymphonyException
@@ -501,6 +436,7 @@ namespace Symphony.Core
             get
             {
                 var result = RawData.ToList();
+                
                 result.Sort((IInputData d1, IInputData d2) => d1.InputTime.CompareTo(d2.InputTime));
 
                 return result;
@@ -609,11 +545,12 @@ namespace Symphony.Core
         /// Constructs a new DelegatedStimulus.
         /// </summary>
         /// <param name="stimulusID">Stimulus generation ID</param>
-        /// <param name="units"></param>
+        /// <param name="units">Units of the stimulus</param>
+        /// <param name="sampleRate">Sample rate of the stimulus</param>
         /// <param name="parameters">Stimulus parameters</param>
         /// <param name="blockRender">BlockRender delegate method</param>
         /// <param name="duration">Duration delegate method</param>
-        public DelegatedStimulus(string stimulusID, string units, IDictionary<string, object> parameters, BlockRenderer blockRender, DurationCalculator duration)
+        public DelegatedStimulus(string stimulusID, string units, IMeasurement sampleRate, IDictionary<string, object> parameters, BlockRenderer blockRender, DurationCalculator duration)
             : base(stimulusID, units, parameters)
         {
 
@@ -622,6 +559,10 @@ namespace Symphony.Core
                 throw new ArgumentException("Delegates may not be null");
             }
 
+            if (sampleRate == null)
+                throw new ArgumentNullException("sampleRate");
+
+            _sampleRate = sampleRate;
             BlockDelegate = blockRender;
             DurationDelegate = duration;
         }
@@ -637,6 +578,9 @@ namespace Symphony.Core
                 if (current.Data.BaseUnits() != Units)
                     throw new StimulusException("Data units do not match stimulus units");
 
+                if (!Equals(current.SampleRate, SampleRate))
+                    throw new StimulusException("Data sample rate does not match stimulus sample rate");
+
                 yield return current;
                 current = BlockDelegate(Parameters, blockDuration);
             }
@@ -645,6 +589,13 @@ namespace Symphony.Core
         public override Option<TimeSpan> Duration
         {
             get { return DurationDelegate(Parameters); }
+        }
+
+        private readonly IMeasurement _sampleRate;
+
+        public override IMeasurement SampleRate
+        {
+            get { return _sampleRate; }
         }
     }
 
@@ -682,6 +633,12 @@ namespace Symphony.Core
         public override Option<TimeSpan> Duration
         {
             get { return Option<TimeSpan>.Some(Data.Duration); }
+        }
+
+
+        public override IMeasurement SampleRate
+        {
+            get { return Data.SampleRate; }
         }
 
 
@@ -744,7 +701,9 @@ namespace Symphony.Core
 
             while (index < Duration || isIndefinite)
             {
-                var dur = blockDuration <= Duration - index || isIndefinite ? blockDuration : Duration - index;
+                var dur = blockDuration <= Duration - index || isIndefinite 
+                    ? blockDuration 
+                    : Duration - index;
 
                 while (local.Duration < dur)
                 {
@@ -763,6 +722,11 @@ namespace Symphony.Core
         public override Option<TimeSpan> Duration
         {
             get { return _duration; }
+        }
+
+        public override IMeasurement SampleRate
+        {
+            get { return _data.SampleRate; }
         }
     }
 }

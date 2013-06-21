@@ -470,5 +470,7 @@ namespace Symphony.Core
             lock (_syncLock) return _items.ToArray();
         }
     }
+
+
     
 }

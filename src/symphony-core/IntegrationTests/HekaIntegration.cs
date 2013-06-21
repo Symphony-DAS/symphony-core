@@ -6,15 +6,23 @@ using System.Threading;
 using System.Threading.Tasks;
 using Heka;
 using Symphony.Core;
+using log4net;
 
 namespace IntegrationTests
 {
     using NUnit.Framework;
 
+    [TestFixture]
     class HekaIntegration
     {
-
+        IMeasurement STREAM_BACKGROUND = new Measurement(0, "V");
         const double MAX_VOLTAGE_DIFF = 0.1; //Volts. This is completely arbitrary and dependent on the quality of the patch cable. Just something "close" to 0.
+
+        [TestFixtureSetUp]
+        public void TestFixtureSetUp()
+        {
+            Logging.ConfigureConsole();
+        }
 
         /// <summary>
         /// The Symphony.Core pipeline must handle max usage (4 Analog Out, 8 Analog in on the Heka device
@@ -33,8 +41,6 @@ namespace IntegrationTests
             [Values(8,8,4)] int nIn
             )
         {
-            Logging.ConfigureConsole();
-
             Converters.Clear();
             HekaDAQInputStream.RegisterConverters();
             HekaDAQOutputStream.RegisterConverters();
@@ -64,6 +70,8 @@ namespace IntegrationTests
                                                            Clock = daq1
                                                        };
                                         dev0.BindStream((IDAQOutputStream)daq1.GetStreams("ANALOG_OUT." + i).First());
+
+                                        controller.BackgroundStreams[dev0] = new BackgroundOutputStream(new Background(STREAM_BACKGROUND, daq.SampleRate));
 
                                         return dev0;
                                     })
@@ -100,7 +108,7 @@ namespace IntegrationTests
                             e.Stimuli[outDev] = new RenderedStimulus((string) "RenderedStimulus", (IDictionary<string, object>) new Dictionary<string, object>(),
                                                         (IOutputData) new OutputData(stimData, daq.SampleRate));
 
-                            e.Background[outDev] = new Epoch.EpochBackground(new Measurement(0, "V"), daq.SampleRate);
+                            e.Backgrounds[outDev] = new Background(new Measurement(0, "V"), daq.SampleRate);
                         }
 
                         foreach (var inDev in inDevices)
@@ -139,8 +147,6 @@ namespace IntegrationTests
             [Values(2)] int nEpochs
             )
         {
-            Logging.ConfigureConsole();
-
             Converters.Clear();
             Converters.Register("V", "V",
                 // just an identity conversion for now, to pass Validate()
@@ -177,10 +183,13 @@ namespace IntegrationTests
                     dev1.BindStream((IDAQOutputStream)daq.GetStreams("ANALOG_OUT.1").First());
                     dev1.BindStream((IDAQInputStream)daq.GetStreams("ANALOG_IN.1").First());
 
+                    controller.BackgroundStreams[dev0] = new BackgroundOutputStream(new Background(STREAM_BACKGROUND, daq.SampleRate));
+                    controller.BackgroundStreams[dev1] = new BackgroundOutputStream(new Background(STREAM_BACKGROUND, daq.SampleRate));
+
                     for (int j = 0; j < nEpochs; j++)
                     {
                         // Setup Epoch
-                        var e = new Epoch("HekaIntegration");
+                        var e = new Epoch("HekaIntegration" + j);
 
                         var nSamples = (int)TimeSpan.FromSeconds(epochDuration).Samples(daq.SampleRate);
                         IList<IMeasurement> stimData = (IList<IMeasurement>)Enumerable.Range(0, nSamples)
@@ -190,7 +199,6 @@ namespace IntegrationTests
                         e.Stimuli[dev0] = new RenderedStimulus((string) "RenderedStimulus", (IDictionary<string, object>) new Dictionary<string, object>(),
                                                         (IOutputData) new OutputData(stimData, daq.SampleRate));
                         e.Responses[dev0] = new Response();
-                        e.Background[dev0] = new Epoch.EpochBackground(new Measurement(0, "V"), daq.SampleRate);
 
                         e.Stimuli[dev1] = new RenderedStimulus((string) "RenderedStimulus", (IDictionary<string, object>) new Dictionary<string, object>(),
                                                        (IOutputData) new OutputData(Enumerable.Range(0, nSamples)
@@ -198,7 +206,6 @@ namespace IntegrationTests
                                                                                         .ToList(),
                                                                                     daq.SampleRate));
                         e.Responses[dev1] = new Response();
-                        e.Background[dev1] = new Epoch.EpochBackground(new Measurement(0, "V"), daq.SampleRate);
 
 
                         //Run single epoch
@@ -313,8 +320,9 @@ namespace IntegrationTests
                                                     (IOutputData) new OutputData(stimData, daq.SampleRate, false));
                     e.Stimuli[dev0] = stim;
                     e.Responses[dev0] = new Response();
-                    e.Background[dev0] = new Epoch.EpochBackground(expectedBackground, daq.SampleRate);
+                    e.Backgrounds[dev0] = new Background(expectedBackground, daq.SampleRate);
 
+                    controller.BackgroundStreams[dev0] = new BackgroundOutputStream(new Background(STREAM_BACKGROUND, daq.SampleRate));
 
                     //Run single epoch
                     var fakeEpochPersistor = new FakeEpochPersistor();
@@ -386,15 +394,16 @@ namespace IntegrationTests
                     var e = new Epoch("HekaIntegration");
 
                     HekaDAQController cDAQ = daq;
-                    var stim = new DelegatedStimulus("TEST_ID", "V", new Dictionary<string, object>(),
+                    var stim = new DelegatedStimulus("TEST_ID", "V", cDAQ.SampleRate, new Dictionary<string, object>(),
                                                      (parameters, duration) =>
                                                      DataForDuration(duration, cDAQ.SampleRate),
                                                      parameters => Option<TimeSpan>.None()
                         );
 
                     e.Stimuli[dev0] = stim;
-                    e.Background[dev0] = new Epoch.EpochBackground(expectedBackground, daq.SampleRate);
+                    e.Backgrounds[dev0] = new Background(expectedBackground, daq.SampleRate);
 
+                    controller.BackgroundStreams[dev0] = new BackgroundOutputStream(new Background(STREAM_BACKGROUND, daq.SampleRate));
 
                     //Run single epoch
                     var fakeEpochPersistor = new FakeEpochPersistor();
@@ -402,7 +411,7 @@ namespace IntegrationTests
                     new TaskFactory().StartNew(() =>
                                                    {
                                                        Thread.Sleep(TimeSpan.FromSeconds(epochDuration));
-                                                       controller.CancelEpoch();
+                                                       controller.RequestStop();
                                                    },
                                                TaskCreationOptions.LongRunning
                         );
@@ -439,8 +448,6 @@ namespace IntegrationTests
             if (File.Exists(h5Path))
                 File.Delete(h5Path);
 
-            Logging.ConfigureConsole();
-
             Converters.Clear();
             Converters.Register("V", "V",
                 // just an identity conversion for now, to pass Validate()
@@ -470,6 +477,7 @@ namespace IntegrationTests
                     dev0.BindStream((IDAQOutputStream) daq.GetStreams("ANALOG_OUT.0").First());
                     dev0.BindStream((IDAQInputStream) daq.GetStreams("ANALOG_IN.0").First());
 
+                    controller.BackgroundStreams[dev0] = new BackgroundOutputStream(new Background(STREAM_BACKGROUND, daq.SampleRate));
 
                     for (int j = 0; j < nEpochs; j++)
                     {
@@ -491,7 +499,7 @@ namespace IntegrationTests
                         e.Stimuli[dev0] = new RenderedStimulus((string) "RenderedStimulus", (IDictionary<string, object>) new Dictionary<string, object>(),
                                                                (IOutputData) new OutputData(stimData, daq.SampleRate));
                         e.Responses[dev0] = new Response();
-                        e.Background[dev0] = new Epoch.EpochBackground(new Measurement(0, "V"), daq.SampleRate);
+                        e.Backgrounds[dev0] = new Background(new Measurement(0, "V"), daq.SampleRate);
 
 
 

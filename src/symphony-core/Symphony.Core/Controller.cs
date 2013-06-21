@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Threading;
@@ -70,12 +71,37 @@ namespace Symphony.Core
         {
             Devices = new HashSet<IExternalDevice>();
             EpochQueue = new ConcurrentQueue<Epoch>();
+            OutputStreams = new ConcurrentDictionary<IExternalDevice, SequenceOutputStream>();
+            InputStreams = new ConcurrentDictionary<IExternalDevice, SequenceInputStream>();
+            BackgroundStreams = new Dictionary<IExternalDevice, IOutputStream>();
+            PersistenceTasks = new List<Task>();
             Configuration = new Dictionary<string, object>();
-            UnusedInputData = new ConcurrentDictionary<ExternalDeviceBase, InputDataPair>();
-            SerialTaskScheduler = new LimitedConcurrencyLevelTaskScheduler(1);
+            CompletedEpochTaskScheduler = new SerialTaskScheduler();
+            PersistEpochTaskScheduler = new SerialTaskScheduler();
         }
 
-        private TaskScheduler SerialTaskScheduler { get; set; }
+        private class SerialTaskScheduler : LimitedConcurrencyLevelTaskScheduler
+        {
+            public SerialTaskScheduler()
+                : base(1)
+            {   
+            }
+        }
+
+        /// <summary>
+        /// A task scheduler for tasks firing the CompletedEpoch event.
+        /// </summary>
+        private SerialTaskScheduler CompletedEpochTaskScheduler { get; set; }
+
+        /// <summary>
+        /// A task scheduler for tasks persisting completed Epochs.
+        /// </summary>
+        private SerialTaskScheduler PersistEpochTaskScheduler { get; set; }
+
+        /// <summary>
+        /// A list of the incomplete tasks persisting completed Epochs. 
+        /// </summary>
+        private IList<Task> PersistenceTasks { get; set; }
 
         /// <summary>
         /// The canonical clock for the experimental timeline
@@ -132,7 +158,7 @@ namespace Symphony.Core
         /// <returns>This instance, for fluent-style API calls</returns>
         public Controller AddDevice(IExternalDevice dev)
         {
-            if (Devices.Where(d => d.Name == dev.Name).Any())
+            if (Devices.Any(d => d.Name == dev.Name))
                 throw new InvalidOperationException("Device with name " + dev.Name + " already exists.");
 
             Devices.Add(dev);
@@ -162,6 +188,34 @@ namespace Symphony.Core
         /// <returns>A monad indicating validation (as a bool) or the error message (if cast to a string)</returns>
         public Maybe<string> Validate()
         {
+            if (Clock == null)
+                return Maybe<string>.No("Controller.Clock must not be null.");
+
+            if (DAQController == null)
+                return Maybe<string>.No("Controller.DAQController must not be null.");
+
+            var daqVal = DAQController.Validate();
+            if (daqVal != true)
+                return daqVal;
+
+            // I think we're OK just adding all necessary devices the client failed to add
+            // instead of complaining and forcing them to do it
+            foreach (var stream in DAQController.OutputStreams.Where(s => s.Active))
+            {
+                if (!Devices.Contains(stream.Device))
+                {
+                    AddDevice(stream.Device);
+                }
+            }
+
+            foreach (var stream in DAQController.InputStreams.Where(s => s.Active))
+            {
+                foreach (var device in stream.Devices.Where(d => !Devices.Contains(d)))
+                {
+                    AddDevice(device);
+                }
+            }
+
             foreach (ExternalDeviceBase ed in Devices)
             {
                 if (ed.Controller != this)
@@ -181,32 +235,21 @@ namespace Symphony.Core
                         ed.ToString() + " failed to validate: " +
                         edVal.Item2);
                 }
+
+                if (ed.OutputStreams.Any() && (!BackgroundStreams.ContainsKey(ed) || BackgroundStreams[ed].Duration))
+                {
+                    return Maybe<string>.No(
+                        ed.Name + " must have an associated background stream of indefinite duration.");
+                }
             }
-
-            if (Clock == null)
-                return Maybe<string>.No("Controller.Clock must not be null.");
-
-            if (DAQController == null)
-                return Maybe<string>.No("Controller.DAQController must not be null.");
 
             return Maybe<string>.Yes();
         }
-
-
+        
         /// <summary>
-        /// Pulls IOutputData from Epochs destined for a given external device. Result 
-        /// will have duration greater than zero, but may not equal the requested duration.
+        /// This controller started.
         /// </summary>
-        /// <param name="device">ExternalDevice for this outputdata</param>
-        /// <param name="duration">Duration of the data requested</param>
-        /// <returns>Output data for the requested device, or null if the data source is drained.</returns>
-        public virtual IOutputData PullOutputData(IExternalDevice device, TimeSpan duration)
-        {
-            if (CurrentEpoch == null)
-                return null;
-
-            return CurrentEpoch.PullOutputData(device, duration);
-        }
+        public event EventHandler<TimeStampedEventArgs> Started;
 
         /// <summary>
         /// This controller received input data.
@@ -214,9 +257,14 @@ namespace Symphony.Core
         public event EventHandler<TimeStampedDeviceDataEventArgs> ReceivedInputData;
 
         /// <summary>
-        /// This controller pushed input data to an Epoch.
+        /// This controller pulled output data from an output stream.
         /// </summary>
-        public event EventHandler<TimeStampedEpochEventArgs> PushedInputData;
+        public event EventHandler<TimeStampedDeviceOutputStreamEventArgs> PulledOutputData;
+
+        /// <summary>
+        /// This controller pushed input data to an input stream.
+        /// </summary>
+        public event EventHandler<TimeStampedDeviceInputStreamEventArgs> PushedInputData;
 
         /// <summary>
         /// This controller persisted a completed Epoch.
@@ -224,7 +272,7 @@ namespace Symphony.Core
         public event EventHandler<TimeStampedEpochEventArgs> SavedEpoch;
 
         /// <summary>
-        /// This controller completed an Epoch
+        /// This controller completed an Epoch.
         /// </summary>
         public event EventHandler<TimeStampedEpochEventArgs> CompletedEpoch;
 
@@ -234,23 +282,38 @@ namespace Symphony.Core
         public event EventHandler<TimeStampedEpochEventArgs> DiscardedEpoch;
 
         /// <summary>
-        /// This controller received a NextEpoch() request.
+        /// This controller received a RequestPause() request.
         /// </summary>
-        public event EventHandler<TimeStampedEventArgs> NextEpochRequested;
+        public event EventHandler<TimeStampedEventArgs> PauseRequested;
 
         /// <summary>
-        /// This controller finished running.
+        /// This controller received a RequestStop() request.
         /// </summary>
-        public event EventHandler<TimeStampedEventArgs> FinishedRun;
+        public event EventHandler<TimeStampedEventArgs> StopRequested;
+
+        /// <summary>
+        /// This controller stopped.
+        /// </summary>
+        public event EventHandler<TimeStampedEventArgs> Stopped;
+
+        private void OnStarted()
+        {
+            FireEvent(Started);
+        }
 
         private void OnReceivedInputData(IExternalDevice device, IIOData data)
         {
             FireEvent(ReceivedInputData, device, data);
         }
 
-        private void OnPushedInputData(Epoch epoch)
+        private void OnPulledOutputData(IExternalDevice device, IOutputStream stream)
         {
-            FireEvent(PushedInputData, epoch);
+            FireEvent(PulledOutputData, device, stream);
+        }
+
+        private void OnPushedInputData(IExternalDevice device, IInputStream stream)
+        {
+            FireEvent(PushedInputData, device, stream);
         }
 
         private void OnSavedEpoch(Epoch epoch)
@@ -268,14 +331,19 @@ namespace Symphony.Core
             FireEvent(DiscardedEpoch, epoch);
         }
 
-        private void OnNextEpochRequested()
+        private void OnPauseRequested()
         {
-            FireEvent(NextEpochRequested);
+            FireEvent(PauseRequested);
         }
 
-        private void OnFinishedRun()
+        private void OnStopRequested()
         {
-            FireEvent(FinishedRun);
+            FireEvent(StopRequested);
+        }
+
+        private void OnStopped()
+        {
+            FireEvent(Stopped);
         }
 
         private void FireEvent(EventHandler<TimeStampedEpochEventArgs> evt, Epoch epoch)
@@ -287,6 +355,18 @@ namespace Symphony.Core
         {
             FireEvent(evt, new TimeStampedDeviceDataEventArgs(Clock, device, data));
         }
+        
+        private void FireEvent(EventHandler<TimeStampedDeviceOutputStreamEventArgs> evt, IExternalDevice device,
+                               IOutputStream stream)
+        {
+            FireEvent(evt, new TimeStampedDeviceOutputStreamEventArgs(Clock, device, stream));
+        }
+
+        private void FireEvent(EventHandler<TimeStampedDeviceInputStreamEventArgs> evt, IExternalDevice device,
+                               IInputStream stream)
+        {
+            FireEvent(evt, new TimeStampedDeviceInputStreamEventArgs(Clock, device, stream));
+        }
 
         private void FireEvent(EventHandler<TimeStampedEventArgs> evt)
         {
@@ -297,134 +377,93 @@ namespace Symphony.Core
         {
             lock (_eventLock)
             {
-                if (evt != null)
+                if (evt == null) 
+                    return;
+                
+                try
                 {
                     evt(this, args);
                 }
-            }
-        }
-
-        /// <summary>
-        /// Null Fragment indidcates no fragment.
-        /// </summary>
-        private class InputDataPair : Tuple<IInputData, Queue<IInputData>>
-        {
-            public InputDataPair()
-                : this(null, new Queue<IInputData>())
-            {
-            }
-
-            public InputDataPair(IInputData item1, Queue<IInputData> item2)
-                : base(item1, item2)
-            {
-            }
-
-            public IInputData Fragment { get { return this.Item1; } }
-
-            public Queue<IInputData> Queue { get { return this.Item2; } }
-        }
-
-        /// <summary>
-        /// Transactional usage must be locked
-        /// </summary>
-        private ConcurrentDictionary<ExternalDeviceBase, InputDataPair> UnusedInputData { get; set; }
-
-        /// <summary>
-        /// Push IInputData from a given ExternalDevice to the appropriate Response of the current
-        /// Epoch.
-        /// </summary>
-        /// <param name="device">ExternalDevice providing the data</param>
-        /// <param name="inData">Input data instsance</param>
-        public virtual void PushInputData(ExternalDeviceBase device, IInputData inData)
-        {
-            //TODO update this to let Epoch use _completionLock around Response duration and appending
-
-            try
-            {
-                OnReceivedInputData(device, inData);
-            }
-            catch (Exception e)
-            {
-                log.ErrorFormat("Unable to notify observers of received input data: {0}", e);
-            }
-            
-            var currentEpoch = CurrentEpoch;
-
-            if (currentEpoch != null &&
-                currentEpoch.Responses.ContainsKey(device))
-            {
-                if (!UnusedInputData.ContainsKey(device))
-                    UnusedInputData[device] = new InputDataPair();
-
-                lock (UnusedInputData[device])
+                catch (Exception e)
                 {
-                    UnusedInputData[device].Queue.Enqueue(inData);
-
-
-                    if (UnusedInputData[device].Fragment != null) //null indicates no fragment present
-                    {
-                        var fragment = UnusedInputData[device].Fragment;
-                        var splitFragment =
-                            fragment.SplitData(currentEpoch.Duration - currentEpoch.Responses[device].Duration);
-
-                        currentEpoch.Responses[device].AppendData(splitFragment.Head);
-
-                        if (splitFragment.Rest.Duration > TimeSpan.Zero)
-                        {
-                            UnusedInputData[device] = new InputDataPair(splitFragment.Rest,
-                                                                        UnusedInputData[device].Queue);
-                        }
-                        else
-                        {
-                            UnusedInputData[device] = new InputDataPair(null,
-                                                                        UnusedInputData[device].Queue);
-                        }
-                    }
-
-                    while (UnusedInputData[device].Queue.Any() &&
-                           currentEpoch.Responses[device].Duration < currentEpoch.Duration)
-                    {
-                        if (UnusedInputData[device].Fragment != null)
-                        {
-                            throw new SymphonyControllerException("Input data fragment should be empty");
-                        }
-
-                        var cData = UnusedInputData[device].Queue.Dequeue();
-
-                        var splitData =
-                            cData.SplitData(currentEpoch.Duration - currentEpoch.Responses[device].Duration);
-
-                        currentEpoch.Responses[device].AppendData(splitData.Head);
-                        if (splitData.Rest.Duration > TimeSpan.Zero)
-                        {
-                            UnusedInputData[device] = new InputDataPair(splitData.Rest,
-                                                                        UnusedInputData[device].Queue);
-                        }
-                    }
-
-
-                    try
-                    {
-                        OnPushedInputData(currentEpoch);
-                    }
-                    catch (Exception e)
-                    {
-                        log.ErrorFormat("Unable to notify observers of pushed input data: {0}", e);
-                    }
+                    log.ErrorFormat("{0} threw an exception: {1}", evt.Method.Name, e);
+                    throw;
                 }
             }
+        }
+        
+        /// <summary>
+        /// Pulls IOutputData from the output stream for the given device. Result will have 
+        /// a duration greater than or equal to the requested duration.
+        /// </summary>
+        /// <param name="device">ExternalDevice for this outputdata</param>
+        /// <param name="duration">Duration of the data requested</param>
+        /// <returns>Output data for the requested device of duration greater than or equal to
+        /// the requested duration.</returns>
+        public virtual IOutputData PullOutputData(IExternalDevice device, TimeSpan duration)
+        {
+            var outStream = OutputStreams[device];
 
+            IOutputData outData = null;
+
+            while (outData == null || outData.Duration < duration)
+            {
+                if (outStream.IsAtEnd)
+                {
+                    var msg = "Output stream exhausted for " + device.Name;
+                    log.Error(msg);
+                    throw new SymphonyControllerException(msg);
+                }
+
+                outData = outData == null
+                    ? outStream.PullOutputData(duration)
+                    : outData.Concat(outStream.PullOutputData(duration - outData.Duration));
+
+                OnPulledOutputData(device, outStream);
+            }
+
+            return new OutputData(outData, outStream.Sealed);
         }
 
+        /// <summary>
+        /// Pushes IInputData to the input stream for the given device.
+        /// </summary>
+        /// <param name="device">ExternalDevice providing the data</param>
+        /// <param name="inData">Input data instance</param>
+        public virtual void PushInputData(ExternalDeviceBase device, IInputData inData)
+        {
+            OnReceivedInputData(device, inData);
+
+            var inStream = InputStreams[device];
+
+            var unpushedInData = inData;
+
+            while (unpushedInData.Duration > TimeSpan.Zero)
+            {
+                if (inStream.IsAtEnd)
+                {
+                    var msg = "Input stream exhausted for " + device.Name;
+                    log.Error(msg);
+                    throw new SymphonyControllerException(msg);
+                }
+
+                var dur = (bool)inStream.Duration 
+                    ? inStream.Duration - inStream.Position 
+                    : unpushedInData.Duration;
+
+                var cons = unpushedInData.SplitData(dur);
+                
+                inStream.PushInputData(cons.Head);
+                unpushedInData = cons.Rest;
+
+                OnPushedInputData(device, inStream);
+            }
+        }
 
         /// <summary>
-        /// The Epoch instance currently being fed through the rig or null if there is
-        /// no current Epoch.
+        /// The main queue of Epochs waiting to be buffered by this Controller.
         /// </summary>
-        public Epoch CurrentEpoch { get; private set; }
-
-
-        protected ConcurrentQueue<Epoch> EpochQueue { get; private set; }
+        private ConcurrentQueue<Epoch> EpochQueue { get; set; }
 
         /// <summary>
         /// Add an Epoch to the Controller's Epoch queue. Epochs are presented in FIFO order from
@@ -432,20 +471,28 @@ namespace Symphony.Core
         /// immediately
         /// </summary>
         /// <param name="e">Epoch to add to the queue</param>
-        /// <see cref="RunEpoch"/>
+        /// <see cref="RunEpoch(Epoch, EpochPersistor)"/>
         public void EnqueueEpoch(Epoch e)
         {
             ValidateEpoch(e);
             EpochQueue.Enqueue(e);
         }
 
-        private static bool ValidateEpoch(Epoch epoch)
+        private bool ValidateEpoch(Epoch epoch)
         {
             if (epoch.IsIndefinite && epoch.Responses.Count > 0)
                 return false;
 
             if (epoch.Stimuli.Values.Any(s => ((bool)s.Duration) != ((bool)epoch.Duration) || ((TimeSpan)s.Duration).Ticks != ((TimeSpan)epoch.Duration).Ticks))
                 return false;
+
+            foreach (var device in Devices)
+            {
+                if (device.OutputStreams.Any() && epoch.GetOutputStream(device) == null)
+                {
+                    return false;
+                }
+            }
 
             return true;
         }
@@ -465,7 +512,7 @@ namespace Symphony.Core
         /// <param name="keywords"></param>
         /// <param name="properties"></param>
         /// <returns>The EpochPersistor instance to be used for saving Epochs</returns>
-        /// <see cref="RunEpoch"/>
+        /// <see cref="RunEpoch(Epoch, EpochPersistor)"/>
         public EpochPersistor BeginEpochGroup(string path, string epochGroupLabel, string source, IEnumerable<string> keywords, IDictionary<string, object> properties)
         {
             EpochPersistor result = null;
@@ -502,23 +549,6 @@ namespace Symphony.Core
         {
             e.EndEpochGroup();
             e.Close();
-        }
-
-        private void PrepareRun()
-        {
-            if (!Validate())
-                throw new ValidationException(Validate());
-
-            if (Running)
-                throw new SymphonyControllerException("Controller is running");
-
-            Running = true;
-        }
-
-        private void FinishRun()
-        {
-            Running = false;
-            OnFinishedRun();
         }
         
         /// <summary>
@@ -567,162 +597,364 @@ namespace Symphony.Core
 
             foreach (var dev in backgrounds.Keys)
             {
-                epoch.Background[dev] = new Epoch.EpochBackground(backgrounds[dev], stimulusSampleRate);
+                epoch.Backgrounds[dev] = new Background(backgrounds[dev], stimulusSampleRate);
             }
 
             RunEpoch(epoch, persistor);
         }
 
         /// <summary>
-        /// The core entry point for the Controller Facade; push an Epoch in here, and when the
-        /// Epoch is finished processing, control will be returned to you. 
+        /// Runs a single Epoch, bypassing the current Epoch queue. This method blocks until
+        /// the Epoch is complete and the Controller is stopped. 
         /// 
-        /// <para>In other words, this method is blocking.</para>
+        /// <para>The Controller cannot run more than one Epoch at a time. This method may only
+        /// be used when the Controller is not running.</para>
         /// </summary>
-        /// 
         /// <param name="e">Single Epoch to present</param>
         /// <param name="persistor">EpochPersistor for saving the data. May be null to indicate epoch should not be persisted</param>
+        /// <exception cref="ArgumentException">Validation failed for the provided Epoch</exception>
         /// <exception cref="ValidationException">Validation failed for this Controller</exception>
+        /// <exception cref="SymphonyControllerException">This Controller is currently running</exception>
         public void RunEpoch(Epoch e, EpochPersistor persistor)
         {
-            PrepareRun();
-            CommonRunEpoch(e, persistor);
-        }
+            if (Running)
+                throw new SymphonyControllerException("Controller is currently running");
 
-        /// <summary>
-        /// The core entry point for the Controller Facade; push an Epoch in here, and control
-        /// is returned to you immediately while the Epoch runs in the background. 
-        /// 
-        /// <para>In other words, this method is nonblocking, however the Controller cannot run 
-        /// more than one Epoch at a time.</para>
-        /// </summary>
-        /// 
-        /// <param name="e">Single Epoch to present</param>
-        /// <param name="persistor">EpochPersistor for saving the data. May be null to indicate epoch should not be persisted</param>
-        /// <exception cref="ValidationException">Validation failed for this Controller</exception>
-        public Task RunEpochAsync(Epoch e, EpochPersistor persistor)
-        {
-            PrepareRun();
-            return Task.Factory.StartNew(() => CommonRunEpoch(e, persistor), TaskCreationOptions.LongRunning);
-        }
+            if (!Validate())
+                throw new ValidationException(Validate());
 
-        private void CommonRunEpoch(Epoch e, EpochPersistor persistor)
-        {
-            var cEpoch = CurrentEpoch;
+            if (!ValidateEpoch(e))
+                throw new ArgumentException("Epoch is not valid");
+
+            EventHandler<TimeStampedEpochEventArgs> epochCompleted = (c, args) => RequestStop();
 
             try
             {
-                if (!ValidateEpoch(e))
-                    throw new ArgumentException("Epoch is not valid");
-                
-                CurrentEpoch = e;
-                RunCurrentEpoch(persistor);
+                CompletedEpoch += epochCompleted;
+
+                var singleEpochQueue = new ConcurrentQueue<Epoch>(new[] { e });
+                Process(singleEpochQueue, persistor);
             }
             finally
             {
-                CurrentEpoch = cEpoch;
-                FinishRun();
+                CompletedEpoch -= epochCompleted;
             }
         }
         
         /// <summary>
-        /// The core method that runs this Controller's CurrentEpoch; executing it on the associated
-        /// DAQ Controller and persisting the results.
+        /// Asynchronously starts processing the Epoch queue. The Controller will not stop until requested 
+        /// with RequestPause() or RequestStop(), or a processing error occurs. In periods when the queue 
+        /// is empty and there is no Epoch data remaining to process, a background stream will be presented
+        /// for each device and no data will be recorded.
+        ///
+        /// <para>Epochs may be enqueued before and during processing of the Epoch queue.</para>
         /// </summary>
-        private void RunCurrentEpoch(EpochPersistor persistor)
+        /// <param name="persistor">EpochPersistor for saving the data. May be null to indicate epoch should not be persisted</param>
+        /// <returns>Task processing the Epoch queue</returns>
+        /// <exception cref="ValidationException">Validation failed for this Controller</exception>
+        /// <exception cref="SymphonyControllerException">This Controller is currently running</exception>
+        /// <see cref="BackgroundStreams"/>
+        /// <see cref="RequestPause()"/>
+        /// <see cref="RequestStop()"/>
+        public Task StartAsync(EpochPersistor persistor)
         {
-            var cts = new CancellationTokenSource();
-            var cancellationToken = cts.Token;
+            if (Running)
+                throw new SymphonyControllerException("Controller is currently running");
 
-            Task persistenceTask = null;
+            if (!Validate())
+                throw new ValidationException(Validate());
 
-            EventHandler<TimeStampedEventArgs> nextRequested = (c, args) =>
-            {
-                DAQController.RequestStop();
-                OnDiscardedEpoch(CurrentEpoch);
-            };
+            return Task.Factory.StartNew(() => Process(EpochQueue, persistor), TaskCreationOptions.LongRunning);
+        }
 
-            bool epochPersisted = false;
-            EventHandler<TimeStampedEpochEventArgs> inputPushed = (c, args) =>
-            {
-                if (CurrentEpoch != null &&
-                    CurrentEpoch.IsComplete)
-                {
-                    log.Debug("Epoch complete. Requesting DAQController stop.");
-                    DAQController.RequestStop();
-                    if (persistor != null && !epochPersisted)
-                    {
-                        Epoch completedEpoch = CurrentEpoch;
-                        persistenceTask = Task.Factory.StartNew(() =>
-                                                                    {
-                                                                        log.DebugFormat("Saving completed Epoch ({0})...", completedEpoch.StartTime);
-                                                                        SaveEpoch(persistor, completedEpoch);
-                                                                    },
-                            cancellationToken,
-                            TaskCreationOptions.PreferFairness,
-                            SerialTaskScheduler)
-                            .ContinueWith((task) =>
-                                              {
-                                                  cancellationToken.ThrowIfCancellationRequested();
+        /// <summary>
+        /// Spins in a loop buffering Epochs from the given Epoch queue as required to satisfy PullOutputData
+        /// requests from the output pipeline. When the queue is exhausted, the Controller's BackgroundStreams
+        /// will be used to feed the pipeline, ensuring that the pipeline is never starved.
+        /// </summary>
+        /// <param name="epochQueue">Epoch queue to process</param>
+        /// <param name="persistor">Epoch persistor for saving data</param>
+        private void Process(ConcurrentQueue<Epoch> epochQueue, EpochPersistor persistor)
+        {
+            Running = true;
+            IsPauseRequested = false;
+            IsStopRequested = false;
 
-                                                  if (task.IsFaulted &&
-                                                      task.Exception != null)
-                                                  {
-                                                      throw task.Exception;
-                                                  }
-
-                                                  OnCompletedEpoch(completedEpoch);
-                                              },
-                                              cancellationToken);
-
-                        epochPersisted = true;
-                    }
-                }
-            };
-
-            EventHandler<TimeStampedExceptionEventArgs> exceptionalStop = (daq, args) =>
-                                                                              {
-                                                                                  log.Debug(
-                                                                                      "Discarding epoch due to exception");
-                                                                                  OnDiscardedEpoch(CurrentEpoch);
-                                                                                  throw new SymphonyControllerException(
-                                                                                      "DAQ Controller stopped", args.Exception);
-                                                                              };
+            OnStarted();
 
             try
             {
-                NextEpochRequested += nextRequested;
-                PushedInputData += inputPushed;
-                DAQController.ExceptionalStop += exceptionalStop;
-
-                CurrentEpoch.StartTime = Maybe<DateTimeOffset>.Some(this.Clock.Now);
-
-                log.DebugFormat("Starting epoch: {0}", CurrentEpoch.ProtocolID);
-                DAQController.Start(CurrentEpoch.WaitForTrigger);
+                ProcessLoop(epochQueue, persistor);
             }
             finally
             {
-                NextEpochRequested -= nextRequested;
+                if (Running)
+                {
+                    Stop();
+                }
+            }
+        }
+
+        private void Stop()
+        {
+            try
+            {
+                Task.WaitAll(PersistenceTasks.ToArray());
+            }
+            catch (Exception ex)
+            {
+                log.ErrorFormat("An error occurred while saving Epochs: {0}", ex);
+                throw new SymphonyControllerException("Unable to write Epoch data to persistor.", ex);
+            }
+            finally
+            {
+                Running = false;
+                OnStopped();
+            }
+        }
+
+        private void ProcessLoop(ConcurrentQueue<Epoch> epochQueue, EpochPersistor persistor)
+        {           
+            var cts = new CancellationTokenSource();
+            var cancellationToken = cts.Token;
+
+            var incompleteEpochs = new ConcurrentQueue<Epoch>();
+            
+            EventHandler<TimeStampedEventArgs> stopRequested = (c, args) =>
+                {
+                    DAQController.RequestStop();
+                };
+
+            EventHandler<TimeStampedDeviceOutputStreamEventArgs> outputPulled = (c, args) =>
+                {
+                    var device = args.Device;
+                    var stream = args.Stream;
+
+                    Debug.Assert(stream == OutputStreams[device], "Pulled from an unexpected stream");
+
+                    if (stream.IsAtEnd)
+                    {
+                        bool didBufferEpoch = false;
+
+                        Epoch nextEpoch;
+                        if (epochQueue.TryPeek(out nextEpoch))
+                        {
+                            bool shouldBufferEpoch = !nextEpoch.WaitForTrigger && !IsPauseRequested && !IsStopRequested;
+
+                            if (shouldBufferEpoch && epochQueue.TryDequeue(out nextEpoch))
+                            {
+                                BufferEpoch(nextEpoch);
+                                incompleteEpochs.Enqueue(nextEpoch);
+                                didBufferEpoch = true;
+                            }
+                        }
+                            
+                        if (!didBufferEpoch)
+                        {
+                            BufferBackground(BackgroundStreams);
+                        }
+                    }
+                };
+
+            EventHandler<TimeStampedDeviceInputStreamEventArgs> inputPushed = (c, args) =>
+                {
+                    var device = args.Device;
+                    var stream = args.Stream;
+
+                    Debug.Assert(stream == InputStreams[device], "Pushed to an unexpected stream");                   
+
+                    Epoch currentEpoch;
+                    if (!incompleteEpochs.TryPeek(out currentEpoch))
+                        return;
+                    
+                    if (currentEpoch.IsComplete)
+                    {
+                        log.DebugFormat("Completed Epoch: {0}", currentEpoch.ProtocolID);
+                            
+                        Task.Factory.StartNew(() => OnCompletedEpoch(currentEpoch), 
+                            CancellationToken.None, 
+                            TaskCreationOptions.None,
+                            CompletedEpochTaskScheduler);
+
+                        if (persistor != null)
+                        {
+                            var persistTask = Task.Factory.StartNew(() =>
+                                {
+                                    log.DebugFormat("Saving completed Epoch ({0})...", currentEpoch.StartTime);
+                                    SaveEpoch(persistor, currentEpoch);
+                                },
+                                cancellationToken,
+                                TaskCreationOptions.PreferFairness,
+                                PersistEpochTaskScheduler)
+                                .ContinueWith((t) =>
+                                    {
+                                        cancellationToken.ThrowIfCancellationRequested();
+
+                                        if (t.IsFaulted &&
+                                            t.Exception != null)
+                                        {
+                                            throw t.Exception;
+                                        }
+                                    },
+                                    cancellationToken);
+
+                            PersistenceTasks = PersistenceTasks.Where(t => !t.IsCompleted).ToList();
+                            PersistenceTasks.Add(persistTask);
+                        }
+
+                        Epoch completedEpoch;
+                        if (!incompleteEpochs.TryDequeue(out completedEpoch))
+                            throw new SymphonyControllerException("Could not dequeue completed epoch");
+
+                        if (incompleteEpochs.IsEmpty)
+                        {
+                            DAQController.RequestStop();
+                        }
+                    }
+                };
+
+            EventHandler<TimeStampedExceptionEventArgs> exceptionalStop = (daq, args) =>
+                {
+                    log.Debug("DAQ Controller stopped");
+                    throw new SymphonyControllerException("DAQ Controller stopped", args.Exception);
+                };
+
+            InitIOStreams();
+
+            try
+            {
+                StopRequested += stopRequested;
+                PulledOutputData += outputPulled;
+                PushedInputData += inputPushed;
+                DAQController.ExceptionalStop += exceptionalStop;
+
+                while (!IsPauseRequested && !IsStopRequested)
+                {
+                    Epoch epoch;
+                    if (epochQueue.TryDequeue(out epoch))
+                    {
+                        BufferEpoch(epoch);
+                        incompleteEpochs.Enqueue(epoch);
+
+                        DAQController.Start(epoch.WaitForTrigger);
+                    }
+                }
+            }
+            finally
+            {
+                StopRequested -= stopRequested;
+                PulledOutputData -= outputPulled;
                 PushedInputData -= inputPushed;
                 DAQController.ExceptionalStop -= exceptionalStop;
 
-                DAQController.WaitForInputTasks();
-
-                //Clear remaining input
-                UnusedInputData.Clear();
-            }
-
-            if (persistenceTask != null)
-            {
-                try
+                while (incompleteEpochs.Any())
                 {
-                    persistenceTask.Wait();
+                    Epoch discardedEpoch;
+                    if (incompleteEpochs.TryDequeue(out discardedEpoch))
+                    {
+                        log.Debug("Discarding incomplete epoch");
+                        OnDiscardedEpoch(discardedEpoch);
+                    }
                 }
-                catch (AggregateException ex)
+            }
+        }
+
+        /// <summary>
+        /// Output streams that the Controller uses to provide output data for the output pipeline.
+        /// </summary>
+        private ConcurrentDictionary<IExternalDevice, SequenceOutputStream> OutputStreams { get; set; }
+
+        /// <summary>
+        /// Input streams that the Controller uses to consume input data from the input pipeline.
+        /// </summary>
+        private ConcurrentDictionary<IExternalDevice, SequenceInputStream> InputStreams { get; set; }
+
+        /// <summary>
+        /// Background streams to present in the absence of Epoch data. All devices in the Controller 
+        /// must have an associated background stream of indefinite duration or the Controller will 
+        /// fail to validate.
+        /// </summary>
+        public IDictionary<IExternalDevice, IOutputStream> BackgroundStreams { get; set; }
+
+        // Protected for unit testing only
+        protected void InitIOStreams()
+        {
+            OutputStreams.Clear();
+            InputStreams.Clear();
+            foreach (var device in Devices)
+            {
+                if (device.OutputStreams.Any())
                 {
-                    log.ErrorFormat("An error occurred while saving Epoch: {0}", ex);
-                    throw new SymphonyControllerException("Unable to write Epoch data to persistor.",
-                        ex.Flatten());
+                    OutputStreams[device] = new SequenceOutputStream();
+                }
+
+                if (device.InputStreams.Any())
+                {
+                    InputStreams[device] = new SequenceInputStream();
+                }
+            }
+        }
+        
+        // Protected for unit testing only
+        /// <summary>
+        /// Buffers all necessary streams from the given Epoch into the device input and output streams
+        /// of this Controller.
+        /// </summary>
+        /// <param name="epoch">Epoch with streams to buffer</param>
+        protected void BufferEpoch(Epoch epoch)
+        {
+            log.DebugFormat("Buffering epoch: {0}", epoch.ProtocolID);
+
+            foreach (var device in Devices)
+            {
+                if (device.OutputStreams.Any())
+                {
+                    var outStream = epoch.GetOutputStream(device, DAQController.ProcessInterval);
+
+                    if (outStream == null)
+                        throw new SymphonyControllerException("Epoch did not provide an output stream for " + device.Name);
+
+                    OutputStreams[device].Add(outStream);
+                }
+
+                if (device.InputStreams.Any())
+                {
+                    var inStream = epoch.GetInputStream(device) ??
+                                   new NullInputStream(epoch.Duration);
+
+                    InputStreams[device].Add(inStream);
+                }
+            }
+        }
+
+        // Protected for unit testing only
+        /// <summary>
+        /// Buffers the given dictionary of background streams into the device output streams of this
+        /// Controller. Input streams will be buffered with NullInputStream.
+        /// </summary>
+        /// <param name="background"></param>
+        protected void BufferBackground(IDictionary<IExternalDevice, IOutputStream> background)
+        {
+            log.DebugFormat("Buffering background");
+
+            foreach (var device in Devices)
+            {
+                if (device.OutputStreams.Any())
+                {
+                    if (!background.ContainsKey(device))
+                        throw new SymphonyControllerException("Background stream not provided for " + device.Name);
+
+                    var backStream = background[device];
+
+                    if (backStream.Duration)
+                        throw new SymphonyControllerException("Background stream must have indefinite duration");
+
+                    OutputStreams[device].Add(backStream);
+                }
+
+                if (device.InputStreams.Any())
+                {
+                    InputStreams[device].Add(new NullInputStream());
                 }
             }
         }
@@ -736,27 +968,35 @@ namespace Symphony.Core
         }
 
         /// <summary>
-        /// Request that the Controller abort the current Epoch and move on to the next Epoch in
-        /// the EpochQueue. If no next Epoch is available (or if the Controller running a single Epoch via
-        /// RunEpoch), this method will stop the input/output pipelines.
+        /// Request this Controller complete all currently buffered Epochs and then pause. This 
+        /// method does not block and the Controller will not pause immediately. Always wait for
+        /// the Controller's Running flag or Stopped event to indicate when the Controller has 
+        /// actually paused.
         /// </summary>
-        /// <remarks>Calling NextEpoch() on a stopped Controller is a NOP</remarks>
-        public void NextEpoch()
+        public void RequestPause()
         {
-            OnNextEpochRequested();
+            IsPauseRequested = true;
+            OnPauseRequested();
         }
 
+        private bool IsPauseRequested { get; set; }
+
         /// <summary>
-        /// Requests that the Controller abort the current Epoch and stop the input/output pipelines.
+        /// Request this Controller stop and discard all incomplete buffered Epochs. This method 
+        /// does not block and the Controller will not stop immediately. Always wait for the 
+        /// Controller's Running flag or Stopped event to indicate when the Controller has 
+        /// actually stopped.
         /// </summary>
-        public void CancelEpoch()
+        public void RequestStop()
         {
-            OnNextEpochRequested();
+            IsStopRequested = true;
+            OnStopRequested();
         }
 
-
+        private bool IsStopRequested { get; set; }
+        
         /// <summary>
-        /// Inform this Controller that the output pipeline send output data "to the wire".
+        /// Inform this Controller that the output pipeline sent output data "to the wire".
         /// </summary>
         /// <param name="device">ExternalDevice that output the data</param>
         /// <param name="outputTime">Approximate time the data was sent to the wire</param>
@@ -764,11 +1004,7 @@ namespace Symphony.Core
         /// <param name="configuration">Pipeline node configuration(s) for the output pipeline that processed the outgoing data</param>
         public virtual void DidOutputData(IExternalDevice device, DateTimeOffset outputTime, TimeSpan duration, IEnumerable<IPipelineNodeConfiguration> configuration)
         {
-            //virtual for Moq
-            if (CurrentEpoch != null && !CurrentEpoch.IsComplete)
-            {
-                CurrentEpoch.DidOutputData(device, outputTime, duration, configuration);
-            }
+            OutputStreams[device].DidOutputData(outputTime, duration, configuration);
         }
     }
 
@@ -787,5 +1023,4 @@ namespace Symphony.Core
         {
         }
     }
-
 }
