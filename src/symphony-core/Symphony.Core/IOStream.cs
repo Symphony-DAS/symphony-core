@@ -464,7 +464,15 @@ namespace Symphony.Core
 
         public void PushInputData(IInputData inData)
         {
-            if (Duration && inData.Duration > Duration - Position)
+            var srate = SampleRate;
+            if (srate != null && !Equals(inData.SampleRate, srate))
+                throw new ArgumentException("Data sample rate does not equal stream sample rate");
+
+            var epsilon = srate == null
+                  ? TimeSpan.FromSeconds(1)
+                  : TimeSpan.FromTicks((long)Math.Ceiling(TimeSpan.TicksPerSecond / srate.QuantityInBaseUnit));
+
+            if (Duration && inData.Duration > Duration - Position + epsilon)
                 throw new ArgumentException("Data duration is greater than stream duration minus position");
 
             var unpushedData = inData;
@@ -550,11 +558,15 @@ namespace Symphony.Core
 
         public void PushInputData(IInputData inData)
         {
-            if (Duration && inData.Duration > Duration - Position)
-                throw new ArgumentException("Data duration is greater than stream duration minus position");
-
             if (SampleRate != null && !Equals(inData.SampleRate, SampleRate))
                 throw new ArgumentException("Data sample rate does not equal stream sample rate");
+
+            var epsilon = SampleRate == null
+                  ? TimeSpan.FromSeconds(1)
+                  : TimeSpan.FromTicks((long) Math.Ceiling(TimeSpan.TicksPerSecond / SampleRate.QuantityInBaseUnit));
+
+            if (Duration && inData.Duration > Duration - Position + epsilon)
+                throw new ArgumentException("Data duration is greater than stream duration minus position");
 
             Response.AppendData(inData);
 
@@ -619,7 +631,9 @@ namespace Symphony.Core
         
         public void PushInputData(IInputData inData)
         {
-            if (Duration && inData.Duration > Duration - Position)
+            var epsilon = TimeSpan.FromSeconds(1);
+
+            if (Duration && inData.Duration > Duration - Position + epsilon)
                 throw new ArgumentException("Data duration is greater than stream duration minus position");
 
             Position += inData.Duration;
