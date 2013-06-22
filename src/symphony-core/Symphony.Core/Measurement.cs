@@ -348,13 +348,14 @@ namespace Symphony.Core
 
         public string BaseUnit(string units)
         {
-            if(_baseUnitsCache.ContainsKey(units))
+            string result;
+            if (_baseUnitsCache.TryGetValue(units, out result))
             {
-                return _baseUnitsCache[units];
+                return result;
             }
 
             var prefix = UnitPrefix(units);
-            var result = HasPrefix(units, prefix) ? units.Substring(prefix.Length) : units;
+            result = HasPrefix(units, prefix) ? units.Substring(prefix.Length) : units;
 
             _baseUnitsCache[units] = result;
 
@@ -389,12 +390,13 @@ namespace Symphony.Core
 
         private string UnitPrefix(string units)
         {
-            if(_unitPrefixCache.ContainsKey(units))
+            string result;
+            if (_unitPrefixCache.TryGetValue(units, out result))
             {
-                return _unitPrefixCache[units];
+                return result;
             }
 
-            var result = _prefixToExponent.Keys.Where(k => !string.IsNullOrEmpty(k)).FirstOrDefault(units.StartsWith);
+            result = _prefixToExponent.Keys.Where(k => !string.IsNullOrEmpty(k)).FirstOrDefault(units.StartsWith);
             _unitPrefixCache[units] = result;
 
             return result;
