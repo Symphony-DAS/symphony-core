@@ -333,18 +333,7 @@ namespace Symphony.Core
             return _exponentToPrefix[exponent];
         }
 
-        private readonly IDictionary<string, string> _baseUnitsCache = new Dictionary<string, string>()
-            {
-                // preload with common units
-                {"V", "V"},
-                {"mV", "V"},
-                {"µV", "V"},
-                {"A", "A"},
-                {"mA", "A"},
-                {"µA", "A"},
-                {"nA", "A"},
-                {"pA", "A"}
-            };
+        private readonly IDictionary<string, string> _baseUnitsCache = new Dictionary<string, string>();
 
         public string BaseUnit(string units)
         {
@@ -375,18 +364,7 @@ namespace Symphony.Core
         }
 
 
-        private readonly IDictionary<string, string> _unitPrefixCache = new Dictionary<string, string>()
-            {
-                // preload with common units
-                {"V", null},
-                {"mV", "m"},
-                {"µV", "µ"},
-                {"A", null},
-                {"mA", "m"},
-                {"µA", "µ"},
-                {"nA", "n"},
-                {"pA", "p"}
-            };
+        private readonly IDictionary<string, string> _unitPrefixCache = new Dictionary<string, string>();
 
         private string UnitPrefix(string units)
         {
