@@ -66,6 +66,19 @@ namespace Symphony.Core
     }
 
     /// <summary>
+    /// Interface for streams around data sinks of the input pipeline.
+    /// </summary>
+    public interface IInputStream : IIOStream
+    {
+        /// <summary>
+        /// Pushes input data to this stream and advances the stream position accordingly.
+        /// </summary>
+        /// <param name="inData">Input data to push</param>
+        /// <exception cref="ArgumentException">If the pushed data would exceed the streams remaining duration</exception>
+        void PushInputData(IInputData inData);
+    }
+
+    /// <summary>
     /// A concatenation of output streams where concatenated streams are traversed in FIFO ordered.
     /// 
     /// <para>A SequenceOutputStream will only hold reference to an underlying stream long enough
@@ -404,19 +417,6 @@ namespace Symphony.Core
         {
             get { return Duration && Position >= Duration; }
         }
-    }
-
-    /// <summary>
-    /// Interface for streams around data sinks of the input pipeline.
-    /// </summary>
-    public interface IInputStream : IIOStream
-    {
-        /// <summary>
-        /// Pushes input data to this stream and advances the stream position accordingly.
-        /// </summary>
-        /// <param name="inData">Input data to push</param>
-        /// <exception cref="ArgumentException">If the pushed data would exceed the streams remaining duration</exception>
-        void PushInputData(IInputData inData);
     }
 
     /// <summary>
