@@ -474,27 +474,33 @@ namespace Symphony.Core
         /// <see cref="RunEpoch(Epoch, EpochPersistor)"/>
         public void EnqueueEpoch(Epoch e)
         {
-            ValidateEpoch(e);
+            if (!ValidateEpoch(e))
+                throw new ArgumentException(ValidateEpoch(e));
+
             EpochQueue.Enqueue(e);
         }
 
-        private bool ValidateEpoch(Epoch epoch)
+        private Maybe<string> ValidateEpoch(Epoch epoch)
         {
             if (epoch.IsIndefinite && epoch.Responses.Count > 0)
-                return false;
+                return Maybe<string>.No("Indefinite Epochs cannot have responses.");
 
             if (epoch.Stimuli.Values.Any(s => ((bool)s.Duration) != ((bool)epoch.Duration) || ((TimeSpan)s.Duration).Ticks != ((TimeSpan)epoch.Duration).Ticks))
-                return false;
+                return Maybe<string>.No("All Epoch stimuli must have equal duration.");
 
-            foreach (var device in Devices)
+            foreach (IExternalDevice dev in Devices)
             {
-                if (device.OutputStreams.Any() && epoch.GetOutputStream(device) == null)
-                {
-                    return false;
-                }
+                if (dev.OutputStreams.Any() && epoch.GetOutputStream(dev) == null)
+                    return Maybe<string>.No("Epoch is missing a stimulus for device " + dev.Name);
             }
 
-            return true;
+            foreach (IExternalDevice dev in epoch.Responses.Keys)
+            {
+                if (!Devices.Contains(dev) || !dev.InputStreams.Any()) 
+                    return Maybe<string>.No("Epoch contains a response for device `" + dev.Name + "` which has no input stream.");
+            }
+
+            return Maybe<string>.Yes();
         }
 
 
@@ -624,7 +630,7 @@ namespace Symphony.Core
                 throw new ValidationException(Validate());
 
             if (!ValidateEpoch(e))
-                throw new ArgumentException("Epoch is not valid");
+                throw new ArgumentException(ValidateEpoch(e));
 
             EventHandler<TimeStampedEpochEventArgs> epochCompleted = (c, args) => RequestStop();
 

@@ -38,6 +38,11 @@ namespace Symphony.Core
                                     SampleRate = srate,
                                     MeasurementConversionTarget = "V"
                                 };
+            var inStream = new DAQInputStream("IN")
+                                {
+                                    SampleRate = srate,
+                                    MeasurementConversionTarget = "V"
+                                };
 
             var controller = new Controller() { Clock = daq, DAQController = daq };
 
@@ -46,7 +51,7 @@ namespace Symphony.Core
                               Clock = daq,
                               MeasurementConversionTarget = "V"
                           };
-            dev.BindStream(outStream);
+            dev.BindStream(outStream).BindStream(inStream);
 
             // Setup Epoch
             var e = new Epoch("OutputPipelineContinuity");
