@@ -163,14 +163,16 @@ namespace Symphony.Core
         }
 
         /// <summary>
-        /// Flag indicating that this epoch is complete. A complete Epoch has Responses that are all greater 
-        /// than or equal to the Epoch duration. Indefinite Epochs are never complete.
+        /// Flag indicating that this epoch is complete. A complete Epoch has stimuli that are all complete
+        /// and responses that are all greater than or equal to the Epoch duration. Indefinite Epochs are 
+        /// never complete.
         /// </summary>
+        /// <seealso cref="IStimulus.IsComplete"/>
         public virtual bool IsComplete
         {
             get
             {
-                return (!IsIndefinite
+                return (Stimuli.Values.All(s => s.IsComplete)
                         && Responses.Values.All((r) => r.Duration.Ticks >= ((TimeSpan) Duration).Ticks));
             }
         }
@@ -284,6 +286,12 @@ namespace Symphony.Core
         IEnumerable<IConfigurationSpan> OutputConfigurationSpans { get; }
 
         /// <summary>
+        /// A flag indicating if this stimulus is complete. A complete stimulus has been informed that its entire
+        /// duration has been pushed "to the wire". Indefinite stimulus are never complete.
+        /// </summary>
+        bool IsComplete { get; }
+
+        /// <summary>
         /// Informs this stimulus that a segment of its data was pushed "to the wire"
         /// </summary>
         /// <param name="timeSpan">Duration of the data that was written</param>
@@ -370,6 +378,11 @@ namespace Symphony.Core
 
                 return result;
             }
+        }
+
+        public bool IsComplete
+        {
+            get { return Duration && OutputConfigurationSpans.Select(s => s.Time.Ticks).Sum() >= ((TimeSpan)Duration).Ticks; }
         }
 
         public void DidOutputData(TimeSpan time, IEnumerable<IPipelineNodeConfiguration> configuration)
