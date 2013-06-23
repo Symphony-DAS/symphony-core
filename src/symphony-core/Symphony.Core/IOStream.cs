@@ -252,7 +252,7 @@ namespace Symphony.Core
 
         /// <summary>
         /// Constructs an output stream around a given Stimulus with a hint at the block duration
-        /// to use for enumerating the Stimulus data.
+        /// to use for enumerating the stimulus data.
         /// </summary>
         /// <param name="stimulus">Stimulus to stream</param>
         /// <param name="blockDuration">Block duration to use for enumerating the stimulus data</param>
@@ -468,9 +468,8 @@ namespace Symphony.Core
             if (srate != null && !Equals(inData.SampleRate, srate))
                 throw new ArgumentException("Data sample rate does not equal stream sample rate");
 
-            var epsilon = srate == null
-                  ? TimeSpan.FromSeconds(1)
-                  : TimeSpan.FromTicks((long)Math.Ceiling(TimeSpan.TicksPerSecond / srate.QuantityInBaseUnit));
+            // Account for data granularity
+            var epsilon = TimeSpan.FromTicks((long)Math.Ceiling(TimeSpan.TicksPerSecond / inData.SampleRate.QuantityInBaseUnit));
 
             if (Duration && inData.Duration > Duration - Position + epsilon)
                 throw new ArgumentException("Data duration is greater than stream duration minus position");
@@ -561,9 +560,8 @@ namespace Symphony.Core
             if (SampleRate != null && !Equals(inData.SampleRate, SampleRate))
                 throw new ArgumentException("Data sample rate does not equal stream sample rate");
 
-            var epsilon = SampleRate == null
-                  ? TimeSpan.FromSeconds(1)
-                  : TimeSpan.FromTicks((long) Math.Ceiling(TimeSpan.TicksPerSecond / SampleRate.QuantityInBaseUnit));
+            // Account for data granularity
+            var epsilon = TimeSpan.FromTicks((long)Math.Ceiling(TimeSpan.TicksPerSecond / inData.SampleRate.QuantityInBaseUnit));
 
             if (Duration && inData.Duration > Duration - Position + epsilon)
                 throw new ArgumentException("Data duration is greater than stream duration minus position");
@@ -631,7 +629,8 @@ namespace Symphony.Core
         
         public void PushInputData(IInputData inData)
         {
-            var epsilon = TimeSpan.FromSeconds(1);
+            // Account for data granularity
+            var epsilon = TimeSpan.FromTicks((long)Math.Ceiling(TimeSpan.TicksPerSecond / inData.SampleRate.QuantityInBaseUnit));
 
             if (Duration && inData.Duration > Duration - Position + epsilon)
                 throw new ArgumentException("Data duration is greater than stream duration minus position");

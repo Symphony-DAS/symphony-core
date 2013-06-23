@@ -246,7 +246,7 @@ namespace Symphony.Core
         [Test]
         public void PushesInputData()
         {
-            var dur = stream.Duration.Item2;
+            TimeSpan dur = stream.Duration;
             var srate = new Measurement(10000, "Hz");
             IList<IMeasurement> list = Enumerable.Range(0, (int)((double)srate.QuantityInBaseUnit * dur.TotalSeconds)).Select(i => new Measurement(i, "V") as IMeasurement).ToList();
 
@@ -269,6 +269,22 @@ namespace Symphony.Core
         }
 
         [Test]
+        public void PushInputDataAllowsForDataGranularity()
+        {
+            var srate = new Measurement(1, "Hz");
+            IList<IMeasurement> list = new List<IMeasurement>() { new Measurement(1, "V") };
+
+            var grainyData = new InputData(list, srate, DateTime.Now);
+
+            var dur = TimeSpan.FromSeconds(0.6);
+            var shortStream = new ResponseInputStream(response, Option<TimeSpan>.Some(dur));
+
+            var cons = grainyData.SplitData(dur);
+            
+            Assert.DoesNotThrow(() => shortStream.PushInputData(cons.Head));
+        }
+
+        [Test]
         public void ShouldSetIsAtEnd()
         {
             var dur = new TimeSpan(stream.Duration.Item2.Ticks / 2);
@@ -288,7 +304,7 @@ namespace Symphony.Core
     }
 
     [TestFixture]
-    class SequenceOutputStreamTests
+    class SequenceInputStreamTests
     {
         IInputStream stream1;
         IInputStream stream2;
