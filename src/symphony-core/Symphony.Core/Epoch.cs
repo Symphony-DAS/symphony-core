@@ -275,7 +275,7 @@ namespace Symphony.Core
         /// The approximate time this stimulus began being processed by the DAQController, or
         /// Maybe.No if this stimulus has not yet started processing. 
         /// </summary>
-        Maybe<DateTimeOffset> StartTime { get; set; } 
+        Maybe<DateTimeOffset> StartTime { get; } 
 
         /// <summary>
         /// BaseUnits for this stimulus' output data
@@ -294,9 +294,10 @@ namespace Symphony.Core
         /// <summary>
         /// Informs this stimulus that a segment of its data was pushed "to the wire"
         /// </summary>
+        /// <param name="outputTime">Approximate time the data was written "to the wire"</param>
         /// <param name="timeSpan">Duration of the data that was written</param>
         /// <param name="configuration">Pipeline node configuration(s) of nodes that processed the outgoing data</param>
-        void DidOutputData(TimeSpan timeSpan, IEnumerable<IPipelineNodeConfiguration> configuration);
+        void DidOutputData(DateTimeOffset outputTime, TimeSpan timeSpan, IEnumerable<IPipelineNodeConfiguration> configuration);
     }
 
     public abstract class Stimulus : IStimulus
@@ -361,7 +362,7 @@ namespace Symphony.Core
         /// The approximate time this stimulus began being processed by the DAQController, or
         /// Maybe.No if this stimulus has not yet started processing. 
         /// </summary>
-        public Maybe<DateTimeOffset> StartTime { get; set; }
+        public Maybe<DateTimeOffset> StartTime { get; private set; }
 
         private ISet<IConfigurationSpan> OutputConfigurationSpanSet
         {
@@ -382,11 +383,19 @@ namespace Symphony.Core
 
         public bool IsComplete
         {
-            get { return Duration && OutputConfigurationSpans.Select(s => s.Time.Ticks).Sum() >= ((TimeSpan)Duration).Ticks; }
+            get { return Duration && OutputConfigurationSpanSet.Select(s => s.Time.Ticks).Sum() >= ((TimeSpan)Duration).Ticks; }
         }
 
-        public void DidOutputData(TimeSpan time, IEnumerable<IPipelineNodeConfiguration> configuration)
+        public void DidOutputData(DateTimeOffset outputTime, TimeSpan time, IEnumerable<IPipelineNodeConfiguration> configuration)
         {
+            if (StartTime && outputTime < StartTime)
+                throw new ArgumentException("Data output time must be after stimulus start time", "outputTime");
+
+            if (!StartTime)
+            {
+                StartTime = Maybe<DateTimeOffset>.Some(outputTime);
+            }
+
             OutputConfigurationSpanSet.Add(new ConfigurationSpan(time, configuration));
         }
     }

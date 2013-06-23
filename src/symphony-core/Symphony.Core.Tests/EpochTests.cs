@@ -173,7 +173,8 @@ namespace Symphony.Core
             e.Stimuli[dev] = stim;
 
             var expected = DateTimeOffset.Now;
-            stim.StartTime = Maybe<DateTimeOffset>.Yes(expected);
+            
+            stim.DidOutputData(expected, TimeSpan.FromSeconds(1), null);
 
             Assert.AreEqual(expected, (DateTimeOffset)e.StartTime);
         }

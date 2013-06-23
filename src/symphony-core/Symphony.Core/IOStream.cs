@@ -310,12 +310,7 @@ namespace Symphony.Core
             if (OutputPosition + timeSpan > Position)
                 throw new ArgumentException("Time span would set output position past stream position", "timeSpan");
 
-            Stimulus.DidOutputData(timeSpan, configuration);
-
-            if (OutputPosition == TimeSpan.Zero && timeSpan > TimeSpan.Zero)
-            {
-                Stimulus.StartTime = Maybe<DateTimeOffset>.Some(outputTime);
-            }
+            Stimulus.DidOutputData(outputTime, timeSpan, configuration);
 
             OutputPosition += timeSpan;
         }

@@ -31,11 +31,11 @@ namespace Symphony.Core
             c2.Add(new PipelineNodeConfiguration("NODE1", new Dictionary<string, object>()));
             c2.Add(new PipelineNodeConfiguration("NODE2", new Dictionary<string, object>()));
             
-            s.DidOutputData(t1, c1);
+            s.DidOutputData(DateTimeOffset.Now, t1, c1);
 
             Assert.That(s.OutputConfigurationSpans.Count(), Is.EqualTo(1));
 
-            s.DidOutputData(t2, c2);
+            s.DidOutputData(DateTimeOffset.Now, t2, c2);
 
             Assert.That(s.OutputConfigurationSpans.Count(), Is.EqualTo(2));
 
@@ -62,9 +62,9 @@ namespace Symphony.Core
             c2.Add(new PipelineNodeConfiguration("NODE1", new Dictionary<string, object>()));
             c2.Add(new PipelineNodeConfiguration("NODE2", new Dictionary<string, object>()));
 
-            s.DidOutputData(t2, c1);
+            s.DidOutputData(DateTimeOffset.Now, t2, c1);
 
-            s.DidOutputData(t1, c2);
+            s.DidOutputData(DateTimeOffset.Now, t1, c2);
 
             Assert.That(s.OutputConfigurationSpans.Count(), Is.EqualTo(2));
 
