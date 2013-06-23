@@ -809,8 +809,8 @@ namespace Symphony.Core
                         }
 
                         Epoch completedEpoch;
-                        if (!incompleteEpochs.TryDequeue(out completedEpoch))
-                            throw new SymphonyControllerException("Could not dequeue completed epoch");
+                        if (!incompleteEpochs.TryDequeue(out completedEpoch) || completedEpoch != currentEpoch)
+                            throw new SymphonyControllerException("Failed to dequeue completed epoch");
 
                         if (incompleteEpochs.IsEmpty)
                         {
@@ -866,17 +866,17 @@ namespace Symphony.Core
         }
 
         /// <summary>
-        /// Output streams that the Controller uses to provide output data for the output pipeline.
+        /// Output streams that the Controller uses to provide data for the output pipeline.
         /// </summary>
         private ConcurrentDictionary<IExternalDevice, SequenceOutputStream> OutputStreams { get; set; }
 
         /// <summary>
-        /// Input streams that the Controller uses to consume input data from the input pipeline.
+        /// Input streams that the Controller uses to consume data from the input pipeline.
         /// </summary>
         private ConcurrentDictionary<IExternalDevice, SequenceInputStream> InputStreams { get; set; }
 
         /// <summary>
-        /// Background streams to present in the absence of Epoch data. All devices in the Controller 
+        /// Background streams to present in the absence of Epoch streams. All devices in the Controller 
         /// must have an associated background stream of indefinite duration or the Controller will 
         /// fail to validate.
         /// </summary>
