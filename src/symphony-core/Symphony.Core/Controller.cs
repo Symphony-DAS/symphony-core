@@ -422,7 +422,7 @@ namespace Symphony.Core
                 OnPulledOutputData(device, outStream);
             }
 
-            return new OutputData(outData, outStream.Sealed);
+            return outData;
         }
 
         /// <summary>
@@ -488,16 +488,22 @@ namespace Symphony.Core
             if (epoch.Stimuli.Values.Any(s => ((bool)s.Duration) != ((bool)epoch.Duration) || ((TimeSpan)s.Duration).Ticks != ((TimeSpan)epoch.Duration).Ticks))
                 return Maybe<string>.No("All Epoch stimuli must have equal duration.");
 
-            foreach (IExternalDevice dev in Devices)
+            foreach (var dev in Devices)
             {
                 if (dev.OutputStreams.Any() && epoch.GetOutputStream(dev) == null)
                     return Maybe<string>.No("Epoch is missing a stimulus for device " + dev.Name);
             }
 
-            foreach (IExternalDevice dev in epoch.Responses.Keys)
+            foreach (var dev in epoch.Stimuli.Keys)
+            {
+                if (!Devices.Contains(dev) || !dev.OutputStreams.Any())
+                    return Maybe<string>.No("Epoch contains a stimulus for a device with no output stream: " + dev.Name);
+            }
+
+            foreach (var dev in epoch.Responses.Keys)
             {
                 if (!Devices.Contains(dev) || !dev.InputStreams.Any()) 
-                    return Maybe<string>.No("Epoch contains a response for device `" + dev.Name + "` which has no input stream.");
+                    return Maybe<string>.No("Epoch contains a response for a device with no input stream: " + dev.Name);
             }
 
             return Maybe<string>.Yes();
@@ -733,10 +739,7 @@ namespace Symphony.Core
 
             EventHandler<TimeStampedDeviceOutputStreamEventArgs> outputPulled = (c, args) =>
                 {
-                    var device = args.Device;
                     var stream = args.Stream;
-
-                    Debug.Assert(stream == OutputStreams[device], "Pulled from an unexpected stream");
 
                     if (stream.IsAtEnd)
                     {
@@ -757,18 +760,13 @@ namespace Symphony.Core
                             
                         if (!didBufferEpoch)
                         {
-                            BufferBackground(BackgroundStreams);
+                            BufferBackground();
                         }
                     }
                 };
 
             EventHandler<TimeStampedDeviceInputStreamEventArgs> inputPushed = (c, args) =>
                 {
-                    var device = args.Device;
-                    var stream = args.Stream;
-
-                    Debug.Assert(stream == InputStreams[device], "Pushed to an unexpected stream");                   
-
                     Epoch currentEpoch;
                     if (!incompleteEpochs.TryPeek(out currentEpoch))
                         return;
@@ -825,8 +823,6 @@ namespace Symphony.Core
                     throw new SymphonyControllerException("DAQ Controller stopped", args.Exception);
                 };
 
-            InitIOStreams();
-
             try
             {
                 StopRequested += stopRequested;
@@ -839,6 +835,8 @@ namespace Symphony.Core
                     Epoch epoch;
                     if (epochQueue.TryDequeue(out epoch))
                     {
+                        InitIOStreams();
+
                         BufferEpoch(epoch);
                         incompleteEpochs.Enqueue(epoch);
 
@@ -875,15 +873,7 @@ namespace Symphony.Core
         /// </summary>
         private ConcurrentDictionary<IExternalDevice, SequenceInputStream> InputStreams { get; set; }
 
-        /// <summary>
-        /// Background streams to present in the absence of Epoch streams. All devices in the Controller 
-        /// must have an associated background stream of indefinite duration or the Controller will 
-        /// fail to validate.
-        /// </summary>
-        public IDictionary<IExternalDevice, IOutputStream> BackgroundStreams { get; set; }
-
-        // Protected for unit testing only
-        protected void InitIOStreams()
+        private void InitIOStreams()
         {
             OutputStreams.Clear();
             InputStreams.Clear();
@@ -900,68 +890,43 @@ namespace Symphony.Core
                 }
             }
         }
-        
-        // Protected for unit testing only
+
         /// <summary>
-        /// Buffers all necessary streams from the given Epoch into the device input and output streams
-        /// of this Controller.
+        /// Background streams to present in the absence of Epoch streams. All devices in the Controller 
+        /// must have an associated background stream of indefinite duration or the Controller will 
+        /// fail to validate.
         /// </summary>
-        /// <param name="epoch">Epoch with streams to buffer</param>
-        protected void BufferEpoch(Epoch epoch)
+        public IDictionary<IExternalDevice, IOutputStream> BackgroundStreams { get; set; }
+
+        private void BufferEpoch(Epoch epoch)
         {
             log.DebugFormat("Buffering epoch: {0}", epoch.ProtocolID);
 
-            foreach (var device in Devices)
+            foreach (var kv in OutputStreams)
             {
-                if (device.OutputStreams.Any())
-                {
-                    var outStream = epoch.GetOutputStream(device, DAQController.ProcessInterval);
+                var stream = epoch.GetOutputStream(kv.Key, DAQController.ProcessInterval);
+                kv.Value.Add(stream);
+            }
 
-                    if (outStream == null)
-                        throw new SymphonyControllerException("Epoch did not provide an output stream for " + device.Name);
-
-                    OutputStreams[device].Add(outStream);
-                }
-
-                if (device.InputStreams.Any())
-                {
-                    var inStream = epoch.GetInputStream(device) ??
-                                   new NullInputStream(epoch.Duration);
-
-                    InputStreams[device].Add(inStream);
-                }
+            foreach (var kv in InputStreams)
+            {
+                var stream = epoch.GetInputStream(kv.Key) ?? new NullInputStream(epoch.Duration);
+                kv.Value.Add(stream);
             }
         }
 
-        // Protected for unit testing only
-        /// <summary>
-        /// Buffers the given dictionary of background streams into the device output streams of this
-        /// Controller. Input streams will be buffered with NullInputStream.
-        /// </summary>
-        /// <param name="background"></param>
-        protected void BufferBackground(IDictionary<IExternalDevice, IOutputStream> background)
+        private void BufferBackground()
         {
-            log.DebugFormat("Buffering background");
+            log.DebugFormat("Buffering background streams");
 
-            foreach (var device in Devices)
+            foreach (var kv in OutputStreams)
             {
-                if (device.OutputStreams.Any())
-                {
-                    if (!background.ContainsKey(device))
-                        throw new SymphonyControllerException("Background stream not provided for " + device.Name);
+                kv.Value.Add(BackgroundStreams[kv.Key]);
+            }
 
-                    var backStream = background[device];
-
-                    if (backStream.Duration)
-                        throw new SymphonyControllerException("Background stream must have indefinite duration");
-
-                    OutputStreams[device].Add(backStream);
-                }
-
-                if (device.InputStreams.Any())
-                {
-                    InputStreams[device].Add(new NullInputStream());
-                }
+            foreach (var kv in InputStreams)
+            {
+                kv.Value.Add(new NullInputStream());
             }
         }
 

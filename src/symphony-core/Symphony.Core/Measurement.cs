@@ -70,7 +70,7 @@ namespace Symphony.Core
         {
             get
             {
-                var siUnits = InternationalSystem.DefaultSystem;
+                var siUnits = InternationalSystem.Default;
                 return string.Format("{0}{1}", siUnits.ToPrefix(Exponent), BaseUnit);
             }
         }
@@ -82,7 +82,7 @@ namespace Symphony.Core
         /// <param name="u">The (whatever)s we have (howevermany)s of</param>
         public Measurement(decimal q, string u)
         {
-            var siUnits = InternationalSystem.DefaultSystem;
+            var siUnits = InternationalSystem.Default;
 
             Quantity = q;
             Exponent = siUnits.Exponent(u);
@@ -133,7 +133,7 @@ namespace Symphony.Core
         /// <returns>IList of Measurements</returns>
         public static IList<IMeasurement> FromArray(decimal[] quantities, string unit)
         {
-            var siUnits = InternationalSystem.DefaultSystem;
+            var siUnits = InternationalSystem.Default;
 
             var exponent = siUnits.Exponent(unit);
             var baseUnit = siUnits.BaseUnit(unit);
@@ -307,14 +307,14 @@ namespace Symphony.Core
 
     public class InternationalSystem : IUnitSystem
     {
-        private static readonly InternationalSystem defaultSystem = new InternationalSystem();
+        private static readonly InternationalSystem _default = new InternationalSystem();
 
         /// <summary>
         /// Returns a shared international system.
         /// </summary>
-        public static InternationalSystem DefaultSystem
+        public static InternationalSystem Default
         {
-            get { return defaultSystem; }
+            get { return _default; }
         }
 
         public int ToExponent(string prefix)

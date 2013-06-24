@@ -108,24 +108,15 @@ namespace Symphony.Core
         {
             UnendedStreams = new Queue<IOutputStream>();
             EndedStreams = new Queue<IOutputStream>();
-            Sealed = false;
+            IsAddingCompleted = false;
         }
 
-        /// <summary>
-        /// Clears all streams from the sequence and sets Sealed to false.
-        /// </summary>
-        public void Clear()
+        public bool IsAddingCompleted { get; private set; }
+
+        public void CompleteAdding()
         {
-            UnendedStreams.Clear();
-            EndedStreams.Clear();
-            Sealed = false;
+            IsAddingCompleted = true;
         }
-
-        /// <summary>
-        /// Indicates if this stream should be sealed; stopping any further streams from being added to
-        /// the sequence. Output data will not be set with IsLast until the stream is sealed.
-        /// </summary>
-        public bool Sealed { get; set; }
 
         /// <summary>
         /// Adds an IOutputStream to the end of the sequence.
@@ -133,8 +124,8 @@ namespace Symphony.Core
         /// <param name="stream">Stream to add to the end of the sequence</param>
         public void Add(IOutputStream stream)
         {
-            if (Sealed)
-                throw new InvalidOperationException("Stream is sealed");
+            if (IsAddingCompleted)
+                throw new InvalidOperationException("Stream marked as adding complete");
 
             if (stream.SampleRate != null && SampleRate != null && !Equals(stream.SampleRate, SampleRate))
                 throw new ArgumentException("Sample rate mismatch");
@@ -174,7 +165,7 @@ namespace Symphony.Core
                 }
             }
 
-            return new OutputData(data, Sealed && !UnendedStreams.Any());
+            return new OutputData(data, IsAddingCompleted && !UnendedStreams.Any());
         }
 
         public void DidOutputData(DateTimeOffset outputTime, TimeSpan timeSpan, IEnumerable<IPipelineNodeConfiguration> configuration)
@@ -431,12 +422,11 @@ namespace Symphony.Core
             Streams = new Queue<IInputStream>();
         }
 
-        /// <summary>
-        /// Clears all streams from the sequence.
-        /// </summary>
-        public void Clear()
+        public bool IsAddingCompleted { get; private set; }
+
+        public void CompleteAdding()
         {
-            Streams.Clear();
+            IsAddingCompleted = true;
         }
 
         /// <summary>
@@ -445,6 +435,9 @@ namespace Symphony.Core
         /// <param name="stream">Stream to add to the end of the sequence</param>
         public void Add(IInputStream stream)
         {
+            if (IsAddingCompleted)
+                throw new InvalidOperationException("Stream marked as adding complete");
+
             if (stream.SampleRate != null && SampleRate != null && !Equals(stream.SampleRate, SampleRate))
                 throw new ArgumentException("Sample rate mismatch");
 
