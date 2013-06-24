@@ -381,9 +381,14 @@ namespace Symphony.Core
             }
         }
 
+        private readonly object _completeLock = new object();
+
         public bool IsComplete
         {
-            get { return Duration && OutputConfigurationSpanSet.Select(s => s.Time.Ticks).Sum() >= ((TimeSpan)Duration).Ticks; }
+            get
+            {
+                lock (_completeLock) return Duration && OutputConfigurationSpanSet.Select(s => s.Time.Ticks).Sum() >= ((TimeSpan)Duration).Ticks;
+            }
         }
 
         public void DidOutputData(DateTimeOffset outputTime, TimeSpan time, IEnumerable<IPipelineNodeConfiguration> configuration)
@@ -396,7 +401,7 @@ namespace Symphony.Core
                 StartTime = Maybe<DateTimeOffset>.Some(outputTime);
             }
 
-            OutputConfigurationSpanSet.Add(new ConfigurationSpan(time, configuration));
+            lock (_completeLock) OutputConfigurationSpanSet.Add(new ConfigurationSpan(time, configuration));
         }
     }
 
