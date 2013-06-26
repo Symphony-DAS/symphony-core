@@ -491,7 +491,10 @@ namespace Symphony.Core
             foreach (var dev in Devices)
             {
                 if (dev.OutputStreams.Any() && epoch.GetOutputStream(dev) == null)
-                    return Maybe<string>.No("Epoch is missing a stimulus for device " + dev.Name);
+                    return Maybe<string>.No("Epoch is missing a stimulus/background for device " + dev.Name);
+
+                if (dev.OutputStreams.Any() && !Equals(dev.OutputSampleRate, epoch.GetOutputStream(dev).SampleRate))
+                    return Maybe<string>.No("Epoch stimulus/background sample rate does not match sample rate for device " + dev.Name);
             }
 
             foreach (var dev in epoch.Stimuli.Keys)

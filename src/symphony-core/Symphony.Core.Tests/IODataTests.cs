@@ -45,6 +45,10 @@ namespace Symphony.Core
                 get { throw new NotImplementedException(); }
             }
 
+            public IMeasurement InputSampleRate { get; set; }
+
+            public IMeasurement OutputSampleRate { get; set; }
+
             public IMeasurement Background
             {
                 get { throw new NotImplementedException(); }

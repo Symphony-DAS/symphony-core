@@ -63,10 +63,20 @@ namespace Symphony.Core
         IEnumerable<IDAQInputStream> InputStreams { get; }
 
         /// <summary>
-        /// Of all Streams associated with this ExternalDevice, the IDAQOutputStreams
+        /// Of all Streams associated with this IExternalDevice, the IDAQOutputStreams
         /// </summary>
         IEnumerable<IDAQOutputStream> OutputStreams { get; }
 
+        /// <summary>
+        /// The input sampling rate of this IExternalDevice.
+        /// </summary>
+        IMeasurement InputSampleRate { get; set; }
+
+        /// <summary>
+        /// The output sampling rate of this IExternalDevice.
+        /// </summary>
+        IMeasurement OutputSampleRate { get; set; }
+            
         /// <summary>
         /// The value, in device  units, that should
         /// be applied to any IOutputStreams bound to this device when stopped.
@@ -265,11 +275,43 @@ namespace Symphony.Core
                 return StreamsOfType<IDAQOutputStream>().OrderBy(s => s.Name);
             }
         }
-
+        
         private IEnumerable<T> StreamsOfType<T>() where T : IDAQStream
         {
             return Streams.Values.OfType<T>();
         }
+
+
+        public virtual IMeasurement InputSampleRate
+        {
+            get { return _inputSampleRate; }
+            set
+            {
+                if (value.Quantity < 0 || value.BaseUnit.ToLower() != "hz")
+                {
+                    throw new ArgumentException("Illegal SampleRate");
+                }
+
+                _inputSampleRate = value;
+            }
+        }
+        private IMeasurement _inputSampleRate;
+
+
+        public virtual IMeasurement OutputSampleRate
+        {
+            get { return _outputSampleRate; }
+            set
+            {
+                if (value.Quantity < 0 || value.BaseUnit.ToLower() != "hz")
+                {
+                    throw new ArgumentException("Illegal SampleRate");
+                }
+
+                _outputSampleRate = value;
+            }
+        }
+        private IMeasurement _outputSampleRate;
 
         /// <summary>
         /// The value, in MeasurementConversionTarget input units, that should
@@ -429,14 +471,19 @@ namespace Symphony.Core
                 if (!sVal)
                     return Maybe<string>.No("DAQStream " +
                         stream.Name + " failed validation: " +
-                        sVal.Item2);
+                        sVal.Item2);    
             }
+
+            if (OutputSampleRate == null && OutputStreams.Any())
+                return Maybe<string>.No("Output sample rate required.");
+
+            if (InputSampleRate == null && InputStreams.Any())
+                return Maybe<string>.No("Input sample rate required.");
 
             if (Clock == null)
                 return Maybe<string>.No("Clock must not be null.");
 
-            if (Background == null &&
-                Streams.Values.Where(s => s.GetType().IsSubclassOf(typeof(IDAQOutputStream))).Any())
+            if (Background == null && OutputStreams.Any())
                 return Maybe<string>.No("Background value required.");
 
             return Maybe<string>.Yes();
@@ -494,6 +541,9 @@ namespace Symphony.Core
             {
                 IOutputData data = this.Controller.PullOutputData(this, duration);
 
+                if (!data.SampleRate.Equals(this.OutputSampleRate))
+                    throw new ExternalDeviceException("Sample rate mismatch.");
+
                 return data.DataWithUnits(MeasurementConversionTarget)
                     .DataWithExternalDeviceConfiguration(this, Configuration);
             }
@@ -514,6 +564,8 @@ namespace Symphony.Core
         {
             try
             {
+                if (!inData.SampleRate.Equals(this.InputSampleRate))
+                    throw new ExternalDeviceException("Sample rate mismatch");
 
                 IInputData convertedData = inData.DataWithUnits(MeasurementConversionTarget)
                     .DataWithExternalDeviceConfiguration(this, Configuration);
