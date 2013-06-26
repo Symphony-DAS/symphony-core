@@ -177,7 +177,8 @@ namespace Symphony.Core
         {
             return Devices.Where(d => d.Name == name).DefaultIfEmpty(null).First();
         }
-
+        
+        // Virtual for unit testing only.
         /// <summary>
         /// Double-check that all the pieces of the pipeline are wired up
         /// correctly--the ExternalDevices all point to this controller,
@@ -186,7 +187,7 @@ namespace Symphony.Core
         /// called as part of this, and so on.
         /// </summary>
         /// <returns>A monad indicating validation (as a bool) or the error message (if cast to a string)</returns>
-        public Maybe<string> Validate()
+        public virtual Maybe<string> Validate()
         {
             if (Clock == null)
                 return Maybe<string>.No("Controller.Clock must not be null.");
@@ -480,7 +481,8 @@ namespace Symphony.Core
             EpochQueue.Enqueue(e);
         }
 
-        private Maybe<string> ValidateEpoch(Epoch epoch)
+        // Protected virtual for unit testing only.
+        protected virtual Maybe<string> ValidateEpoch(Epoch epoch)
         {
             if (epoch.IsIndefinite && epoch.Responses.Count > 0)
                 return Maybe<string>.No("Indefinite Epochs cannot have responses.");

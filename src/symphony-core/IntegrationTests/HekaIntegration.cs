@@ -67,7 +67,8 @@ namespace IntegrationTests
                                                                                     new Measurement(0, "V"))
                                                        {
                                                            MeasurementConversionTarget = "V",
-                                                           Clock = daq1
+                                                           Clock = daq1,
+                                                           OutputSampleRate = daq.SampleRate
                                                        };
                                         dev0.BindStream((IDAQOutputStream)daq1.GetStreams("ANALOG_OUT." + i).First());
 
@@ -85,7 +86,8 @@ namespace IntegrationTests
                                                                         new Measurement(0, "V"))
                             {
                                 MeasurementConversionTarget = "V",
-                                Clock = daq1
+                                Clock = daq1,
+                                InputSampleRate = daq.SampleRate
                             };
                             dev0.BindStream((IDAQInputStream)daq1.GetStreams("ANALOG_IN." + i).First());
 
@@ -170,7 +172,9 @@ namespace IntegrationTests
                     var dev0 = new UnitConvertingExternalDevice("Device0", "Manufacturer", controller, new Measurement(0, "V"))
                                    {
                                        MeasurementConversionTarget = "V",
-                                       Clock = daq
+                                       Clock = daq,
+                                       OutputSampleRate = daq.SampleRate,
+                                       InputSampleRate = daq.SampleRate
                                    };
                     dev0.BindStream((IDAQOutputStream)daq.GetStreams("ANALOG_OUT.0").First());
                     dev0.BindStream((IDAQInputStream)daq.GetStreams("ANALOG_IN.0").First());
@@ -178,7 +182,9 @@ namespace IntegrationTests
                     var dev1 = new UnitConvertingExternalDevice("Device1", "Manufacturer", controller, new Measurement(0, "V"))
                     {
                         MeasurementConversionTarget = "V",
-                        Clock = daq
+                        Clock = daq,
+                        OutputSampleRate = daq.SampleRate,
+                        InputSampleRate = daq.SampleRate
                     };
                     dev1.BindStream((IDAQOutputStream)daq.GetStreams("ANALOG_OUT.1").First());
                     dev1.BindStream((IDAQInputStream)daq.GetStreams("ANALOG_IN.1").First());
@@ -301,7 +307,12 @@ namespace IntegrationTests
 
                     const decimal expectedBackgroundVoltage = -3.2m;
                     var expectedBackground = new Measurement(expectedBackgroundVoltage, "V");
-                    var dev0 = new UnitConvertingExternalDevice("Device0", "Manufacturer", controller, expectedBackground) { MeasurementConversionTarget = "V" };
+                    var dev0 = new UnitConvertingExternalDevice("Device0", "Manufacturer", controller, expectedBackground)
+                        {
+                            MeasurementConversionTarget = "V",
+                            OutputSampleRate = daq.SampleRate,
+                            InputSampleRate = daq.SampleRate
+                        };
                     dev0.BindStream(daq.GetStreams("ANALOG_OUT.0").First() as IDAQOutputStream);
                     dev0.BindStream(daq.GetStreams("ANALOG_IN.0").First() as IDAQInputStream);
                     dev0.Clock = daq;
@@ -383,7 +394,9 @@ namespace IntegrationTests
                     var dev0 = new UnitConvertingExternalDevice("Device0", "Manufacturer", controller, expectedBackground)
                                    {
                                        MeasurementConversionTarget = "V",
-                                       Clock = daq
+                                       Clock = daq,
+                                       OutputSampleRate = daq.SampleRate,
+                                       InputSampleRate = daq.SampleRate
                                    };
                     dev0.BindStream(daq.GetStreams("ANALOG_OUT.0").First() as IDAQOutputStream);
                     dev0.BindStream(daq.GetStreams("ANALOG_IN.0").First() as IDAQInputStream);
@@ -472,7 +485,9 @@ namespace IntegrationTests
                                                                 new Measurement(0, "V"))
                                    {
                                        MeasurementConversionTarget = "V",
-                                       Clock = daq
+                                       Clock = daq,
+                                       OutputSampleRate = daq.SampleRate,
+                                       InputSampleRate = daq.SampleRate
                                    };
                     dev0.BindStream((IDAQOutputStream) daq.GetStreams("ANALOG_OUT.0").First());
                     dev0.BindStream((IDAQInputStream) daq.GetStreams("ANALOG_IN.0").First());

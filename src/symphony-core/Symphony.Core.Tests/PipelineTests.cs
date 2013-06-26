@@ -49,7 +49,9 @@ namespace Symphony.Core
             var dev = new UnitConvertingExternalDevice("dev", "co", controller, new Measurement(0, "V"))
                           {
                               Clock = daq,
-                              MeasurementConversionTarget = "V"
+                              MeasurementConversionTarget = "V",
+                              OutputSampleRate = srate,
+                              InputSampleRate = srate
                           };
             dev.BindStream(outStream).BindStream(inStream);
 

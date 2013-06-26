@@ -131,18 +131,24 @@ namespace Symphony.Core
 
             con.Clock = clock;
 
+            var sampleRate = new Measurement(10000, "Hz");
+
             // Three ExternalDevices
             CoalescingDevice amp = new CoalescingDevice("Amp", UNUSED_DEVICE_MANUFACTURER, con, UNUSED_BACKGROUND)
                                        {
-                                           MeasurementConversionTarget = "units"
+                                           MeasurementConversionTarget = "units",
+                                           OutputSampleRate = sampleRate,
+                                           InputSampleRate = sampleRate
                                        };
             var LED = new UnitConvertingExternalDevice("LED", UNUSED_DEVICE_MANUFACTURER, UNUSED_BACKGROUND)
             {
-                MeasurementConversionTarget = "units"
+                MeasurementConversionTarget = "units",
+                OutputSampleRate = sampleRate
             };
             var temp = new UnitConvertingExternalDevice("Temp", UNUSED_DEVICE_MANUFACTURER, UNUSED_BACKGROUND)
             {
-                MeasurementConversionTarget = "units"
+                MeasurementConversionTarget = "units",
+                InputSampleRate = sampleRate
             };
             amp.Clock = clock;
             LED.Clock = clock;
@@ -204,9 +210,8 @@ namespace Symphony.Core
             Assert.IsTrue(dc.OutputStreams.Contains(out0));
 
             // We need to associate a background stream with each output device
-            var back = new Background(UNUSED_BACKGROUND, new Measurement(1, "Hz"));
-            con.BackgroundStreams[LED] = new BackgroundOutputStream(back);
-            con.BackgroundStreams[amp] = new BackgroundOutputStream(back);
+            con.BackgroundStreams[LED] = new BackgroundOutputStream(new Background(UNUSED_BACKGROUND, new Measurement(1, "Hz")));
+            con.BackgroundStreams[amp] = new BackgroundOutputStream(new Background(UNUSED_BACKGROUND, new Measurement(1, "Hz")));
 
             // Validate and report the validation results
             Maybe<string> conVal = con.Validate();
@@ -228,22 +233,10 @@ namespace Symphony.Core
         [Test, Timeout(2000)]
         public void PullsOutputData()
         {
-            Converters.Register("V", "V",
-                (IMeasurement m) => m);
-
             var daq = new SimpleDAQController();
-            var c = new Controller { DAQController = daq };
-            var dev = new UnitConvertingExternalDevice(UNUSED_DEVICE_NAME, UNUSED_DEVICE_MANUFACTURER, c, UNUSED_BACKGROUND)
-                {
-                    MeasurementConversionTarget = "V",
-                    Clock = c.Clock
-                };
-            var outStream = new DAQOutputStream("out")
-                {
-                    MeasurementConversionTarget = "V",
-                    Clock = c.Clock
-                };
-            dev.BindStream(outStream);
+            var c = new NonValidatingController { DAQController = daq };
+            var dev = new UnitConvertingExternalDevice(UNUSED_DEVICE_NAME, UNUSED_DEVICE_MANUFACTURER, c, UNUSED_BACKGROUND);
+            dev.BindStream(new DAQOutputStream("out"));
 
             const int srate = 1000;
             IList<IMeasurement> data = (IList<IMeasurement>) Enumerable.Range(0, srate * 2).Select(i => new Measurement(i, "V") as IMeasurement).ToList();
@@ -307,10 +300,14 @@ namespace Symphony.Core
                                     evt = true;
                                 };
 
+            var srate = new Measurement(10, "Hz");
+
             var dev = new UnitConvertingExternalDevice(UNUSED_DEVICE_NAME, UNUSED_DEVICE_MANUFACTURER, c, UNUSED_BACKGROUND)
                           {
                               MeasurementConversionTarget = "V",
-                              Clock = c.Clock
+                              Clock = c.Clock,
+                              OutputSampleRate = srate,
+                              InputSampleRate = srate
                           };
 
             var outStream = new DAQOutputStream("outStream") { MeasurementConversionTarget = "V", Clock = c.Clock };
@@ -320,7 +317,6 @@ namespace Symphony.Core
             (c.DAQController as IMutableDAQController).AddStream(outStream);
             (c.DAQController as IMutableDAQController).AddStream(inStream);
 
-            var srate = new Measurement(10, "Hz");
             outStream.SampleRate = srate;
             inStream.SampleRate = srate;
 
@@ -368,10 +364,14 @@ namespace Symphony.Core
                 evt = true;
             };
 
+            var srate = new Measurement(10, "Hz");
+
             var dev = new UnitConvertingExternalDevice(UNUSED_DEVICE_NAME, UNUSED_DEVICE_MANUFACTURER, c, UNUSED_BACKGROUND)
             {
                 MeasurementConversionTarget = "V",
-                Clock = c.Clock
+                Clock = c.Clock,
+                OutputSampleRate = srate,
+                InputSampleRate = srate
             };
 
             var outStream = new DAQOutputStream("outStream") { MeasurementConversionTarget = "V", Clock = c.Clock };
@@ -381,7 +381,6 @@ namespace Symphony.Core
             (c.DAQController as IMutableDAQController).AddStream(outStream);
             (c.DAQController as IMutableDAQController).AddStream(inStream);
 
-            var srate = new Measurement(10, "Hz");
             outStream.SampleRate = srate;
             inStream.SampleRate = srate;
 
@@ -442,31 +441,13 @@ namespace Symphony.Core
                 (IMeasurement m) => m);
 
             var daq = new SimpleDAQController();
-            var c = new Controller { DAQController = daq };
+            var c = new NonValidatingController { DAQController = daq };
 
-            var dev1 = new UnitConvertingExternalDevice("dev1", "co", c, new Measurement(0, "V"))
-                {
-                    MeasurementConversionTarget = "V",
-                    Clock = c.Clock
-                };
-            var dev2 = new UnitConvertingExternalDevice("dev2", "co", c, new Measurement(0, "V"))
-                {
-                    MeasurementConversionTarget = "V",
-                    Clock = c.Clock
-                };
-            var stream1 = new DAQOutputStream("out1")
-            {
-                MeasurementConversionTarget = "V",
-                Clock = c.Clock
-            };
-            var stream2 = new DAQOutputStream("out2")
-            {
-                MeasurementConversionTarget = "V",
-                Clock = c.Clock
-            };
+            var dev1 = new UnitConvertingExternalDevice("dev1", "co", c, new Measurement(0, "V"));
+            var dev2 = new UnitConvertingExternalDevice("dev2", "co", c, new Measurement(0, "V"));
 
-            dev1.BindStream(stream1);
-            dev2.BindStream(stream1);
+            dev1.BindStream(new DAQOutputStream("out1"));
+            dev2.BindStream(new DAQOutputStream("out2"));
 
             int baseSamples = 1000;
             IList<IMeasurement> data = (IList<IMeasurement>)Enumerable.Range(0, baseSamples)
@@ -604,11 +585,14 @@ namespace Symphony.Core
             var c = new Controller { DAQController = new SimpleDAQController() };
             c.DAQController.Clock = c.DAQController as IClock;
 
+            var sampleRate = new Measurement(1, "Hz");
+
             var e = new Epoch(UNUSED_PROTOCOL);
             var dev = new UnitConvertingExternalDevice("dev", "co", c, new Measurement(0, "V"))
             {
                 MeasurementConversionTarget = "V",
-                Clock = c.Clock
+                Clock = c.Clock,
+                OutputSampleRate = sampleRate
             };
             var outStream = new DAQOutputStream("out")
             {
@@ -616,8 +600,6 @@ namespace Symphony.Core
                 Clock = c.Clock
             };
             dev.BindStream(outStream);
-
-            var sampleRate = new Measurement(1, "Hz");
 
             c.BackgroundStreams[dev] = new BackgroundOutputStream(new Background(UNUSED_BACKGROUND, sampleRate));
 
@@ -678,22 +660,10 @@ namespace Symphony.Core
                 (IMeasurement m) => m);
 
             var daq = new SimpleDAQController();
-            var c = new Controller { DAQController = daq };
-            var dev = new UnitConvertingExternalDevice("dev", UNUSED_DEVICE_MANUFACTURER, c, UNUSED_BACKGROUND)
-            {
-                MeasurementConversionTarget = "V",
-                Clock = c.Clock
-            };
-            var outStream = new DAQOutputStream("out")
-            {
-                MeasurementConversionTarget = "V",
-                Clock = c.Clock
-            };
-            var inStream = new DAQInputStream("in")
-            {
-                MeasurementConversionTarget = "V",
-                Clock = c.Clock
-            };
+            var c = new NonValidatingController { DAQController = daq };
+            var dev = new UnitConvertingExternalDevice("dev", UNUSED_DEVICE_MANUFACTURER, c, UNUSED_BACKGROUND);
+            var outStream = new DAQOutputStream("out");
+            var inStream = new DAQInputStream("in");
             dev.BindStream(outStream).BindStream(inStream);
 
             var sampleRate = new Measurement(1, "Hz");
@@ -820,34 +790,18 @@ namespace Symphony.Core
         [Test, Timeout(2000)]
         public void PushesDataToEpoch()
         {
-            Converters.Register("V", "V",
-                (IMeasurement m) => m);
-
             const string UNUSED_NAME = "UNUSED";
 
             var daq = new SimpleDAQController();
-            var c = new Controller { DAQController = daq };
-            var dev = new UnitConvertingExternalDevice(UNUSED_NAME, UNUSED_DEVICE_MANUFACTURER, c, UNUSED_BACKGROUND)
-                {
-                    MeasurementConversionTarget = "V",
-                    Clock = c.Clock
-                };
-            var outStream = new DAQOutputStream("out")
-                {
-                    MeasurementConversionTarget = "V",
-                    Clock = c.Clock
-                };
-            var inStream = new DAQInputStream("in")
-                {
-                    MeasurementConversionTarget = "V",
-                    Clock = c.Clock
-                };
+            var c = new NonValidatingController { DAQController = daq };
+            var dev = new UnitConvertingExternalDevice(UNUSED_NAME, UNUSED_DEVICE_MANUFACTURER, c, UNUSED_BACKGROUND);
+            var outStream = new DAQOutputStream("out");
+            var inStream = new DAQInputStream("in");
+
             dev.BindStream(outStream).BindStream(inStream);
 
             var srate = new Measurement(100, "Hz");
             var samples = Enumerable.Range(0, 100).Select(i => new Measurement(1, "V")).ToList();
-
-            c.BackgroundStreams[dev] = new BackgroundOutputStream(new Background(UNUSED_BACKGROUND, srate));
 
             var e = new Epoch("PushesDataToEpoch");
             e.Responses[dev] = new Response();
@@ -889,13 +843,15 @@ namespace Symphony.Core
 
             c.DiscardedEpoch += (co, args) => Assert.Fail("Run failed");
 
+            var srate = new Measurement(10, "Hz");
+
             var dev = new UnitConvertingExternalDevice(UNUSED_DEVICE_NAME, UNUSED_DEVICE_MANUFACTURER, c, UNUSED_BACKGROUND)
             {
                 Clock = c.Clock,
-                MeasurementConversionTarget = "V"
+                MeasurementConversionTarget = "V",
+                OutputSampleRate = srate,
+                InputSampleRate = srate
             };
-
-            var srate = new Measurement(10, "Hz");
 
             var back = new Background(UNUSED_BACKGROUND, srate);
             c.BackgroundStreams.Add(dev, new BackgroundOutputStream(back));
@@ -974,11 +930,14 @@ namespace Symphony.Core
             var c = new Controller { DAQController = new SimpleDAQController2() };
             c.DAQController.Clock = c.DAQController as IClock;
 
+            var sampleRate = new Measurement(1, "Hz");
+
             var e = new Epoch(UNUSED_PROTOCOL);
             var dev1 = new UnitConvertingExternalDevice("dev1", "co", c, new Measurement(0, "V"))
                 {
                     MeasurementConversionTarget = "V",
-                    Clock = c.Clock
+                    Clock = c.Clock,
+                    OutputSampleRate = sampleRate
                 };
             var outStream = new DAQOutputStream("out")
                 {
@@ -986,8 +945,6 @@ namespace Symphony.Core
                     Clock = c.Clock
                 };
             dev1.BindStream(outStream);
-
-            var sampleRate = new Measurement(1, "Hz");
 
             var back = new Background(UNUSED_BACKGROUND, sampleRate);
             c.BackgroundStreams[dev1] = new BackgroundOutputStream(back);
@@ -1039,6 +996,18 @@ namespace Symphony.Core
             Assert.IsTrue(daq.WaitedForTrigger);
         }
 
+        class NonValidatingController : Controller
+        {
+            protected override Maybe<string> ValidateEpoch(Epoch epoch)
+            {
+                return Maybe<string>.Yes();
+            }
+
+            public override Maybe<string> Validate()
+            {
+                return Maybe<string>.Yes();
+            }
+        }
     }
 
     class SimpleDAQController : DAQControllerBase, IClock, IMutableDAQController

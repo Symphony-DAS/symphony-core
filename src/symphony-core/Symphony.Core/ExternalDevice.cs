@@ -68,12 +68,14 @@ namespace Symphony.Core
         IEnumerable<IDAQOutputStream> OutputStreams { get; }
 
         /// <summary>
-        /// The input sampling rate of this IExternalDevice.
+        /// The input sampling rate of this IExternalDevice. InputSampleRate is distinct from the sample rate of
+        /// bound IDAQInputStreams because a device may be bound to multiple input streams with varying sample rates. 
         /// </summary>
         IMeasurement InputSampleRate { get; set; }
 
         /// <summary>
-        /// The output sampling rate of this IExternalDevice.
+        /// The output sampling rate of this IExternalDevice. OutputSampleRate is distinct from the sample rate of
+        /// bound IDAQOutputStreams because a device may be bound to multiple output streams with varying sample rates. 
         /// </summary>
         IMeasurement OutputSampleRate { get; set; }
             

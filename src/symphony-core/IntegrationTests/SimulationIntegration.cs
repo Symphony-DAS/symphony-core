@@ -268,6 +268,12 @@ namespace IntegrationTests
             dev0 = controller.GetDevice("Device0");
             dev1 = controller.GetDevice("Device1");
 
+            dev0.InputSampleRate = new Measurement((decimal)sampleRate, "Hz");
+            dev0.OutputSampleRate = new Measurement((decimal)sampleRate, "Hz");
+
+            dev1.InputSampleRate = new Measurement((decimal)sampleRate, "Hz");
+            dev1.OutputSampleRate = new Measurement((decimal)sampleRate, "Hz");
+
             if (nChannels == 1)
             {
                 dev1.UnbindStream(dev1.Streams.Values.First().Name);
