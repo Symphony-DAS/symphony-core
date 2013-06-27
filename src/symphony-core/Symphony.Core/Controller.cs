@@ -481,6 +481,18 @@ namespace Symphony.Core
             EpochQueue.Enqueue(e);
         }
 
+        /// <summary>
+        /// Removes all Epochs from the Epoch queue.
+        /// </summary>
+        public void ClearEpochQueue()
+        {
+            while (!EpochQueue.IsEmpty)
+            {
+                Epoch ignore;
+                EpochQueue.TryDequeue(out ignore);
+            }
+        }
+
         // Protected virtual for unit testing only.
         protected virtual Maybe<string> ValidateEpoch(Epoch epoch)
         {
