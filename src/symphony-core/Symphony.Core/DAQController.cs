@@ -340,11 +340,11 @@ namespace Symphony.Core
                 var outputTime = Clock.Now;
                 var incomingData = ProcessLoopIteration(outgoingData, deficit);
 
-                // Push Data
-                PushIncomingData(incomingData);
-
                 // Push Output events
                 PushOutputDataEvents(outputTime, outgoingData);
+
+                // Push Data
+                PushIncomingData(incomingData);
                 
                 OnProcessIteration();
 
