@@ -803,8 +803,8 @@ namespace Symphony.ExternalDevices
 
             mcd.SetBackgroundForMode(IClampMode, IClampBackground);
 
-            Assert.That(mcd.BackgroudForMode(IClampMode), Is.EqualTo(IClampBackground));
-            Assert.That(mcd.BackgroudForMode(operatingMode), Is.EqualTo(VClampBackground));
+            Assert.That(mcd.BackgroundForMode(IClampMode), Is.EqualTo(IClampBackground));
+            Assert.That(mcd.BackgroundForMode(operatingMode), Is.EqualTo(VClampBackground));
 
         }
 
@@ -876,8 +876,8 @@ namespace Symphony.ExternalDevices
 
             var mcd = new MultiClampDevice(mc.SerialNumber, mc.Channel, c.Clock, c, new List<string>() { "VClamp", "IClamp" }, bg.Values);
 
-            Assert.That(mcd.BackgroudForMode(MultiClampInterop.OperatingMode.VClamp), Is.EqualTo(VClampBackground));
-            Assert.That(mcd.BackgroudForMode(MultiClampInterop.OperatingMode.IClamp), Is.EqualTo(IClampBackground));
+            Assert.That(mcd.BackgroundForMode(MultiClampInterop.OperatingMode.VClamp), Is.EqualTo(VClampBackground));
+            Assert.That(mcd.BackgroundForMode(MultiClampInterop.OperatingMode.IClamp), Is.EqualTo(IClampBackground));
         }
 
         [Test]

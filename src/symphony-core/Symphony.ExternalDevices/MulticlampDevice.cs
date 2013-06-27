@@ -795,7 +795,7 @@ namespace Symphony.ExternalDevices
         /// </summary>
         /// <param name="operatingMode">Device operating mode</param>
         /// <returns>Background Measurement for the given mode.</returns>
-        public IMeasurement BackgroudForMode(MultiClampInterop.OperatingMode operatingMode)
+        public IMeasurement BackgroundForMode(MultiClampInterop.OperatingMode operatingMode)
         {
             return Backgrounds[operatingMode];
         }
