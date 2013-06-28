@@ -28,6 +28,11 @@ namespace Symphony.Core
         IMeasurement SampleRate { get; set; }
 
         /// <summary>
+        /// Indicates if the sample rate can be set on this stream.
+        /// </summary>
+        bool CanSetSampleRate { get; }
+
+        /// <summary>
         /// An output stream without an associated Device or an input stream without devices to which it
         /// is pushing data is "inactive". DAQControllers may wish to not process data for these incative
         /// streams.
@@ -182,6 +187,11 @@ namespace Symphony.Core
             }
         }
         private IMeasurement sampleRate;
+
+        public virtual bool CanSetSampleRate
+        {
+            get { return true; }
+        }
 
         /// <summary>
         /// Indicates whether this stream is "active". An input stream is active if it
@@ -382,6 +392,11 @@ namespace Symphony.Core
         }
         private IMeasurement sampleRate;
 
+        public virtual bool CanSetSampleRate
+        {
+            get { return true; }
+        }
+
         /// <summary>
         /// Configuration for this stream.
         /// </summary>
@@ -390,6 +405,7 @@ namespace Symphony.Core
         /// This stream's name.
         /// </summary>
         public string Name { get; private set; }
+
         /// <summary>
         /// Indicates whether this stream is "active". An active output stream has exactly one
         /// attached ExternalDevice.

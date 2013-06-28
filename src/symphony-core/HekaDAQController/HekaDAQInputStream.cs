@@ -47,6 +47,11 @@ namespace Heka
             set { throw new NotSupportedException("HekaDAQInputStream.SampleRate set by DAQController."); }
         }
 
+        public override bool CanSetSampleRate
+        {
+            get { return false; }
+        }
+
         public ITCMM.ITCChannelInfo ChannelInfo
         {
             get

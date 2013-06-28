@@ -51,6 +51,11 @@ namespace Heka
             set { throw new NotSupportedException("HekaDAQOutputStream.SampleRate set by DAQController."); }
         }
 
+        public override bool CanSetSampleRate
+        {
+            get { return false; }
+        }
+
         /// <summary>
         /// Register ConversionProcs for V=>HekaDAQCounts
         /// </summary>
