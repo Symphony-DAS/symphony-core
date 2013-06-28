@@ -144,7 +144,14 @@ namespace Symphony.Core
             get { return Streams.All(s => s.IsAtEnd); }
         }
 
+        private readonly object _pullLock = new object();
+
         public IOutputData PullOutputData(TimeSpan duration)
+        {
+            lock (_pullLock) return PullOutputDataUnsafe(duration);
+        }
+
+        private IOutputData PullOutputDataUnsafe(TimeSpan duration)
         {
             if (IsAtEnd)
                 throw new InvalidOperationException("Pulling from a stream that has ended");
@@ -169,6 +176,11 @@ namespace Symphony.Core
         }
 
         public void DidOutputData(DateTimeOffset outputTime, TimeSpan timeSpan, IEnumerable<IPipelineNodeConfiguration> configuration)
+        {
+            lock (_pullLock) DidOutputDataUnsafe(outputTime, timeSpan, configuration);
+        }
+
+        private void DidOutputDataUnsafe(DateTimeOffset outputTime, TimeSpan timeSpan, IEnumerable<IPipelineNodeConfiguration> configuration)
         {
             if (OutputPosition + timeSpan > Position)
                 throw new ArgumentException("Time span would set output position past stream position", "timeSpan");
