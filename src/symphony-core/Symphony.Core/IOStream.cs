@@ -111,9 +111,9 @@ namespace Symphony.Core
             IsAddingCompleted = false;
         }
 
-        public bool IsAddingCompleted { get; private set; }
+        public virtual bool IsAddingCompleted { get; private set; }
 
-        public void CompleteAdding()
+        public virtual void CompleteAdding()
         {
             IsAddingCompleted = true;
         }
@@ -122,7 +122,7 @@ namespace Symphony.Core
         /// Adds an IOutputStream to the end of the sequence.
         /// </summary>
         /// <param name="stream">Stream to add to the end of the sequence</param>
-        public void Add(IOutputStream stream)
+        public virtual void Add(IOutputStream stream)
         {
             if (IsAddingCompleted)
                 throw new InvalidOperationException("Stream marked as adding complete");
@@ -139,19 +139,12 @@ namespace Symphony.Core
             }
         }
 
-        public bool IsAtEnd
+        public virtual bool IsAtEnd
         {
             get { return Streams.All(s => s.IsAtEnd); }
         }
 
-        private readonly object _pullLock = new object();
-
-        public IOutputData PullOutputData(TimeSpan duration)
-        {
-            lock (_pullLock) return PullOutputDataUnsafe(duration);
-        }
-
-        private IOutputData PullOutputDataUnsafe(TimeSpan duration)
+        public virtual IOutputData PullOutputData(TimeSpan duration)
         {
             if (IsAtEnd)
                 throw new InvalidOperationException("Pulling from a stream that has ended");
@@ -175,12 +168,7 @@ namespace Symphony.Core
             return new OutputData(data, IsAddingCompleted && !UnendedStreams.Any());
         }
 
-        public void DidOutputData(DateTimeOffset outputTime, TimeSpan timeSpan, IEnumerable<IPipelineNodeConfiguration> configuration)
-        {
-            lock (_pullLock) DidOutputDataUnsafe(outputTime, timeSpan, configuration);
-        }
-
-        private void DidOutputDataUnsafe(DateTimeOffset outputTime, TimeSpan timeSpan, IEnumerable<IPipelineNodeConfiguration> configuration)
+        public virtual void DidOutputData(DateTimeOffset outputTime, TimeSpan timeSpan, IEnumerable<IPipelineNodeConfiguration> configuration)
         {
             if (OutputPosition + timeSpan > Position)
                 throw new ArgumentException("Time span would set output position past stream position", "timeSpan");
@@ -196,7 +184,6 @@ namespace Symphony.Core
                 stream.DidOutputData(outputTime, span, configuration);
 
                 timeSpan -= span;
-                outputTime += span;
 
                 if (stream.IsOutputAtEnd)
                 {
@@ -205,22 +192,22 @@ namespace Symphony.Core
             }
         }
 
-        public TimeSpan OutputPosition
+        public virtual TimeSpan OutputPosition
         {
             get { return new TimeSpan(Streams.Select(s => s.OutputPosition.Ticks).Sum()); }
         }
 
-        public bool IsOutputAtEnd
+        public virtual bool IsOutputAtEnd
         {
             get { return Streams.All(s => s.IsOutputAtEnd); }
         }
 
-        public IMeasurement SampleRate
+        public virtual IMeasurement SampleRate
         {
             get { return Streams.Select(s => s.SampleRate).FirstOrDefault(r => r != null); }
         }
         
-        public Option<TimeSpan> Duration
+        public virtual Option<TimeSpan> Duration
         {
             get 
             { 
@@ -238,9 +225,86 @@ namespace Symphony.Core
             }
         }
         
-        public TimeSpan Position
+        public virtual TimeSpan Position
         {
             get { return new TimeSpan(Streams.Select(s => s.Position.Ticks).Sum()); }
+        }
+        
+        /// <summary>
+        /// Returns a thread-safe wrapper for SequenceOutputStream.
+        /// </summary>
+        /// <param name="s"></param>
+        /// <returns></returns>
+        public static SequenceOutputStream Synchronized(SequenceOutputStream s)
+        {
+            return new SyncSequenceOutputStream(s);
+        }
+
+        private class SyncSequenceOutputStream : SequenceOutputStream
+        {
+            private readonly object _syncLock = new object();
+
+            private SequenceOutputStream _stream;
+
+            internal SyncSequenceOutputStream(SequenceOutputStream stream)
+            {
+                _stream = stream;
+            }
+
+            public override bool IsAddingCompleted
+            {
+                get { lock (_syncLock) return _stream.IsAddingCompleted; }
+            }
+
+            public override void CompleteAdding()
+            {
+                lock (_syncLock) _stream.CompleteAdding();
+            }
+
+            public override void Add(IOutputStream stream)
+            {
+                lock (_syncLock) _stream.Add(stream);
+            }
+
+            public override bool IsAtEnd
+            {
+                get { lock (_syncLock) return _stream.IsAtEnd; }
+            }
+
+            public override IOutputData PullOutputData(TimeSpan duration)
+            {
+                lock (_syncLock) return _stream.PullOutputData(duration);
+            }
+
+            public override void DidOutputData(DateTimeOffset outputTime, TimeSpan timeSpan, IEnumerable<IPipelineNodeConfiguration> configuration)
+            {
+                lock (_syncLock) _stream.DidOutputData(outputTime, timeSpan, configuration);
+            }
+
+            public override TimeSpan OutputPosition
+            {
+                get { lock (_syncLock) return _stream.OutputPosition; }
+            }
+
+            public override bool IsOutputAtEnd
+            {
+                get { lock (_syncLock) return _stream.IsOutputAtEnd; }
+            }
+
+            public override IMeasurement SampleRate
+            {
+                get { lock (_syncLock) return _stream.SampleRate; }
+            }
+
+            public override Option<TimeSpan> Duration
+            {
+                get { lock (_syncLock) return _stream.Duration; }
+            }
+
+            public override TimeSpan Position
+            {
+                get { lock (_syncLock) return _stream.Position; }
+            }
         }
     }
 
@@ -434,9 +498,9 @@ namespace Symphony.Core
             Streams = new Queue<IInputStream>();
         }
 
-        public bool IsAddingCompleted { get; private set; }
+        public virtual bool IsAddingCompleted { get; private set; }
 
-        public void CompleteAdding()
+        public virtual void CompleteAdding()
         {
             IsAddingCompleted = true;
         }
@@ -445,7 +509,7 @@ namespace Symphony.Core
         /// Adds an IInputStream to the end of the sequence.
         /// </summary>
         /// <param name="stream">Stream to add to the end of the sequence</param>
-        public void Add(IInputStream stream)
+        public virtual void Add(IInputStream stream)
         {
             if (IsAddingCompleted)
                 throw new InvalidOperationException("Stream marked as adding complete");
@@ -462,7 +526,7 @@ namespace Symphony.Core
             }
         }
 
-        public void PushInputData(IInputData inData)
+        public virtual void PushInputData(IInputData inData)
         {
             var srate = SampleRate;
             if (srate != null && !Equals(inData.SampleRate, srate))
@@ -496,12 +560,12 @@ namespace Symphony.Core
             }
         }
 
-        public IMeasurement SampleRate
+        public virtual IMeasurement SampleRate
         {
             get { return Streams.Select(s => s.SampleRate).FirstOrDefault(r => r != null); }
         }
-        
-        public Option<TimeSpan> Duration
+
+        public virtual Option<TimeSpan> Duration
         {
             get
             {
@@ -518,15 +582,77 @@ namespace Symphony.Core
                 return duration;
             }
         }
-        
-        public TimeSpan Position
+
+        public virtual TimeSpan Position
         {
             get { return new TimeSpan(Streams.Select(s => s.Position.Ticks).Sum()); }
         }
-        
-        public bool IsAtEnd
+
+        public virtual bool IsAtEnd
         {
             get { return Streams.All(s => s.IsAtEnd); }
+        }
+        
+        /// <summary>
+        /// Returns a thread-safe wrapper for SequenceInputStream.
+        /// </summary>
+        /// <param name="s"></param>
+        /// <returns></returns>
+        public static SequenceInputStream Synchronized(SequenceInputStream s)
+        {
+            return new SyncSequenceInputStream(s);
+        }
+
+        private class SyncSequenceInputStream : SequenceInputStream
+        {
+            private readonly object _syncLock = new object();
+
+            private SequenceInputStream _stream;
+
+            internal SyncSequenceInputStream(SequenceInputStream stream)
+            {
+                _stream = stream;
+            }
+
+            public override bool IsAddingCompleted
+            {
+                get { lock (_syncLock) return _stream.IsAddingCompleted; }
+            }
+
+            public override void CompleteAdding()
+            {
+                lock (_syncLock) _stream.CompleteAdding();
+            }
+
+            public override void Add(IInputStream stream)
+            {
+                lock (_syncLock) _stream.Add(stream);
+            }
+
+            public override bool IsAtEnd
+            {
+                get { lock (_syncLock) return _stream.IsAtEnd; }
+            }
+
+            public override void PushInputData(IInputData inData)
+            {
+                lock (_syncLock) _stream.PushInputData(inData);
+            }
+
+            public override IMeasurement SampleRate
+            {
+                get { lock (_syncLock) return _stream.SampleRate; }
+            }
+
+            public override Option<TimeSpan> Duration
+            {
+                get { lock (_syncLock) return _stream.Duration; }
+            }
+
+            public override TimeSpan Position
+            {
+                get { lock (_syncLock) return _stream.Position; }
+            }
         }
     }
 

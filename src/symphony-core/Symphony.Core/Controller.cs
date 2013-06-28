@@ -900,12 +900,12 @@ namespace Symphony.Core
             {
                 if (device.OutputStreams.Any())
                 {
-                    OutputStreams[device] = new SequenceOutputStream();
+                    OutputStreams[device] = SequenceOutputStream.Synchronized(new SequenceOutputStream());
                 }
 
                 if (device.InputStreams.Any())
                 {
-                    InputStreams[device] = new SequenceInputStream();
+                    InputStreams[device] = SequenceInputStream.Synchronized(new SequenceInputStream());
                 }
             }
         }
