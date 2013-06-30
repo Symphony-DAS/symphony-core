@@ -74,7 +74,8 @@ namespace Symphony.Core
             OutputStreams = new ConcurrentDictionary<IExternalDevice, SequenceOutputStream>();
             InputStreams = new ConcurrentDictionary<IExternalDevice, SequenceInputStream>();
             BackgroundStreams = new Dictionary<IExternalDevice, IOutputStream>();
-            PersistenceTasks = new List<Task>();
+            CompletedEpochTasks = new List<Task>();
+            PersistEpochTasks = new List<Task>();
             Configuration = new Dictionary<string, object>();
             CompletedEpochTaskScheduler = new SerialTaskScheduler();
             PersistEpochTaskScheduler = new SerialTaskScheduler();
@@ -94,14 +95,27 @@ namespace Symphony.Core
         private SerialTaskScheduler CompletedEpochTaskScheduler { get; set; }
 
         /// <summary>
+        /// A list of incomplete tasks firing the CompletedEpoch event.
+        /// </summary>
+        private IList<Task> CompletedEpochTasks { get; set; } 
+
+        /// <summary>
+        /// Blocks for completion of all asynchronous task firing the CompletedEpoch event. 
+        /// </summary>
+        public void WaitForCompletedEpochTasks()
+        {
+            Task.WaitAll(CompletedEpochTasks.ToArray());
+        }
+
+        /// <summary>
         /// A task scheduler for tasks persisting completed Epochs.
         /// </summary>
         private SerialTaskScheduler PersistEpochTaskScheduler { get; set; }
 
         /// <summary>
-        /// A list of the incomplete tasks persisting completed Epochs. 
+        /// A list of incomplete tasks persisting completed Epochs. 
         /// </summary>
-        private IList<Task> PersistenceTasks { get; set; }
+        private IList<Task> PersistEpochTasks { get; set; }
 
         /// <summary>
         /// The canonical clock for the experimental timeline
@@ -738,7 +752,7 @@ namespace Symphony.Core
         {
             try
             {
-                Task.WaitAll(PersistenceTasks.ToArray());
+                Task.WaitAll(PersistEpochTasks.ToArray());
             }
             catch (Exception ex)
             {
@@ -801,11 +815,14 @@ namespace Symphony.Core
                     if (currentEpoch.IsComplete)
                     {
                         log.DebugFormat("Completed Epoch: {0}", currentEpoch.ProtocolID);
-                            
-                        Task.Factory.StartNew(() => OnCompletedEpoch(currentEpoch), 
-                            CancellationToken.None, 
-                            TaskCreationOptions.None,
-                            CompletedEpochTaskScheduler);
+
+                        var completeTask = Task.Factory.StartNew(() => OnCompletedEpoch(currentEpoch),
+                                                                 CancellationToken.None,
+                                                                 TaskCreationOptions.None,
+                                                                 CompletedEpochTaskScheduler);
+
+                        CompletedEpochTasks = CompletedEpochTasks.Where(t => !t.IsCompleted).ToList();
+                        CompletedEpochTasks.Add(completeTask);
 
                         if (persistor != null && currentEpoch.ShouldBePersisted)
                         {
@@ -829,8 +846,8 @@ namespace Symphony.Core
                                     },
                                     cancellationToken);
 
-                            PersistenceTasks = PersistenceTasks.Where(t => !t.IsCompleted).ToList();
-                            PersistenceTasks.Add(persistTask);
+                            PersistEpochTasks = PersistEpochTasks.Where(t => !t.IsCompleted).ToList();
+                            PersistEpochTasks.Add(persistTask);
                         }
 
                         Epoch completedEpoch;
