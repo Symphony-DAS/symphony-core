@@ -656,7 +656,13 @@ namespace Symphony.Core
 
             if (!ValidateEpoch(e))
                 throw new ArgumentException(ValidateEpoch(e));
+            
+            Running = true;
+            IsPauseRequested = false;
+            IsStopRequested = false;
 
+            OnStarted();
+            
             EventHandler<TimeStampedEpochEventArgs> epochCompleted = (c, args) => RequestStop();
 
             try
@@ -695,6 +701,12 @@ namespace Symphony.Core
             if (!Validate())
                 throw new ValidationException(Validate());
 
+            Running = true;
+            IsPauseRequested = false;
+            IsStopRequested = false;
+
+            OnStarted();
+
             return Task.Factory.StartNew(() => Process(EpochQueue, persistor), TaskCreationOptions.LongRunning);
         }
 
@@ -707,12 +719,6 @@ namespace Symphony.Core
         /// <param name="persistor">Epoch persistor for saving data</param>
         private void Process(ConcurrentQueue<Epoch> epochQueue, EpochPersistor persistor)
         {
-            Running = true;
-            IsPauseRequested = false;
-            IsStopRequested = false;
-
-            OnStarted();
-
             try
             {
                 ProcessLoop(epochQueue, persistor);
@@ -911,8 +917,8 @@ namespace Symphony.Core
         }
 
         /// <summary>
-        /// Background streams to present in the absence of Epoch streams. All devices in the Controller 
-        /// must have an associated background stream of indefinite duration or the Controller will 
+        /// Background streams to present in the absence of Epoch streams. All devices with a DAQOutputStream in 
+        /// the Controller must have an associated background stream of indefinite duration or the Controller will 
         /// fail to validate.
         /// </summary>
         public IDictionary<IExternalDevice, IOutputStream> BackgroundStreams { get; set; }
