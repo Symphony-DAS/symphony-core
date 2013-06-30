@@ -100,6 +100,11 @@ namespace Symphony.Core
         string Name { get; }
 
         /// <summary>
+        /// Blocks for completion of all asynchronous input tasks (incoming data).
+        /// </summary>
+        void WaitForInputTasks();
+
+        /// <summary>
         /// Asynchronously sets the background for the given stream. Stream background given by s.Background.
         /// </summary>
         /// <param name="s">Output stream</param>
@@ -397,6 +402,11 @@ namespace Symphony.Core
 
             InputTasks = InputTasks.Where(t => !t.IsCompleted).ToList();
             InputTasks.Add(newTask);
+        }
+
+        public void WaitForInputTasks()
+        {
+            Task.WaitAll(InputTasks.ToArray());
         }
 
         public void ApplyStreamBackground(IDAQOutputStream s)

@@ -861,10 +861,15 @@ namespace Symphony.Core
                     }
                 };
 
-            EventHandler<TimeStampedExceptionEventArgs> exceptionalStop = (daq, args) =>
+            EventHandler<TimeStampedEventArgs> daqStopped = (daq, args) =>
                 {
-                    log.Debug("DAQ Controller stopped");
-                    throw new SymphonyControllerException("DAQ Controller stopped", args.Exception);
+                    DAQController.WaitForInputTasks();
+                };
+
+            EventHandler<TimeStampedExceptionEventArgs> daqExceptionalStop = (daq, args) =>
+                {
+                    log.Debug("DAQ Controller stopped due to an exception");
+                    throw new SymphonyControllerException("DAQ Controller stopped due to an exception", args.Exception);
                 };
 
             try
@@ -872,7 +877,8 @@ namespace Symphony.Core
                 StopRequested += stopRequested;
                 PulledOutputData += outputPulled;
                 PushedInputData += inputPushed;
-                DAQController.ExceptionalStop += exceptionalStop;
+                DAQController.Stopped += daqStopped;
+                DAQController.ExceptionalStop += daqExceptionalStop;
 
                 while (!IsPauseRequested && !IsStopRequested)
                 {
@@ -893,7 +899,10 @@ namespace Symphony.Core
                 StopRequested -= stopRequested;
                 PulledOutputData -= outputPulled;
                 PushedInputData -= inputPushed;
-                DAQController.ExceptionalStop -= exceptionalStop;
+                DAQController.Stopped -= daqStopped;
+                DAQController.ExceptionalStop -= daqExceptionalStop;
+
+                DAQController.WaitForInputTasks();
 
                 while (incompleteEpochs.Any())
                 {
