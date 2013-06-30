@@ -481,6 +481,8 @@ namespace Symphony.Core
                 throw new ArgumentException(ValidateEpoch(e));
 
             EpochQueue.Enqueue(e);
+
+            log.DebugFormat("Queued epoch: {0}", e.ProtocolID);
         }
 
         /// <summary>
@@ -805,7 +807,7 @@ namespace Symphony.Core
                             TaskCreationOptions.None,
                             CompletedEpochTaskScheduler);
 
-                        if (persistor != null)
+                        if (persistor != null && currentEpoch.ShouldBePersisted)
                         {
                             var persistTask = Task.Factory.StartNew(() =>
                                 {

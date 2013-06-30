@@ -43,6 +43,7 @@ namespace Symphony.Core
             Backgrounds = new Dictionary<IExternalDevice, Background>();
             Keywords = new HashSet<string>();
             WaitForTrigger = false;
+            ShouldBePersisted = true;
         }
 
 
@@ -61,9 +62,15 @@ namespace Symphony.Core
         /// Indicates if this Epoch should wait for an external trigger before running. If this value
         /// is false, the Epoch will begin immediately after being pushed to the Controller. If this value
         /// is true, the Epoch will begin following the next external trigger after being pushed to the
-        /// Controller.  
+        /// Controller. The default value is false.
         /// </summary>
         public bool WaitForTrigger { get; set; }
+
+        /// <summary>
+        /// Indicates if this Epoch should be persisted by the EpochPersistor upon completion. The default
+        /// value is true.
+        /// </summary>
+        public bool ShouldBePersisted { get; set; }
 
         /// <summary>
         /// Responses for this epoch, indexd by the ExternalDevice from which they were recorded.
