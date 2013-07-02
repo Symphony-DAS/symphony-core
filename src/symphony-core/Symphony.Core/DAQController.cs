@@ -557,7 +557,6 @@ namespace Symphony.Core
 
             //OutputTaskCTS.Cancel();
             Task.WaitAll(OutputTasks.ToArray());
-            Task.WaitAll(InputTasks.ToArray());
 
             SetStreamsBackground();
         }
