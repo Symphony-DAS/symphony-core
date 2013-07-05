@@ -91,6 +91,11 @@ namespace Symphony.Core
         IMeasurement OutputBackground { get; }
 
         /// <summary>
+        /// Applies OutputBackground to all bound output streams.
+        /// </summary>
+        void ApplyBackground();
+
+        /// <summary>
         /// The name of this external device, principally for human-recognition
         /// purposes (log files, etc)
         /// </summary>
@@ -330,6 +335,14 @@ namespace Symphony.Core
         {
             get { return ConvertOutput(Background); }
         }
+        
+        public void ApplyBackground()
+        {
+            foreach (var s in OutputStreams)
+            {
+                s.ApplyBackground();
+            }
+        }
 
         protected virtual IMeasurement ConvertOutput(IMeasurement deviceOutput)
         {
@@ -402,7 +415,6 @@ namespace Symphony.Core
                 stream.RemoveDevice(this);
             }
         }
-
 
         /// <summary>
         /// The name of this external device, principally for human-recognition

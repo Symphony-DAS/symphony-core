@@ -63,6 +63,11 @@ namespace Symphony.Core
                 get { throw new NotImplementedException(); }
             }
 
+            public void ApplyBackground()
+            {
+                throw new NotImplementedException();
+            }
+
             public string Name
             {
                 get { return "NamedDevice"; }
