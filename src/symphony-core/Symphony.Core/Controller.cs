@@ -299,12 +299,12 @@ namespace Symphony.Core
         /// <summary>
         /// This controller received a RequestPause() request.
         /// </summary>
-        public event EventHandler<TimeStampedEventArgs> PauseRequested;
+        public event EventHandler<TimeStampedEventArgs> RequestedPause;
 
         /// <summary>
         /// This controller received a RequestStop() request.
         /// </summary>
-        public event EventHandler<TimeStampedEventArgs> StopRequested;
+        public event EventHandler<TimeStampedEventArgs> RequestedStop;
 
         /// <summary>
         /// This controller stopped.
@@ -346,14 +346,14 @@ namespace Symphony.Core
             FireEvent(DiscardedEpoch, epoch);
         }
 
-        private void OnPauseRequested()
+        private void OnRequestedPause()
         {
-            FireEvent(PauseRequested);
+            FireEvent(RequestedPause);
         }
 
-        private void OnStopRequested()
+        private void OnRequestedStop()
         {
-            FireEvent(StopRequested);
+            FireEvent(RequestedStop);
         }
 
         private void OnStopped()
@@ -872,7 +872,7 @@ namespace Symphony.Core
 
             try
             {
-                StopRequested += stopRequested;
+                RequestedStop += stopRequested;
                 PulledOutputData += outputPulled;
                 PushedInputData += inputPushed;
                 DAQController.Stopped += daqStopped;
@@ -894,7 +894,7 @@ namespace Symphony.Core
             }
             finally
             {
-                StopRequested -= stopRequested;
+                RequestedStop -= stopRequested;
                 PulledOutputData -= outputPulled;
                 PushedInputData -= inputPushed;
                 DAQController.Stopped -= daqStopped;
@@ -998,7 +998,7 @@ namespace Symphony.Core
         public void RequestPause()
         {
             IsPauseRequested = true;
-            OnPauseRequested();
+            OnRequestedPause();
         }
 
         private bool IsPauseRequested { get; set; }
@@ -1012,7 +1012,7 @@ namespace Symphony.Core
         public void RequestStop()
         {
             IsStopRequested = true;
-            OnStopRequested();
+            OnRequestedStop();
         }
 
         private bool IsStopRequested { get; set; }

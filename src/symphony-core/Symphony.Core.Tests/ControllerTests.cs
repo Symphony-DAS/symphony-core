@@ -1044,7 +1044,7 @@ namespace Symphony.Core
             AsyncBackground = background;
         }
 
-        protected override IDictionary<IDAQInputStream, IInputData> ProcessLoopIteration(IDictionary<IDAQOutputStream, IOutputData> outData, TimeSpan deficit)
+        protected override IDictionary<IDAQInputStream, IInputData> ProcessLoopIteration(IDictionary<IDAQOutputStream, IOutputData> outData, TimeSpan deficit, CancellationToken token)
         {
             return new Dictionary<IDAQInputStream, IInputData>();
         }
@@ -1065,7 +1065,7 @@ namespace Symphony.Core
 
         protected override bool ShouldStop()
         {
-            return StopRequested;
+            return IsStopRequested;
         }
     }
 
@@ -1073,21 +1073,21 @@ namespace Symphony.Core
     {
         protected override bool ShouldStop()
         {
-            return StopRequested;
+            return IsStopRequested;
         }
     }
 
     class ExceptionThrowingDAQController : SimpleDAQController, IClock
     {
 
-        protected override IDictionary<IDAQInputStream, IInputData> ProcessLoopIteration(IDictionary<IDAQOutputStream, IOutputData> outData, TimeSpan deficit)
+        protected override IDictionary<IDAQInputStream, IInputData> ProcessLoopIteration(IDictionary<IDAQOutputStream, IOutputData> outData, TimeSpan deficit, CancellationToken token)
         {
             throw new Exception("Exception thrown in ProcessLoopIteration");
         }
 
         protected override bool ShouldStop()
         {
-            return StopRequested;
+            return IsStopRequested;
         }
     }
 

@@ -19,6 +19,7 @@
 using namespace std;
 using namespace System::Collections::Generic;
 using namespace System::Linq;
+using namespace System::Threading;
 
 namespace Heka {
 
@@ -116,7 +117,8 @@ namespace Heka {
 	IDictionary<ChannelIdentifier, array<itcsample_t>^>^ 
 		IOBridge::ReadWrite(IDictionary<ChannelIdentifier, array<itcsample_t>^>^ output,
 		IList<ChannelIdentifier>^ input,
-		int32_t nsamples)
+		int32_t nsamples,
+		CancellationToken^ token)
 	{
 
 		if(nsamples < 0) {
@@ -193,6 +195,11 @@ namespace Heka {
 		}
 
 		while(nIn < nsamples) {
+
+			if(token->IsCancellationRequested)
+			{
+				break;
+			}
 
 			CheckStatus(GetDevice(), status);
 

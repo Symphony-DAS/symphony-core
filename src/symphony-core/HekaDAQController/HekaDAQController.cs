@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics.Contracts;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Heka.NativeInterop;
 using log4net;
@@ -45,8 +46,9 @@ namespace Heka
         void PreloadSamples(StreamType channelType, ushort channelNumber, IList<short> samples);
 
         IEnumerable<KeyValuePair<ChannelIdentifier, short[]>> ReadWrite(IDictionary<ChannelIdentifier, short[]> output,
-                                                          IList<ChannelIdentifier> input,
-                                                          int nsamples);
+                                                                        IList<ChannelIdentifier> input,
+                                                                        int nsamples,
+                                                                        CancellationToken token);
 
         void SetStreamBackgroundAsyncIO(HekaDAQOutputStream stream);
 
@@ -130,7 +132,7 @@ namespace Heka
 
         public override void ApplyStreamBackgroundAsync(IDAQOutputStream s, IMeasurement background)
         {
-            if(Running && !StopRequested)
+            if(Running && !IsStopRequested)
             {
                 throw new HekaDAQException("Cannot set stream background while running");
             }
@@ -386,7 +388,7 @@ namespace Heka
 
         protected override bool ShouldStop()
         {
-            return StopRequested;
+            return IsStopRequested;
         }
 
         protected override void CommonStop()
@@ -411,7 +413,7 @@ namespace Heka
         private static readonly ILog log = LogManager.GetLogger(typeof(HekaDAQController));
         private bool _disposed = false;
 
-        protected override IDictionary<IDAQInputStream, IInputData> ProcessLoopIteration(IDictionary<IDAQOutputStream, IOutputData> outData, TimeSpan deficit)
+        protected override IDictionary<IDAQInputStream, IInputData> ProcessLoopIteration(IDictionary<IDAQOutputStream, IOutputData> outData, TimeSpan deficit, CancellationToken token)
         {
             IDictionary<ChannelIdentifier, short[]> output = new Dictionary<ChannelIdentifier, short[]>();
             IDictionary<ChannelIdentifier, short[]> deficitOutput = new Dictionary<ChannelIdentifier, short[]>();
@@ -455,7 +457,7 @@ namespace Heka
                 nsamples = (int)TimeSpan.FromSeconds(DEFAULT_TRANSFER_BLOCK_SECONDS).Samples(SampleRate);
             }
 
-            IEnumerable<KeyValuePair<ChannelIdentifier, short[]>> input = Device.ReadWrite(output, inputChannels, nsamples);
+            IEnumerable<KeyValuePair<ChannelIdentifier, short[]>> input = Device.ReadWrite(output, inputChannels, nsamples, token);
 
             var result = new ConcurrentDictionary<IDAQInputStream, IInputData>();
             Parallel.ForEach(input, (kvp) =>

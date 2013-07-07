@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 
 using Symphony.Core;
@@ -89,10 +90,10 @@ namespace Symphony.SimulationDAQController
 
         protected override bool ShouldStop()
         {
-            return StopRequested;
+            return IsStopRequested;
         }
 
-        protected override IDictionary<IDAQInputStream, IInputData> ProcessLoopIteration(IDictionary<IDAQOutputStream, IOutputData> outData, TimeSpan deficit)
+        protected override IDictionary<IDAQInputStream, IInputData> ProcessLoopIteration(IDictionary<IDAQOutputStream, IOutputData> outData, TimeSpan deficit, CancellationToken token)
         {
             var result = SimulationRunner(outData, ProcessInterval);
 
