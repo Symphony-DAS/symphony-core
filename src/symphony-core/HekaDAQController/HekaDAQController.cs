@@ -40,7 +40,7 @@ namespace Heka
     /// Encapsulates interaction with the ITCMM driver. Client code should not use this interface
     /// directly; a IHekaDevice is managed by the HekaDAQController.
     /// </summary>
-    public interface IHekaDevice : IClock
+    public interface IHekaDevice
     {
         void PreloadSamples(StreamType channelType, ushort channelNumber, IList<short> samples);
 
@@ -83,7 +83,7 @@ namespace Heka
     /// The ITC hardware supports heterogeneous sampling rates for each channel. The current
     /// controller supports only a single sampling rate.
     /// </summary>
-    public sealed class HekaDAQController : DAQControllerBase, IClock, IDisposable
+    public sealed class HekaDAQController : DAQControllerBase, IDisposable
     {
         private const double DEFAULT_TRANSFER_BLOCK_SECONDS = 0.25;
         private const double PRELOAD_DURATION_SECONDS = 2 * DEFAULT_TRANSFER_BLOCK_SECONDS;
@@ -180,27 +180,40 @@ namespace Heka
         }
 
         /// <summary>
-        /// Constructs a new HekaDAQController for the given device type and number.
+        /// Constructs a new HekaDAQController for the given device type and number, using 
+        /// the system (CPU) clock.
         /// </summary>
         /// <param name="deviceType">Heka device type (e.g. ITCMM.ITC18_ID)</param>
         /// <param name="deviceNumber">Device number (0-indexed)</param>
         public HekaDAQController(uint deviceType, uint deviceNumber)
+            : this(deviceType, deviceNumber, new SystemClock())
         {
-            this.DeviceType = deviceType;
-            this.DeviceNumber = deviceNumber;
-            this.HardwareReady = false;
-            this.ProcessInterval = TimeSpan.FromSeconds(DEFAULT_TRANSFER_BLOCK_SECONDS);
-            this.Clock = this;
         }
 
         /// <summary>
-        /// Constructs a HekaDAQController for the default PCI-18 #0 device.
+        /// Constructs a HekaDAQController for the default PCI-18 #0 device, using the system 
+        /// (CPU) clock.
         /// </summary>
         public HekaDAQController()
             : this(ITCMM.ITC18_ID, 0)
         {
         }
 
+        /// <summary>
+        /// Constructs a new HekaDAQController for the given device type and number, using
+        /// the given clock.
+        /// </summary>
+        /// <param name="deviceType"></param>
+        /// <param name="deviceNumber"></param>
+        /// <param name="clock"></param>
+        public HekaDAQController(uint deviceType, uint deviceNumber, IClock clock)
+        {
+            this.DeviceType = deviceType;
+            this.DeviceNumber = deviceNumber;
+            this.HardwareReady = false;
+            this.ProcessInterval = TimeSpan.FromSeconds(DEFAULT_TRANSFER_BLOCK_SECONDS);
+            this.Clock = clock;
+        }
 
         /// <summary>
         /// Initializes the Heka/Instructech hardware.
@@ -513,11 +526,6 @@ namespace Heka
         internal void PipelineException(Exception e)
         {
             StopWithException(e);
-        }
-
-        public DateTimeOffset Now
-        {
-            get { return Device.Now; }
         }
 
         public static IEnumerable<HekaDAQController> AvailableControllers()

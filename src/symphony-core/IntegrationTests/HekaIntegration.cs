@@ -57,9 +57,8 @@ namespace IntegrationTests
                 {
                     daq.SampleRate = new Measurement(sampleRate, "Hz");
 
-                    var controller = new Controller { Clock = daq, DAQController = daq };
+                    var controller = new Controller { Clock = daq.Clock, DAQController = daq };
 
-                    HekaDAQController daq1 = daq;
                     var outDevices = Enumerable.Range(0, nOut)
                         .Select(i =>
                                     {
@@ -67,10 +66,10 @@ namespace IntegrationTests
                                                                                     new Measurement(0, "V"))
                                                        {
                                                            MeasurementConversionTarget = "V",
-                                                           Clock = daq1,
+                                                           Clock = daq.Clock,
                                                            OutputSampleRate = daq.SampleRate
                                                        };
-                                        dev0.BindStream((IDAQOutputStream)daq1.GetStreams("ANALOG_OUT." + i).First());
+                                        dev0.BindStream((IDAQOutputStream)daq.GetStreams("ANALOG_OUT." + i).First());
 
                                         controller.BackgroundStreams[dev0] = new BackgroundOutputStream(new Background(STREAM_BACKGROUND, daq.SampleRate));
 
@@ -86,10 +85,10 @@ namespace IntegrationTests
                                                                         new Measurement(0, "V"))
                             {
                                 MeasurementConversionTarget = "V",
-                                Clock = daq1,
+                                Clock = daq.Clock,
                                 InputSampleRate = daq.SampleRate
                             };
-                            dev0.BindStream((IDAQInputStream)daq1.GetStreams("ANALOG_IN." + i).First());
+                            dev0.BindStream((IDAQInputStream)daq.GetStreams("ANALOG_IN." + i).First());
 
                             return dev0;
                         })
@@ -167,12 +166,12 @@ namespace IntegrationTests
                 {
                     daq.SampleRate = new Measurement((decimal)sampleRate, "Hz");
 
-                    var controller = new Controller { Clock = daq, DAQController = daq };
+                    var controller = new Controller { Clock = daq.Clock, DAQController = daq };
 
                     var dev0 = new UnitConvertingExternalDevice("Device0", "Manufacturer", controller, new Measurement(0, "V"))
                                    {
                                        MeasurementConversionTarget = "V",
-                                       Clock = daq,
+                                       Clock = daq.Clock,
                                        OutputSampleRate = daq.SampleRate,
                                        InputSampleRate = daq.SampleRate
                                    };
@@ -182,7 +181,7 @@ namespace IntegrationTests
                     var dev1 = new UnitConvertingExternalDevice("Device1", "Manufacturer", controller, new Measurement(0, "V"))
                     {
                         MeasurementConversionTarget = "V",
-                        Clock = daq,
+                        Clock = daq.Clock,
                         OutputSampleRate = daq.SampleRate,
                         InputSampleRate = daq.SampleRate
                     };
@@ -301,7 +300,7 @@ namespace IntegrationTests
                     daq.SampleRate = new Measurement((decimal)sampleRate, "Hz");
 
                     var controller = new Controller();
-                    controller.Clock = daq;
+                    controller.Clock = daq.Clock;
                     controller.DAQController = daq;
 
 
@@ -315,7 +314,7 @@ namespace IntegrationTests
                         };
                     dev0.BindStream(daq.GetStreams("ANALOG_OUT.0").First() as IDAQOutputStream);
                     dev0.BindStream(daq.GetStreams("ANALOG_IN.0").First() as IDAQInputStream);
-                    dev0.Clock = daq;
+                    dev0.Clock = daq.Clock;
 
                     controller.DiscardedEpoch += (c, args) => Console.WriteLine("Discarded epoch: " + args.Epoch);
 
@@ -385,7 +384,7 @@ namespace IntegrationTests
                     daq.SampleRate = new Measurement((decimal)sampleRate, "Hz");
 
                     var controller = new Controller();
-                    controller.Clock = daq;
+                    controller.Clock = daq.Clock;
                     controller.DAQController = daq;
 
 
@@ -394,7 +393,7 @@ namespace IntegrationTests
                     var dev0 = new UnitConvertingExternalDevice("Device0", "Manufacturer", controller, expectedBackground)
                                    {
                                        MeasurementConversionTarget = "V",
-                                       Clock = daq,
+                                       Clock = daq.Clock,
                                        OutputSampleRate = daq.SampleRate,
                                        InputSampleRate = daq.SampleRate
                                    };
@@ -479,13 +478,13 @@ namespace IntegrationTests
                     daq.InitHardware();
                     daq.SampleRate = new Measurement(sampleRate, "Hz");
 
-                    var controller = new Controller {Clock = daq, DAQController = daq};
+                    var controller = new Controller {Clock = daq.Clock, DAQController = daq};
 
                     var dev0 = new UnitConvertingExternalDevice("Device0", "Manufacturer", controller,
                                                                 new Measurement(0, "V"))
                                    {
                                        MeasurementConversionTarget = "V",
-                                       Clock = daq,
+                                       Clock = daq.Clock,
                                        OutputSampleRate = daq.SampleRate,
                                        InputSampleRate = daq.SampleRate
                                    };

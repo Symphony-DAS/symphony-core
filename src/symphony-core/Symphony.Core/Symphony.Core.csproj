@@ -140,7 +140,9 @@
   <ItemGroup>
     <None Include="packages.config" />
     <None Include="physion_authenticode.pfx" />
-    <None Include="Symphony.Core.cd" />
+    <None Include="Symphony.Core.cd">
+      <SubType>Designer</SubType>
+    </None>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>

@@ -142,8 +142,6 @@ namespace Heka
 
         private void FixtureForController(HekaDAQController controller, double durationSeconds = 10)
         {
-            controller.Clock = controller;
-
             controller.SampleRate = new Measurement(10000, "Hz");
             controller.InitHardware();
 

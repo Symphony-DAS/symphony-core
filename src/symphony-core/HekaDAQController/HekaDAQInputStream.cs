@@ -27,7 +27,7 @@ namespace Heka
             this.MeasurementConversionTarget = (ChannelType == StreamType.DIGITAL_IN || ChannelType == StreamType.AUX_IN) 
                 ? Measurement.UNITLESS : "V";
             this.Controller = controller;
-            this.Clock = controller;
+            this.Clock = controller.Clock;
         }
 
         public override IDictionary<string, object> Configuration

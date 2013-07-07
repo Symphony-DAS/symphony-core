@@ -31,7 +31,7 @@ namespace Heka
             this.MeasurementConversionTarget = (ChannelType == StreamType.DIGITAL_OUT || ChannelType == StreamType.AUX_OUT)
                 ? Measurement.UNITLESS : DAQCountUnits;
             this.Controller = controller;
-            this.Clock = controller;
+            this.Clock = controller.Clock;
         }
 
         public override IDictionary<string, object> Configuration

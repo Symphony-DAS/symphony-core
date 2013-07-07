@@ -13,13 +13,6 @@ namespace Symphony.Core
     /// </summary>
     public class SystemClock : IClock
     {
-        private static readonly SystemClock _default = new SystemClock();
-
-        public static SystemClock Default
-        {
-            get { return _default; }
-        }
-
         public DateTimeOffset Now
         {
             get { return DateTimeOffset.Now; }

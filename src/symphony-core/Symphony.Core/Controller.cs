@@ -363,31 +363,29 @@ namespace Symphony.Core
 
         private void FireEvent(EventHandler<TimeStampedEpochEventArgs> evt, Epoch epoch)
         {
-            // We need to use the system clock for time stamped events because using the Controller
-            // clock is likely to lock the input/output tasks of the DAQController for extended periods.
-            FireEvent(evt, new TimeStampedEpochEventArgs(SystemClock.Default, epoch));
+            FireEvent(evt, new TimeStampedEpochEventArgs(Clock, epoch));
         }
 
         private void FireEvent(EventHandler<TimeStampedDeviceDataEventArgs> evt, IExternalDevice device, IIOData data)
         {
-            FireEvent(evt, new TimeStampedDeviceDataEventArgs(SystemClock.Default, device, data));
+            FireEvent(evt, new TimeStampedDeviceDataEventArgs(Clock, device, data));
         }
         
         private void FireEvent(EventHandler<TimeStampedDeviceOutputStreamEventArgs> evt, IExternalDevice device,
                                IOutputStream stream)
         {
-            FireEvent(evt, new TimeStampedDeviceOutputStreamEventArgs(SystemClock.Default, device, stream));
+            FireEvent(evt, new TimeStampedDeviceOutputStreamEventArgs(Clock, device, stream));
         }
 
         private void FireEvent(EventHandler<TimeStampedDeviceInputStreamEventArgs> evt, IExternalDevice device,
                                IInputStream stream)
         {
-            FireEvent(evt, new TimeStampedDeviceInputStreamEventArgs(SystemClock.Default, device, stream));
+            FireEvent(evt, new TimeStampedDeviceInputStreamEventArgs(Clock, device, stream));
         }
 
         private void FireEvent(EventHandler<TimeStampedEventArgs> evt)
         {
-            FireEvent(evt, new TimeStampedEventArgs(SystemClock.Default));
+            FireEvent(evt, new TimeStampedEventArgs(Clock));
         }
 
         private void FireEvent<T>(EventHandler<T> evt, T args) where T : TimeStampedEventArgs
