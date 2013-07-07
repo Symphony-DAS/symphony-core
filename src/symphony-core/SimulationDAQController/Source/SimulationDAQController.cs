@@ -80,7 +80,7 @@ namespace Symphony.SimulationDAQController
             if (waitForTrigger)
                 throw new DAQException("SimulationDAQController does not support triggered start.");
 
-            Running = true;
+            IsRunning = true;
         }
 
         public override void ApplyStreamBackgroundAsync(IDAQOutputStream s, IMeasurement background)

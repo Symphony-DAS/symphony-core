@@ -132,7 +132,7 @@ namespace Heka
 
         public override void ApplyStreamBackgroundAsync(IDAQOutputStream s, IMeasurement background)
         {
-            if(Running && !IsStopRequested)
+            if(IsRunning && !IsStopRequested)
             {
                 throw new HekaDAQException("Cannot set stream background while running");
             }
@@ -172,7 +172,7 @@ namespace Heka
         {
             get
             {
-                return Running;
+                return IsRunning;
             }
         }
         
@@ -393,7 +393,7 @@ namespace Heka
 
         protected override void CommonStop()
         {
-            if (Running)
+            if (IsRunning)
             {
                 Device.StopHardware();
             }
@@ -537,7 +537,7 @@ namespace Heka
 
         public void ConfigureChannels()
         {
-            if(Running)
+            if(IsRunning)
             {
                 throw new HekaDAQException("Cannot configure channels while hardware is running.");
             }

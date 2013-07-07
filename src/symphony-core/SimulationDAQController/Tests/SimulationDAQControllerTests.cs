@@ -43,7 +43,7 @@ namespace Symphony.SimulationDAQController
             };
             c.Start(false);
 
-            while (c.Running) { }
+            while (c.IsRunning) { }
 
             Assert.AreEqual(loopDuration, actualTimeStep);
             CollectionAssert.AreEqual(actualOutput[outStream].Data, expectedOutput.SplitData(loopDuration).Head.Data);

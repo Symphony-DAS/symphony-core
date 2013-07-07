@@ -160,7 +160,7 @@ namespace Symphony.Core
         /// <summary>
         /// Flag indicating whether the Controller is running.
         /// </summary>
-        public bool Running { get; protected set; }
+        public bool IsRunning { get; protected set; }
 
         /// <summary>
         /// Add an ExternalDevice to the Controller; take care of performing
@@ -662,7 +662,7 @@ namespace Symphony.Core
         /// <exception cref="SymphonyControllerException">This Controller is currently running</exception>
         public void RunEpoch(Epoch e, EpochPersistor persistor)
         {
-            if (Running)
+            if (IsRunning)
                 throw new SymphonyControllerException("Controller is currently running");
 
             if (!Validate())
@@ -671,7 +671,7 @@ namespace Symphony.Core
             if (!ValidateEpoch(e))
                 throw new ArgumentException(ValidateEpoch(e));
             
-            Running = true;
+            IsRunning = true;
             IsPauseRequested = false;
             IsStopRequested = false;
 
@@ -709,13 +709,13 @@ namespace Symphony.Core
         /// <see cref="RequestStop()"/>
         public Task StartAsync(EpochPersistor persistor)
         {
-            if (Running)
+            if (IsRunning)
                 throw new SymphonyControllerException("Controller is currently running");
 
             if (!Validate())
                 throw new ValidationException(Validate());
 
-            Running = true;
+            IsRunning = true;
             IsPauseRequested = false;
             IsStopRequested = false;
 
@@ -739,7 +739,7 @@ namespace Symphony.Core
             }
             finally
             {
-                if (Running)
+                if (IsRunning)
                 {
                     Stop();
                 }
@@ -759,7 +759,7 @@ namespace Symphony.Core
             }
             finally
             {
-                Running = false;
+                IsRunning = false;
                 OnStopped();
             }
         }

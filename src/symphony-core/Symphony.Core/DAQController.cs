@@ -182,7 +182,7 @@ namespace Symphony.Core
         /// <summary>
         /// Flag indicating whether or not the represented hardware device is running
         /// </summary>
-        public virtual bool Running { get; protected set; }
+        public virtual bool IsRunning { get; protected set; }
 
         protected IEnumerable<IDAQOutputStream> ActiveOutputStreamsWithData
         {
@@ -228,9 +228,9 @@ namespace Symphony.Core
         /// is a NOP.</remarks>
         public virtual void Start(bool waitForTrigger)
         {
-            if (!Running)
+            if (!IsRunning)
             {
-                Running = true;
+                IsRunning = true;
                 IsStopRequested = false;
                 OnStarted();
 
@@ -274,7 +274,7 @@ namespace Symphony.Core
             }
             finally
             {
-                if (Running)
+                if (IsRunning)
                 {
                     Stop();
                 }
@@ -313,7 +313,7 @@ namespace Symphony.Core
             {
                 RequestedStop += stopRequested;
 
-                while (Running && !ShouldStop())
+                while (IsRunning && !ShouldStop())
                 {
 
                     // Collect outgoing data task results
@@ -431,7 +431,7 @@ namespace Symphony.Core
                 throw new DAQException("Output stream does not use this DAQ controller.");
             }
 
-            if(Running && !IsStopRequested)
+            if(IsRunning && !IsStopRequested)
             {
                 throw new DAQException("Attempted to set background on running stream");
             }
@@ -562,7 +562,7 @@ namespace Symphony.Core
             OnStopped();
             CommonStop();
 
-            Running = false;
+            IsRunning = false;
         }
 
         public event EventHandler<TimeStampedStimulusOutputEventArgs> StimulusOutput;
@@ -603,7 +603,7 @@ namespace Symphony.Core
 
         protected virtual void StopWithException(Exception e)
         {
-            Running = false;
+            IsRunning = false;
             OnExceptionalStop(e);
             CommonStop();
         }

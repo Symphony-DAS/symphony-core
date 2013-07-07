@@ -1029,7 +1029,7 @@ namespace Symphony.Core
 
         public void SetRunning(bool runnig)
         {
-            Running = runnig;
+            IsRunning = runnig;
         }
 
         protected override void StartHardware(bool wait)

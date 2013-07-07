@@ -42,7 +42,7 @@ namespace Heka
         {
             foreach (HekaDAQController controller in HekaDAQController.AvailableControllers())
             {
-                if (controller.Running)
+                if (controller.IsRunning)
                 {
                     controller.Stop();
                 }
