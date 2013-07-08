@@ -273,6 +273,152 @@ namespace IntegrationTests
             }
         }
 
+        [Test]
+        [Timeout(30 * 1000)]
+        public void ContinuousAcquisition(
+            [Values(10000, 20000, 50000)] double sampleRate,
+            [Values(20)] int nEpochs)
+        {
+            Converters.Clear();
+            HekaDAQInputStream.RegisterConverters();
+            HekaDAQOutputStream.RegisterConverters();
+
+            Assert.That(HekaDAQController.AvailableControllers().Count(), Is.GreaterThan(0));
+            foreach (var daq in HekaDAQController.AvailableControllers())
+            {
+                const double epochDuration = 1; //s
+
+                try
+                {
+                    daq.InitHardware();
+                    daq.SampleRate = new Measurement((decimal)sampleRate, "Hz");
+
+                    var controller = new Controller { Clock = daq.Clock, DAQController = daq };
+
+                    var dev0 = new UnitConvertingExternalDevice("Device0", "Manufacturer", controller, new Measurement(0, "V"))
+                    {
+                        MeasurementConversionTarget = "V",
+                        Clock = daq.Clock,
+                        OutputSampleRate = daq.SampleRate,
+                        InputSampleRate = daq.SampleRate
+                    };
+                    dev0.BindStream((IDAQOutputStream)daq.GetStreams("ANALOG_OUT.0").First());
+                    dev0.BindStream((IDAQInputStream)daq.GetStreams("ANALOG_IN.0").First());
+
+                    var dev1 = new UnitConvertingExternalDevice("Device1", "Manufacturer", controller, new Measurement(0, "V"))
+                    {
+                        MeasurementConversionTarget = "V",
+                        Clock = daq.Clock,
+                        OutputSampleRate = daq.SampleRate,
+                        InputSampleRate = daq.SampleRate
+                    };
+                    dev1.BindStream((IDAQOutputStream)daq.GetStreams("ANALOG_OUT.1").First());
+                    dev1.BindStream((IDAQInputStream)daq.GetStreams("ANALOG_IN.1").First());
+
+                    controller.BackgroundStreams[dev0] = new BackgroundOutputStream(new Background(STREAM_BACKGROUND, daq.SampleRate));
+                    controller.BackgroundStreams[dev1] = new BackgroundOutputStream(new Background(STREAM_BACKGROUND, daq.SampleRate));
+
+                    var nDAQStarts = 0;
+                    daq.Started += (evt, args) =>
+                        {
+                            nDAQStarts++;
+                        };
+
+                    var completedEpochs = new Queue<Epoch>();
+                    controller.CompletedEpoch += (evt, args) =>
+                        {
+                            completedEpochs.Enqueue(args.Epoch);
+                            if (completedEpochs.Count >= nEpochs)
+                            {
+                                controller.RequestStop();
+                            }
+                        };
+                    
+                    var epochs = new Queue<Epoch>();
+                    var nSamples = (int)TimeSpan.FromSeconds(epochDuration).Samples(daq.SampleRate);
+
+                    // Triangle wave
+                    var data = Enumerable.Range(0, nSamples/2)
+                                         .Select(k => new Measurement(k/(nSamples/2.0/10.0), "V") as IMeasurement)
+                                         .ToList();
+                    var stimData = data.Concat(Enumerable.Reverse(data)).ToList();
+
+                    var fakeEpochPersistor = new FakeEpochPersistor();
+                    
+                    bool start = true;
+                    
+                    for (int j = 0; j < nEpochs; j++)
+                    {
+                        var e = new Epoch("HekaIntegration" + j);
+
+                        e.Stimuli[dev0] = new RenderedStimulus("Stim",
+                                                               new Dictionary<string, object>(),
+                                                               new OutputData(stimData, daq.SampleRate));
+                        e.Responses[dev0] = new Response();
+
+                        e.SetBackground(dev1, new Measurement(1, "V"), daq.SampleRate);
+                        e.Responses[dev1] = new Response();
+
+                        epochs.Enqueue(e);
+
+                        controller.EnqueueEpoch(e);
+
+                        if (start)
+                        {
+                            controller.StartAsync(fakeEpochPersistor);
+                            start = false;
+                        }
+                    }
+                    
+                    while (controller.IsRunning) { }
+
+                    controller.WaitForCompletedEpochTasks();
+                    var stopTime = controller.Clock.Now;
+
+                    Assert.That(nDAQStarts <= 1, "Epochs did not run continuously");
+
+                    Assert.AreEqual(epochs, completedEpochs);
+                    Assert.AreEqual(fakeEpochPersistor.PersistedEpochs, completedEpochs);
+
+                    DateTimeOffset prevTime = completedEpochs.First().StartTime;
+                    foreach (var e in completedEpochs)
+                    {
+                        Assert.That((bool)e.StartTime, Is.True);
+                        Assert.That((DateTimeOffset)e.StartTime, Is.GreaterThanOrEqualTo(prevTime));
+                        Assert.That((DateTimeOffset)e.StartTime, Is.LessThanOrEqualTo(stopTime));
+
+                        Assert.That(e.Responses[dev0].Duration, Is.EqualTo(((TimeSpan)e.Duration))
+                                              .Within(TimeSpanExtensions.FromSamples(1, daq.SampleRate)));
+
+                        Assert.That(e.Responses[dev1].Duration, Is.EqualTo(((TimeSpan)e.Duration))
+                                                                      .Within(TimeSpanExtensions.FromSamples(1, daq.SampleRate)));
+
+                        var failures0 =
+                            e.Responses[dev0].Data.Select(
+                                (t, i) => new {index = i, diff = t.QuantityInBaseUnit - stimData[i].QuantityInBaseUnit})
+                                             .Where(dif => Math.Abs(dif.diff) > (decimal) MAX_VOLTAGE_DIFF);
+
+                        foreach (var failure in failures0.Take(10))
+                            Console.WriteLine("{0}: {1}", failure.index, failure.diff);
+
+                        /*
+                         * According to Telly @ Heka, a patch cable may introduce 3-4 offset points
+                         */
+                        Assert.That(failures0.Count(), Is.LessThanOrEqualTo(4));
+
+                        prevTime = e.StartTime;
+                    }
+                }
+                finally
+                {
+                    if (daq.HardwareReady)
+                    {
+                        daq.CloseHardware();
+                    }
+                }
+            }
+        }
+
 
         [Test]
         [Timeout(10 * 1000)]
