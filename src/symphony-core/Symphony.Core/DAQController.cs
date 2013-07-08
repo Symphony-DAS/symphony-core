@@ -348,6 +348,7 @@ namespace Symphony.Core
                     if (start)
                     {
                         StartHardware(waitForTrigger);
+                        OnStartedHardware();
                         start = false;
                     }
 
@@ -526,6 +527,16 @@ namespace Symphony.Core
             lock (eventLock)
             {
                 var evt = Started;
+                if (evt != null)
+                    evt(this, new TimeStampedEventArgs(Clock));
+            }
+        }
+
+        private void OnStartedHardware()
+        {
+            lock (eventLock)
+            {
+                var evt = StartedHardware;
                 if (evt != null)
                     evt(this, new TimeStampedEventArgs(Clock));
             }
@@ -743,6 +754,10 @@ namespace Symphony.Core
         /// gets fired after the Thread has started)
         /// </summary>
         public virtual event EventHandler<TimeStampedEventArgs> Started;
+        /// <summary>
+        /// Fired after the DAQController starts the DAQ hardware.
+        /// </summary>
+        public virtual event EventHandler<TimeStampedEventArgs> StartedHardware;
         /// <summary>
         /// Fired when the DAQController receives a RequestStop() request.
         /// </summary>
