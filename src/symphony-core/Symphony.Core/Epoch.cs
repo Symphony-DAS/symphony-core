@@ -96,9 +96,7 @@ namespace Symphony.Core
         /// </summary>
         public IDictionary<IExternalDevice, Background> Backgrounds { get; private set; }
 
-        public void SetBackground(IExternalDevice dev,
-            Measurement background,
-            Measurement sampleRate)
+        public void SetBackground(IExternalDevice dev, IMeasurement background, IMeasurement sampleRate)
         {
             Backgrounds[dev] = new Background(background, sampleRate);
         }
