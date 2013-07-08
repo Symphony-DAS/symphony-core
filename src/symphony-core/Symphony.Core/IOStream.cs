@@ -83,7 +83,7 @@ namespace Symphony.Core
     /// 
     /// <para>A SequenceOutputStream will only hold reference to an underlying stream long enough
     /// for the stream to be output by the pipeline. Thus the state of a SequenceOutputStream will 
-    /// always only reflect the state of the underlying streams that it has not yet released.
+    /// only reflect the state of the underlying streams that it has not yet released.
     /// </para>
     /// </summary>
     public class SequenceOutputStream : IOutputStream
@@ -401,7 +401,7 @@ namespace Symphony.Core
     }
 
     /// <summary>
-    /// An output stream where the contents of the stream are filled with a single Background.
+    /// An output stream consisting of a single Background value.
     /// </summary>
     public class BackgroundOutputStream : IOutputStream
     {
@@ -533,7 +533,7 @@ namespace Symphony.Core
                 throw new ArgumentException("Data sample rate does not equal stream sample rate");
 
             // Account for data granularity
-            var epsilon = TimeSpan.FromTicks((long)Math.Ceiling(TimeSpan.TicksPerSecond / inData.SampleRate.QuantityInBaseUnit));
+            var epsilon = TimeSpanExtensions.FromSamples(1, inData.SampleRate);
 
             if (Duration && inData.Duration > Duration - Position + epsilon)
                 throw new ArgumentException("Data duration is greater than stream duration minus position");
@@ -687,7 +687,7 @@ namespace Symphony.Core
                 throw new ArgumentException("Data sample rate does not equal stream sample rate");
 
             // Account for data granularity
-            var epsilon = TimeSpan.FromTicks((long)Math.Ceiling(TimeSpan.TicksPerSecond / inData.SampleRate.QuantityInBaseUnit));
+            var epsilon = TimeSpanExtensions.FromSamples(1, inData.SampleRate);
 
             if (Duration && inData.Duration > Duration - Position + epsilon)
                 throw new ArgumentException("Data duration is greater than stream duration minus position");
@@ -756,7 +756,7 @@ namespace Symphony.Core
         public void PushInputData(IInputData inData)
         {
             // Account for data granularity
-            var epsilon = TimeSpan.FromTicks((long)Math.Ceiling(TimeSpan.TicksPerSecond / inData.SampleRate.QuantityInBaseUnit));
+            var epsilon = TimeSpanExtensions.FromSamples(1, inData.SampleRate);
 
             if (Duration && inData.Duration > Duration - Position + epsilon)
                 throw new ArgumentException("Data duration is greater than stream duration minus position");
