@@ -701,7 +701,7 @@ namespace Symphony.ExternalDevices
             var mcd = new MultiClampDevice(mc, c, background);
             mcd.BindStream(s);
 
-            daq.ExpectAndReturn("get_Running", false);
+            daq.ExpectAndReturn("get_IsRunning", false);
             daq.Expect("ApplyStreamBackground", new object[] {s});
 
             mc.FireParametersChanged(DateTimeOffset.Now, dataVClamp);
@@ -742,7 +742,7 @@ namespace Symphony.ExternalDevices
             var mcd = new MultiClampDevice(mc, c, background);
             mcd.BindStream(s);
 
-            daq.ExpectAndReturn("get_Running", true);
+            daq.ExpectAndReturn("get_IsRunning", true);
             daq.ExpectNoCall("ApplyStreamBackground");
 
             mc.FireParametersChanged(DateTimeOffset.Now, dataVClamp);
