@@ -251,7 +251,7 @@
             </hdf5:DataType>
             <hdf5:Data>
               <hdf5:DataFromFile>
-                  1
+                  4
                   </hdf5:DataFromFile>
             </hdf5:Data>
           </hdf5:Attribute>
@@ -290,8 +290,8 @@
             <!-- Note: format of compound data not specified -->
             <hdf5:Data>
               <hdf5:DataFromFile>
-                  "Device1" 0 "V"
                   "Device0" 0 "V"
+                  "Device1" 0 "V"
                   </hdf5:DataFromFile>
             </hdf5:Data>
           </hdf5:Dataset>
