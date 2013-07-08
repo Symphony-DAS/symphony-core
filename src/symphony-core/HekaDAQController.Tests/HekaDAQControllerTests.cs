@@ -302,44 +302,6 @@ namespace Heka
             }
         }
 
-        /// <summary>
-        /// Controller should present a stream background to prevent buffer underrun.
-        /// </summary>
-        [Test]
-        public void ShouldNotUnderrun()
-        {
-            foreach (HekaDAQController daq in HekaDAQController.AvailableControllers())
-            {
-
-                try
-                {
-                    bool receivedExc = false;
-
-                    FixtureForController(daq, durationSeconds: 1.0);
-
-                    InputDevice.InputData[InputStream] = new List<IInputData>();
-
-                    daq.ExceptionalStop += (c, args) => receivedExc = true;
-
-                    new TaskFactory().StartNew(() =>
-                    {
-                        Thread.Sleep(TimeSpan.FromSeconds(10.0));
-                        daq.Stop();
-                    }, TaskCreationOptions.LongRunning);
-
-                    daq.Start(false);
-                    
-                    Assert.That(receivedExc, Is.False);
-                }
-                finally
-                {
-                    if(daq.HardwareReady)
-                        daq.CloseHardware();
-                }
-
-            }
-        }
-
         [Test]
         public void ShouldResetHardwareWhenStopsWithException()
         {
