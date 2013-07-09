@@ -214,7 +214,7 @@ namespace Symphony.Core
                 return daqVal;
 
             // I think we're OK just adding all necessary devices the client failed to add
-            // instead of complaining and forcing them to do it
+            // instead of complaining and forcing them to do it.
             foreach (var stream in DAQController.OutputStreams.Where(s => s.Active))
             {
                 if (!Devices.Contains(stream.Device))
@@ -799,7 +799,16 @@ namespace Symphony.Core
                             
                         if (!didBufferEpoch)
                         {
-                            BufferBackground();
+                            foreach (var kv in OutputStreams)
+                            {
+                                kv.Value.Add(BackgroundStreams[kv.Key]);
+                            }
+                            foreach (var kv in InputStreams)
+                            {
+                                kv.Value.Add(new NullInputStream());
+                            }
+
+                            log.DebugFormat("Buffered background streams");
                         }
                     }
                 };
@@ -883,7 +892,18 @@ namespace Symphony.Core
                     Epoch epoch;
                     if (epochQueue.TryDequeue(out epoch))
                     {
-                        InitIOStreams();
+                        foreach (var device in Devices)
+                        {
+                            if (device.OutputStreams.Any())
+                            {
+                                OutputStreams[device] = SequenceOutputStream.Synchronized(new SequenceOutputStream());
+                            }
+
+                            if (device.InputStreams.Any())
+                            {
+                                InputStreams[device] = SequenceInputStream.Synchronized(new SequenceInputStream());
+                            }
+                        }
 
                         BufferEpoch(epoch);
                         incompleteEpochs.Enqueue(epoch);
@@ -902,6 +922,9 @@ namespace Symphony.Core
 
                 DAQController.WaitForInputTasks();
 
+                OutputStreams.Clear();
+                InputStreams.Clear();
+
                 while (incompleteEpochs.Any())
                 {
                     Epoch discardedEpoch;
@@ -915,7 +938,7 @@ namespace Symphony.Core
         }
 
         /// <summary>
-        /// Output streams that the Controller uses to provide data for the output pipeline.
+        /// Output streams that the Controller uses to produce data for the output pipeline.
         /// </summary>
         private ConcurrentDictionary<IExternalDevice, SequenceOutputStream> OutputStreams { get; set; }
 
@@ -923,31 +946,6 @@ namespace Symphony.Core
         /// Input streams that the Controller uses to consume data from the input pipeline.
         /// </summary>
         private ConcurrentDictionary<IExternalDevice, SequenceInputStream> InputStreams { get; set; }
-
-        private void InitIOStreams()
-        {
-            OutputStreams.Clear();
-            InputStreams.Clear();
-            foreach (var device in Devices)
-            {
-                if (device.OutputStreams.Any())
-                {
-                    OutputStreams[device] = SequenceOutputStream.Synchronized(new SequenceOutputStream());
-                }
-
-                if (device.InputStreams.Any())
-                {
-                    InputStreams[device] = SequenceInputStream.Synchronized(new SequenceInputStream());
-                }
-            }
-        }
-
-        /// <summary>
-        /// Background streams to present in the absence of Epoch streams. All devices with a DAQOutputStream in 
-        /// the Controller must have an associated background stream of indefinite duration or the Controller will 
-        /// fail to validate.
-        /// </summary>
-        public IDictionary<IExternalDevice, IOutputStream> BackgroundStreams { get; set; }
 
         private void BufferEpoch(Epoch epoch)
         {
@@ -966,20 +964,12 @@ namespace Symphony.Core
             log.DebugFormat("Buffered epoch: {0}", epoch.ProtocolID);
         }
 
-        private void BufferBackground()
-        {
-            foreach (var kv in OutputStreams)
-            {
-                kv.Value.Add(BackgroundStreams[kv.Key]);
-            }
-
-            foreach (var kv in InputStreams)
-            {
-                kv.Value.Add(new NullInputStream());
-            }
-
-            log.DebugFormat("Buffered background streams");
-        }
+        /// <summary>
+        /// Background streams to present in the absence of Epoch streams. All devices with a DAQOutputStream in 
+        /// the Controller must have an associated background stream of indefinite duration or the Controller will 
+        /// fail to validate.
+        /// </summary>
+        public IDictionary<IExternalDevice, IOutputStream> BackgroundStreams { get; set; }
 
         private static readonly ILog log = LogManager.GetLogger(typeof(Controller));
 
