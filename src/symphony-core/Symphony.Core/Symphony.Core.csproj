@@ -113,7 +113,7 @@
     <Compile Include="Controller.cs" />
     <Compile Include="DAQController.cs" />
     <Compile Include="DAQStream.cs" />
-    <Compile Include="IOStream.cs" />
+    <Compile Include="IODataStream.cs" />
     <Compile Include="Epoch.cs" />
     <Compile Include="EpochHDF5Persistor.cs" />
     <Compile Include="EpochPersistor.cs" />

@@ -86,7 +86,7 @@ namespace Symphony.Core
     /// </summary>
     public class TimeStampedDeviceInputStreamEventArgs : TimeStampedEventArgs
     {
-        public TimeStampedDeviceInputStreamEventArgs(IClock clock, IExternalDevice device, IInputStream stream)
+        public TimeStampedDeviceInputStreamEventArgs(IClock clock, IExternalDevice device, IInputDataStream stream)
             : base(clock)
         {
             Device = device;
@@ -94,7 +94,7 @@ namespace Symphony.Core
         }
 
         public IExternalDevice Device { get; private set; }
-        public IInputStream Stream { get; private set; }
+        public IInputDataStream Stream { get; private set; }
     }
 
     /// <summary>
@@ -103,7 +103,7 @@ namespace Symphony.Core
     /// </summary>
     public class TimeStampedDeviceOutputStreamEventArgs : TimeStampedEventArgs
     {
-        public TimeStampedDeviceOutputStreamEventArgs(IClock clock, IExternalDevice device, IOutputStream stream)
+        public TimeStampedDeviceOutputStreamEventArgs(IClock clock, IExternalDevice device, IOutputDataStream stream)
             : base(clock)
         {
             Device = device;
@@ -111,7 +111,7 @@ namespace Symphony.Core
         }
 
         public IExternalDevice Device { get; private set; }
-        public IOutputStream Stream { get; private set; }
+        public IOutputDataStream Stream { get; private set; }
     }
 
     /// <summary>

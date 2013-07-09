@@ -71,7 +71,7 @@ namespace IntegrationTests
                                                        };
                                         dev0.BindStream((IDAQOutputStream)daq.GetStreams("ANALOG_OUT." + i).First());
 
-                                        controller.BackgroundStreams[dev0] = new BackgroundOutputStream(new Background(STREAM_BACKGROUND, daq.SampleRate));
+                                        controller.BackgroundDataStreams[dev0] = new BackgroundOutputDataStream(new Background(STREAM_BACKGROUND, daq.SampleRate));
 
                                         return dev0;
                                     })
@@ -188,8 +188,8 @@ namespace IntegrationTests
                     dev1.BindStream((IDAQOutputStream)daq.GetStreams("ANALOG_OUT.1").First());
                     dev1.BindStream((IDAQInputStream)daq.GetStreams("ANALOG_IN.1").First());
 
-                    controller.BackgroundStreams[dev0] = new BackgroundOutputStream(new Background(STREAM_BACKGROUND, daq.SampleRate));
-                    controller.BackgroundStreams[dev1] = new BackgroundOutputStream(new Background(STREAM_BACKGROUND, daq.SampleRate));
+                    controller.BackgroundDataStreams[dev0] = new BackgroundOutputDataStream(new Background(STREAM_BACKGROUND, daq.SampleRate));
+                    controller.BackgroundDataStreams[dev1] = new BackgroundOutputDataStream(new Background(STREAM_BACKGROUND, daq.SampleRate));
 
                     for (int j = 0; j < nEpochs; j++)
                     {
@@ -315,8 +315,8 @@ namespace IntegrationTests
                     dev1.BindStream((IDAQOutputStream)daq.GetStreams("ANALOG_OUT.1").First());
                     dev1.BindStream((IDAQInputStream)daq.GetStreams("ANALOG_IN.1").First());
 
-                    controller.BackgroundStreams[dev0] = new BackgroundOutputStream(new Background(STREAM_BACKGROUND, daq.SampleRate));
-                    controller.BackgroundStreams[dev1] = new BackgroundOutputStream(new Background(STREAM_BACKGROUND, daq.SampleRate));
+                    controller.BackgroundDataStreams[dev0] = new BackgroundOutputDataStream(new Background(STREAM_BACKGROUND, daq.SampleRate));
+                    controller.BackgroundDataStreams[dev1] = new BackgroundOutputDataStream(new Background(STREAM_BACKGROUND, daq.SampleRate));
 
                     var nDAQStarts = 0;
                     daq.Started += (evt, args) =>
@@ -478,7 +478,7 @@ namespace IntegrationTests
                     e.Responses[dev0] = new Response();
                     e.Backgrounds[dev0] = new Background(expectedBackground, daq.SampleRate);
 
-                    controller.BackgroundStreams[dev0] = new BackgroundOutputStream(new Background(STREAM_BACKGROUND, daq.SampleRate));
+                    controller.BackgroundDataStreams[dev0] = new BackgroundOutputDataStream(new Background(STREAM_BACKGROUND, daq.SampleRate));
 
                     //Run single epoch
                     var fakeEpochPersistor = new FakeEpochPersistor();
@@ -561,7 +561,7 @@ namespace IntegrationTests
                     e.Stimuli[dev0] = stim;
                     e.Backgrounds[dev0] = new Background(expectedBackground, daq.SampleRate);
 
-                    controller.BackgroundStreams[dev0] = new BackgroundOutputStream(new Background(STREAM_BACKGROUND, daq.SampleRate));
+                    controller.BackgroundDataStreams[dev0] = new BackgroundOutputDataStream(new Background(STREAM_BACKGROUND, daq.SampleRate));
 
                     //Run single epoch
                     var fakeEpochPersistor = new FakeEpochPersistor();
@@ -637,7 +637,7 @@ namespace IntegrationTests
                     dev0.BindStream((IDAQOutputStream) daq.GetStreams("ANALOG_OUT.0").First());
                     dev0.BindStream((IDAQInputStream) daq.GetStreams("ANALOG_IN.0").First());
 
-                    controller.BackgroundStreams[dev0] = new BackgroundOutputStream(new Background(STREAM_BACKGROUND, daq.SampleRate));
+                    controller.BackgroundDataStreams[dev0] = new BackgroundOutputDataStream(new Background(STREAM_BACKGROUND, daq.SampleRate));
 
                     for (int j = 0; j < nEpochs; j++)
                     {

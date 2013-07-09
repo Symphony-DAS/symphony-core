@@ -111,7 +111,7 @@ namespace Symphony.Core
         /// </summary>
         /// <returns>An output stream for the given device, or null if this Epoch has no stimulus or
         /// background associated with the given device.</returns>
-        public IOutputStream GetOutputStream(IExternalDevice device)
+        public IOutputDataStream GetOutputStream(IExternalDevice device)
         {
             return GetOutputStream(device, TimeSpan.FromSeconds(DEFAULT_BLOCK_SECONDS));
         }
@@ -123,23 +123,23 @@ namespace Symphony.Core
         /// <param name="blockDuration">A hint of the stream enumerator block duration</param>
         /// <returns>An output stream for the given device, or null if this Epoch has no stimulus or
         /// background associated with the given device.</returns>
-        public IOutputStream GetOutputStream(IExternalDevice device, TimeSpan blockDuration)
+        public IOutputDataStream GetOutputStream(IExternalDevice device, TimeSpan blockDuration)
         {
-            IOutputStream stream = null;
+            IOutputDataStream stream = null;
 
             if (Stimuli.ContainsKey(device))
             {
                 IStimulus stimulus;
                 Stimuli.TryGetValue(device, out stimulus);
 
-                stream = new StimulusOutputStream(stimulus, blockDuration);
+                stream = new StimulusOutputDataStream(stimulus, blockDuration);
             }
             else if (Backgrounds.ContainsKey(device))
             {
                 Background background;
                 Backgrounds.TryGetValue(device, out background);
 
-                stream = new BackgroundOutputStream(background, Duration);
+                stream = new BackgroundOutputDataStream(background, Duration);
             }
 
             return stream;
@@ -152,16 +152,16 @@ namespace Symphony.Core
         /// <param name="device"></param>
         /// <returns>An input stream for the given device, or null if this Epoch has no response
         /// associated with the given device.</returns>
-        public IInputStream GetInputStream(IExternalDevice device)
+        public IInputDataStream GetInputStream(IExternalDevice device)
         {
-            IInputStream stream = null;
+            IInputDataStream stream = null;
 
             if (Responses.ContainsKey(device))
             {
                 Response response;
                 Responses.TryGetValue(device, out response);
 
-                stream = new ResponseInputStream(response, Duration);
+                stream = new ResponseInputDataStream(response, Duration);
             }
 
             return stream;

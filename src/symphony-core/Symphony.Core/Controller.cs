@@ -71,9 +71,9 @@ namespace Symphony.Core
         {
             Devices = new HashSet<IExternalDevice>();
             EpochQueue = new ConcurrentQueue<Epoch>();
-            OutputStreams = new ConcurrentDictionary<IExternalDevice, SequenceOutputStream>();
-            InputStreams = new ConcurrentDictionary<IExternalDevice, SequenceInputStream>();
-            BackgroundStreams = new Dictionary<IExternalDevice, IOutputStream>();
+            OutputDataStreams = new ConcurrentDictionary<IExternalDevice, SequenceOutputDataStream>();
+            InputDataStreams = new ConcurrentDictionary<IExternalDevice, SequenceInputDataStream>();
+            BackgroundDataStreams = new Dictionary<IExternalDevice, IOutputDataStream>();
             CompletedEpochTasks = new List<Task>();
             PersistEpochTasks = new List<Task>();
             Configuration = new Dictionary<string, object>();
@@ -251,7 +251,7 @@ namespace Symphony.Core
                         edVal.Item2);
                 }
 
-                if (ed.OutputStreams.Any() && (!BackgroundStreams.ContainsKey(ed) || BackgroundStreams[ed].Duration))
+                if (ed.OutputStreams.Any() && (!BackgroundDataStreams.ContainsKey(ed) || BackgroundDataStreams[ed].Duration))
                 {
                     return Maybe<string>.No(
                         ed.Name + " must have an associated background stream of indefinite duration.");
@@ -321,12 +321,12 @@ namespace Symphony.Core
             FireEvent(ReceivedInputData, device, data);
         }
 
-        private void OnPulledOutputData(IExternalDevice device, IOutputStream stream)
+        private void OnPulledOutputData(IExternalDevice device, IOutputDataStream stream)
         {
             FireEvent(PulledOutputData, device, stream);
         }
 
-        private void OnPushedInputData(IExternalDevice device, IInputStream stream)
+        private void OnPushedInputData(IExternalDevice device, IInputDataStream stream)
         {
             FireEvent(PushedInputData, device, stream);
         }
@@ -372,13 +372,13 @@ namespace Symphony.Core
         }
         
         private void FireEvent(EventHandler<TimeStampedDeviceOutputStreamEventArgs> evt, IExternalDevice device,
-                               IOutputStream stream)
+                               IOutputDataStream stream)
         {
             FireEvent(evt, new TimeStampedDeviceOutputStreamEventArgs(Clock, device, stream));
         }
 
         private void FireEvent(EventHandler<TimeStampedDeviceInputStreamEventArgs> evt, IExternalDevice device,
-                               IInputStream stream)
+                               IInputDataStream stream)
         {
             FireEvent(evt, new TimeStampedDeviceInputStreamEventArgs(Clock, device, stream));
         }
@@ -417,7 +417,7 @@ namespace Symphony.Core
         /// the requested duration.</returns>
         public virtual IOutputData PullOutputData(IExternalDevice device, TimeSpan duration)
         {
-            var outStream = OutputStreams[device];
+            var outStream = OutputDataStreams[device];
 
             IOutputData outData = null;
 
@@ -449,7 +449,7 @@ namespace Symphony.Core
         {
             OnReceivedInputData(device, inData);
 
-            var inStream = InputStreams[device];
+            var inStream = InputDataStreams[device];
 
             var unpushedInData = inData;
 
@@ -704,7 +704,7 @@ namespace Symphony.Core
         /// <returns>Task processing the Epoch queue</returns>
         /// <exception cref="ValidationException">Validation failed for this Controller</exception>
         /// <exception cref="SymphonyControllerException">This Controller is currently running</exception>
-        /// <see cref="BackgroundStreams"/>
+        /// <see cref="BackgroundDataStreams"/>
         /// <see cref="RequestPause()"/>
         /// <see cref="RequestStop()"/>
         public Task StartAsync(EpochPersistor persistor)
@@ -799,13 +799,13 @@ namespace Symphony.Core
                             
                         if (!didBufferEpoch)
                         {
-                            foreach (var kv in OutputStreams)
+                            foreach (var kv in OutputDataStreams)
                             {
-                                kv.Value.Add(BackgroundStreams[kv.Key]);
+                                kv.Value.Add(BackgroundDataStreams[kv.Key]);
                             }
-                            foreach (var kv in InputStreams)
+                            foreach (var kv in InputDataStreams)
                             {
-                                kv.Value.Add(new NullInputStream());
+                                kv.Value.Add(new NullInputDataStream());
                             }
 
                             log.DebugFormat("Buffered background streams");
@@ -896,12 +896,12 @@ namespace Symphony.Core
                         {
                             if (device.OutputStreams.Any())
                             {
-                                OutputStreams[device] = SequenceOutputStream.Synchronized(new SequenceOutputStream());
+                                OutputDataStreams[device] = SequenceOutputDataStream.Synchronized(new SequenceOutputDataStream());
                             }
 
                             if (device.InputStreams.Any())
                             {
-                                InputStreams[device] = SequenceInputStream.Synchronized(new SequenceInputStream());
+                                InputDataStreams[device] = SequenceInputDataStream.Synchronized(new SequenceInputDataStream());
                             }
                         }
 
@@ -922,8 +922,8 @@ namespace Symphony.Core
 
                 DAQController.WaitForInputTasks();
 
-                OutputStreams.Clear();
-                InputStreams.Clear();
+                OutputDataStreams.Clear();
+                InputDataStreams.Clear();
 
                 while (incompleteEpochs.Any())
                 {
@@ -940,24 +940,24 @@ namespace Symphony.Core
         /// <summary>
         /// Output streams that the Controller uses to produce data for the output pipeline.
         /// </summary>
-        private ConcurrentDictionary<IExternalDevice, SequenceOutputStream> OutputStreams { get; set; }
+        private ConcurrentDictionary<IExternalDevice, SequenceOutputDataStream> OutputDataStreams { get; set; }
 
         /// <summary>
         /// Input streams that the Controller uses to consume data from the input pipeline.
         /// </summary>
-        private ConcurrentDictionary<IExternalDevice, SequenceInputStream> InputStreams { get; set; }
+        private ConcurrentDictionary<IExternalDevice, SequenceInputDataStream> InputDataStreams { get; set; }
 
         private void BufferEpoch(Epoch epoch)
         {
-            foreach (var kv in OutputStreams)
+            foreach (var kv in OutputDataStreams)
             {
                 var stream = epoch.GetOutputStream(kv.Key, DAQController.ProcessInterval);
                 kv.Value.Add(stream);
             }
 
-            foreach (var kv in InputStreams)
+            foreach (var kv in InputDataStreams)
             {
-                var stream = epoch.GetInputStream(kv.Key) ?? new NullInputStream(epoch.Duration);
+                var stream = epoch.GetInputStream(kv.Key) ?? new NullInputDataStream(epoch.Duration);
                 kv.Value.Add(stream);
             }
 
@@ -969,7 +969,7 @@ namespace Symphony.Core
         /// the Controller must have an associated background stream of indefinite duration or the Controller will 
         /// fail to validate.
         /// </summary>
-        public IDictionary<IExternalDevice, IOutputStream> BackgroundStreams { get; set; }
+        public IDictionary<IExternalDevice, IOutputDataStream> BackgroundDataStreams { get; set; }
 
         private static readonly ILog log = LogManager.GetLogger(typeof(Controller));
 
@@ -1016,7 +1016,7 @@ namespace Symphony.Core
         /// <param name="configuration">Pipeline node configuration(s) for the output pipeline that processed the outgoing data</param>
         public virtual void DidOutputData(IExternalDevice device, DateTimeOffset outputTime, TimeSpan duration, IEnumerable<IPipelineNodeConfiguration> configuration)
         {
-            OutputStreams[device].DidOutputData(outputTime, duration, configuration);
+            OutputDataStreams[device].DidOutputData(outputTime, duration, configuration);
         }
     }
 

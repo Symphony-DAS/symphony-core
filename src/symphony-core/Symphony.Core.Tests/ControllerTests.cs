@@ -28,7 +28,7 @@ namespace Symphony.Core
 
             var srate = new Measurement(1000, "Hz");
             var background = new Background(new Measurement(1, "V"), srate);
-            c.BackgroundStreams[dev] = new BackgroundOutputStream(background);
+            c.BackgroundDataStreams[dev] = new BackgroundOutputDataStream(background);
 
             TimeSpan dur = TimeSpan.FromSeconds(0.5);
             var samples = (int)dur.Samples(srate);
@@ -253,8 +253,8 @@ namespace Symphony.Core
             Assert.IsTrue(dc.OutputStreams.Contains(out0));
 
             // We need to associate a background stream with each output device
-            con.BackgroundStreams[LED] = new BackgroundOutputStream(new Background(UNUSED_BACKGROUND, new Measurement(1, "Hz")));
-            con.BackgroundStreams[amp] = new BackgroundOutputStream(new Background(UNUSED_BACKGROUND, new Measurement(1, "Hz")));
+            con.BackgroundDataStreams[LED] = new BackgroundOutputDataStream(new Background(UNUSED_BACKGROUND, new Measurement(1, "Hz")));
+            con.BackgroundDataStreams[amp] = new BackgroundOutputDataStream(new Background(UNUSED_BACKGROUND, new Measurement(1, "Hz")));
 
             // Validate and report the validation results
             Maybe<string> conVal = con.Validate();
@@ -286,7 +286,7 @@ namespace Symphony.Core
             var sampleRate = new Measurement(srate, "Hz");
 
             var background = new Background(new Measurement(3, "V"), sampleRate);
-            c.BackgroundStreams[dev] = new BackgroundOutputStream(background);
+            c.BackgroundDataStreams[dev] = new BackgroundOutputDataStream(background);
 
             IOutputData data1 = new OutputData(data, sampleRate, false);
 
@@ -379,7 +379,7 @@ namespace Symphony.Core
             e.Backgrounds[dev] = new Background(new Measurement(0, "V"), srate);
 
             var back = new Background(UNUSED_BACKGROUND, srate);
-            c.BackgroundStreams[dev] = new BackgroundOutputStream(back);
+            c.BackgroundDataStreams[dev] = new BackgroundOutputDataStream(back);
 
             ((TestDAQController)c.DAQController).AddStreamMapping(outStream, inStream);
 
@@ -431,7 +431,7 @@ namespace Symphony.Core
             dev.BindStream(inStream);
 
             var back = new Background(UNUSED_BACKGROUND, srate);
-            c.BackgroundStreams[dev] = new BackgroundOutputStream(back);
+            c.BackgroundDataStreams[dev] = new BackgroundOutputDataStream(back);
 
             var e = new Epoch(UNUSED_PROTOCOL);
             var samples = new List<IMeasurement> { new Measurement(1.0m, "V"), new Measurement(1.0m, "V"), new Measurement(1.0m, "V") };
@@ -499,8 +499,8 @@ namespace Symphony.Core
 
             Measurement sampleRate = new Measurement(baseSamples, "Hz");
 
-            c.BackgroundStreams[dev1] = new BackgroundOutputStream(new Background(UNUSED_BACKGROUND, sampleRate));
-            c.BackgroundStreams[dev2] = new BackgroundOutputStream(new Background(UNUSED_BACKGROUND, sampleRate));
+            c.BackgroundDataStreams[dev1] = new BackgroundOutputDataStream(new Background(UNUSED_BACKGROUND, sampleRate));
+            c.BackgroundDataStreams[dev2] = new BackgroundOutputDataStream(new Background(UNUSED_BACKGROUND, sampleRate));
 
             var config = new Dictionary<string, object>();
 
@@ -562,8 +562,8 @@ namespace Symphony.Core
             var sampleRate = new Measurement(1, "Hz");
 
             var back = new Background(UNUSED_BACKGROUND, sampleRate);
-            c.BackgroundStreams[dev1] = new BackgroundOutputStream(back);
-            c.BackgroundStreams[dev2] = new BackgroundOutputStream(back);
+            c.BackgroundDataStreams[dev1] = new BackgroundOutputDataStream(back);
+            c.BackgroundDataStreams[dev2] = new BackgroundOutputDataStream(back);
 
             e.Stimuli[dev1] = new RenderedStimulus((string) "ID1",
                                                    (IDictionary<string, object>) new Dictionary<string, object>(),
@@ -606,7 +606,7 @@ namespace Symphony.Core
             var sampleRate = new Measurement(1, "Hz");
 
             var back = new Background(UNUSED_BACKGROUND, sampleRate);
-            c.BackgroundStreams[dev2] = new BackgroundOutputStream(back);
+            c.BackgroundDataStreams[dev2] = new BackgroundOutputDataStream(back);
 
             e.Stimuli[dev2] = new DelegatedStimulus("ID2", "units", new Measurement(10, "Hz"), 
                                                     new Dictionary<string, object>(),
@@ -644,7 +644,7 @@ namespace Symphony.Core
             };
             dev.BindStream(outStream);
 
-            c.BackgroundStreams[dev] = new BackgroundOutputStream(new Background(UNUSED_BACKGROUND, sampleRate));
+            c.BackgroundDataStreams[dev] = new BackgroundOutputDataStream(new Background(UNUSED_BACKGROUND, sampleRate));
 
             e.Stimuli[dev] = new DelegatedStimulus("ID1", "units", sampleRate, new Dictionary<string, object>(),
                                                     (parameters, duration) => null,
@@ -711,7 +711,7 @@ namespace Symphony.Core
 
             var sampleRate = new Measurement(1, "Hz");
 
-            c.BackgroundStreams[dev] = new BackgroundOutputStream(new Background(UNUSED_BACKGROUND, sampleRate));
+            c.BackgroundDataStreams[dev] = new BackgroundOutputDataStream(new Background(UNUSED_BACKGROUND, sampleRate));
 
             var samples = new List<IMeasurement> { new Measurement(1, "V"), new Measurement(2, "V"), new Measurement(3, "V") };
 
@@ -897,7 +897,7 @@ namespace Symphony.Core
             };
 
             var back = new Background(UNUSED_BACKGROUND, srate);
-            c.BackgroundStreams.Add(dev, new BackgroundOutputStream(back));
+            c.BackgroundDataStreams.Add(dev, new BackgroundOutputDataStream(back));
 
             var outStream = new DAQOutputStream("outStream") { MeasurementConversionTarget = "V", Clock = c.Clock };
 
@@ -990,7 +990,7 @@ namespace Symphony.Core
             dev1.BindStream(outStream);
 
             var back = new Background(UNUSED_BACKGROUND, sampleRate);
-            c.BackgroundStreams[dev1] = new BackgroundOutputStream(back);
+            c.BackgroundDataStreams[dev1] = new BackgroundOutputDataStream(back);
 
             e.Stimuli[dev1] = new DelegatedStimulus("ID1", "units", sampleRate, new Dictionary<string, object>(),
                                                     (parameters, duration) =>

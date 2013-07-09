@@ -7,15 +7,15 @@ using NUnit.Framework;
 namespace Symphony.Core
 {
     [TestFixture]
-    class StimulusOutputStreamTests
+    class StimulusOutputDataStreamTests
     {
         OutputData data;
 
         IStimulus stim;
-        StimulusOutputStream stream;
+        StimulusOutputDataStream stream;
 
         IStimulus indefiniteStim;
-        StimulusOutputStream indefiniteStream;
+        StimulusOutputDataStream indefiniteStream;
 
         [SetUp]
         public void SetUp()
@@ -25,10 +25,10 @@ namespace Symphony.Core
             data = new OutputData(list, new Measurement(srate, "Hz"));
 
             stim = new RenderedStimulus("stimID", new Dictionary<string, object>(), data);
-            stream = new StimulusOutputStream(stim, TimeSpan.FromSeconds(0.13));
+            stream = new StimulusOutputDataStream(stim, TimeSpan.FromSeconds(0.13));
 
             indefiniteStim = new RepeatingRenderedStimulus("indefID", new Dictionary<string, object>(), data, Option<TimeSpan>.None());
-            indefiniteStream = new StimulusOutputStream(indefiniteStim, TimeSpan.FromSeconds(0.52));
+            indefiniteStream = new StimulusOutputDataStream(indefiniteStim, TimeSpan.FromSeconds(0.52));
         }
 
         [Test]
@@ -101,20 +101,20 @@ namespace Symphony.Core
     }
 
     [TestFixture]
-    class BackgroundOutputStreamTests
+    class BackgroundOutputDataStreamTests
     {
         Background background;
-        BackgroundOutputStream stream;
-        BackgroundOutputStream indefiniteStream;
+        BackgroundOutputDataStream stream;
+        BackgroundOutputDataStream indefiniteStream;
 
         [SetUp]
         public void SetUp()
         {
             background = new Background(new Measurement(1, "V"), new Measurement(10000, "Hz"));
 
-            stream = new BackgroundOutputStream(background, Option<TimeSpan>.Some(TimeSpan.FromSeconds(0.97)));
+            stream = new BackgroundOutputDataStream(background, Option<TimeSpan>.Some(TimeSpan.FromSeconds(0.97)));
 
-            indefiniteStream = new BackgroundOutputStream(background);
+            indefiniteStream = new BackgroundOutputDataStream(background);
         }
 
         [Test]
@@ -172,12 +172,12 @@ namespace Symphony.Core
     }
 
     [TestFixture]
-    class SequenceOutputStreamTest
+    class SequenceOutputDataStreamTest
     {
-        IOutputStream stream1;
-        IOutputStream stream2;
+        IOutputDataStream stream1;
+        IOutputDataStream stream2;
         IOutputData seqData;
-        SequenceOutputStream seqStream;
+        SequenceOutputDataStream seqStream;
 
         [SetUp]
         public void SetUp()
@@ -187,14 +187,14 @@ namespace Symphony.Core
             var data = new OutputData(list, new Measurement(srate, "Hz"));
 
             var stim1 = new RenderedStimulus("stim1", new Dictionary<string, object>(), data);
-            stream1 = new StimulusOutputStream(stim1, TimeSpan.FromSeconds(0.1));
+            stream1 = new StimulusOutputDataStream(stim1, TimeSpan.FromSeconds(0.1));
 
             var stim2 = new RenderedStimulus("stim2", new Dictionary<string, object>(), data);
-            stream2 = new StimulusOutputStream(stim2, TimeSpan.FromSeconds(0.1));
+            stream2 = new StimulusOutputDataStream(stim2, TimeSpan.FromSeconds(0.1));
 
             seqData = data.Concat(data);
 
-            seqStream = new SequenceOutputStream();
+            seqStream = new SequenceOutputDataStream();
             seqStream.Add(stream1);
             seqStream.Add(stream2);
         }
@@ -230,17 +230,17 @@ namespace Symphony.Core
     }
 
     [TestFixture]
-    class ResponseInputStreamTests
+    class ResponseInputDataStreamTests
     {
         Response response;
-        ResponseInputStream stream;
+        ResponseInputDataStream stream;
 
         [SetUp]
         public void SetUp()
         {
             response = new Response();
 
-            stream = new ResponseInputStream(response, Option<TimeSpan>.Some(TimeSpan.FromSeconds(3)));
+            stream = new ResponseInputDataStream(response, Option<TimeSpan>.Some(TimeSpan.FromSeconds(3)));
         }
 
         [Test]
@@ -277,7 +277,7 @@ namespace Symphony.Core
             var grainyData = new InputData(list, srate, DateTime.Now);
 
             var dur = TimeSpan.FromSeconds(0.6);
-            var shortStream = new ResponseInputStream(response, Option<TimeSpan>.Some(dur));
+            var shortStream = new ResponseInputDataStream(response, Option<TimeSpan>.Some(dur));
 
             var cons = grainyData.SplitData(dur);
             
@@ -304,19 +304,19 @@ namespace Symphony.Core
     }
 
     [TestFixture]
-    class SequenceInputStreamTests
+    class SequenceInputDataStreamTests
     {
-        IInputStream stream1;
-        IInputStream stream2;
-        SequenceInputStream seqStream;
+        IInputDataStream stream1;
+        IInputDataStream stream2;
+        SequenceInputDataStream seqStream;
 
         [SetUp]
         public void SetUp()
         {
-            stream1 = new NullInputStream(Option<TimeSpan>.Some(TimeSpan.FromSeconds(0.1)));
-            stream2 = new NullInputStream(Option<TimeSpan>.Some(TimeSpan.FromSeconds(0.1)));
+            stream1 = new NullInputDataStream(Option<TimeSpan>.Some(TimeSpan.FromSeconds(0.1)));
+            stream2 = new NullInputDataStream(Option<TimeSpan>.Some(TimeSpan.FromSeconds(0.1)));
 
-            seqStream = new SequenceInputStream();
+            seqStream = new SequenceInputDataStream();
             seqStream.Add(stream1);
             seqStream.Add(stream2);
         }

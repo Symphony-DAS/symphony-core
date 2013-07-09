@@ -300,8 +300,8 @@ namespace IntegrationTests
             if (nChannels > 1)
                 e.Responses[dev1] = new Response();
 
-            controller.BackgroundStreams[dev0] = new BackgroundOutputStream(new Background(new Measurement(0, "V"), srate));
-            controller.BackgroundStreams[dev1] = new BackgroundOutputStream(new Background(new Measurement(0, "V"), srate));
+            controller.BackgroundDataStreams[dev0] = new BackgroundOutputDataStream(new Background(new Measurement(0, "V"), srate));
+            controller.BackgroundDataStreams[dev1] = new BackgroundOutputDataStream(new Background(new Measurement(0, "V"), srate));
 
             e.Backgrounds[dev0] = new Background(new Measurement(0, "V"), srate);
             e.Backgrounds[dev1] = new Background(new Measurement(0, "V"), srate);

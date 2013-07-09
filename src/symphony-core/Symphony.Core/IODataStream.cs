@@ -5,9 +5,9 @@ using System.Linq;
 namespace Symphony.Core
 {
     /// <summary>
-    /// Interface for streams around data stores of the pipeline.
+    /// Interface for streams around input/output data stores of the pipeline.
     /// </summary>
-    public interface IIOStream
+    public interface IIODataStream
     {
         /// <summary>
         /// Sample rate of this stream, or null if the stream has no sample rate.
@@ -34,7 +34,7 @@ namespace Symphony.Core
     /// <summary>
     /// Interface for streams around data sources of the output pipeline.
     /// </summary>
-    public interface IOutputStream : IIOStream
+    public interface IOutputDataStream : IIODataStream
     {
         /// <summary>
         /// Pulls output data from this stream and advances the stream position accordingly. The 
@@ -68,7 +68,7 @@ namespace Symphony.Core
     /// <summary>
     /// Interface for streams around data sinks of the input pipeline.
     /// </summary>
-    public interface IInputStream : IIOStream
+    public interface IInputDataStream : IIODataStream
     {
         /// <summary>
         /// Pushes input data to this stream and advances the stream position accordingly.
@@ -79,35 +79,35 @@ namespace Symphony.Core
     }
 
     /// <summary>
-    /// A concatenation of output streams where concatenated streams are traversed in FIFO ordered.
+    /// A concatenation of output data streams where concatenated streams are traversed in FIFO ordered.
     /// 
-    /// <para>A SequenceOutputStream will only hold reference to an underlying stream long enough
-    /// for the stream to be output by the pipeline. Thus the state of a SequenceOutputStream will 
+    /// <para>A SequenceOutputDataStream will only hold reference to an underlying stream long enough
+    /// for the stream to be output by the pipeline. Thus the state of a SequenceOutputDataStream will 
     /// only reflect the state of the underlying streams that it has not yet released.
     /// </para>
     /// </summary>
-    public class SequenceOutputStream : IOutputStream
+    public class SequenceOutputDataStream : IOutputDataStream
     {
         /// <summary>
         /// Streams in the sequence not yet exhausted.
         /// </summary>
-        private Queue<IOutputStream> UnendedStreams { get; set; }
+        private Queue<IOutputDataStream> UnendedStreams { get; set; }
 
         /// <summary>
         /// Streams that have been exhausted but are waiting to be informed that their pulled data has
         /// been output by the pipeline.
         /// </summary>
-        private Queue<IOutputStream> EndedStreams { get; set; }
+        private Queue<IOutputDataStream> EndedStreams { get; set; }
 
-        private IEnumerable<IOutputStream> Streams
+        private IEnumerable<IOutputDataStream> Streams
         {
             get { return EndedStreams.Concat(UnendedStreams); }
         }
 
-        public SequenceOutputStream()
+        public SequenceOutputDataStream()
         {
-            UnendedStreams = new Queue<IOutputStream>();
-            EndedStreams = new Queue<IOutputStream>();
+            UnendedStreams = new Queue<IOutputDataStream>();
+            EndedStreams = new Queue<IOutputDataStream>();
             IsAddingCompleted = false;
         }
 
@@ -119,10 +119,10 @@ namespace Symphony.Core
         }
 
         /// <summary>
-        /// Adds an IOutputStream to the end of the sequence.
+        /// Adds an IOutputDataStream to the end of the sequence.
         /// </summary>
         /// <param name="stream">Stream to add to the end of the sequence</param>
-        public virtual void Add(IOutputStream stream)
+        public virtual void Add(IOutputDataStream stream)
         {
             if (IsAddingCompleted)
                 throw new InvalidOperationException("Stream marked as adding complete");
@@ -231,22 +231,22 @@ namespace Symphony.Core
         }
         
         /// <summary>
-        /// Returns a thread-safe wrapper for SequenceOutputStream.
+        /// Returns a thread-safe wrapper for SequenceOutputDataStream.
         /// </summary>
         /// <param name="s"></param>
         /// <returns></returns>
-        public static SequenceOutputStream Synchronized(SequenceOutputStream s)
+        public static SequenceOutputDataStream Synchronized(SequenceOutputDataStream s)
         {
-            return new SyncSequenceOutputStream(s);
+            return new SyncSequenceOutputDataStream(s);
         }
 
-        private class SyncSequenceOutputStream : SequenceOutputStream
+        private class SyncSequenceOutputDataStream : SequenceOutputDataStream
         {
             private readonly object _syncLock = new object();
 
-            private SequenceOutputStream _stream;
+            private readonly SequenceOutputDataStream _stream;
 
-            internal SyncSequenceOutputStream(SequenceOutputStream stream)
+            internal SyncSequenceOutputDataStream(SequenceOutputDataStream stream)
             {
                 _stream = stream;
             }
@@ -261,7 +261,7 @@ namespace Symphony.Core
                 lock (_syncLock) _stream.CompleteAdding();
             }
 
-            public override void Add(IOutputStream stream)
+            public override void Add(IOutputDataStream stream)
             {
                 lock (_syncLock) _stream.Add(stream);
             }
@@ -309,21 +309,21 @@ namespace Symphony.Core
     }
 
     /// <summary>
-    /// An output stream around a Stimulus.
+    /// An output data stream around a Stimulus.
     /// </summary>
-    public class StimulusOutputStream : IOutputStream
+    public class StimulusOutputDataStream : IOutputDataStream
     {
         private IStimulus Stimulus { get; set; }
         private IEnumerator<IOutputData> StimulusDataEnumerator { get; set; }
         private IOutputData UnusedData { get; set; }
 
         /// <summary>
-        /// Constructs an output stream around a given Stimulus with a hint at the block duration
+        /// Constructs an output data stream around a given Stimulus with a hint at the block duration
         /// to use for enumerating the stimulus data.
         /// </summary>
         /// <param name="stimulus">Stimulus to stream</param>
         /// <param name="blockDuration">Block duration to use for enumerating the stimulus data</param>
-        public StimulusOutputStream(IStimulus stimulus, TimeSpan blockDuration)
+        public StimulusOutputDataStream(IStimulus stimulus, TimeSpan blockDuration)
         {
             if (stimulus == null)
                 throw new ArgumentNullException("stimulus");
@@ -401,27 +401,27 @@ namespace Symphony.Core
     }
 
     /// <summary>
-    /// An output stream consisting of a single Background value.
+    /// An output data stream filled with a single Background value.
     /// </summary>
-    public class BackgroundOutputStream : IOutputStream
+    public class BackgroundOutputDataStream : IOutputDataStream
     {
         private Background Background { get; set; }
 
         /// <summary>
-        /// Constructs an output stream with the given Background, of indefinite duration.
+        /// Constructs an output data stream with the given Background, of indefinite duration.
         /// </summary>
         /// <param name="background">Background to stream</param>
-        public BackgroundOutputStream(Background background)
+        public BackgroundOutputDataStream(Background background)
             : this(background, Option<TimeSpan>.None())
         {
         }
 
         /// <summary>
-        /// Constructs an output stream with the given Background, of a given duration.
+        /// Constructs an output data stream with the given Background, of a given duration.
         /// </summary>
         /// <param name="background">Background to stream</param>
         /// <param name="duration">Duration of stream</param>
-        public BackgroundOutputStream(Background background, Option<TimeSpan> duration)
+        public BackgroundOutputDataStream(Background background, Option<TimeSpan> duration)
         {
             if (background == null)
                 throw new ArgumentNullException("background");
@@ -482,20 +482,20 @@ namespace Symphony.Core
     }
 
     /// <summary>
-    /// A concatenation of input streams where concatenated streams are traversed in FIFO ordered.
+    /// A concatenation of input data streams where concatenated streams are traversed in FIFO ordered.
     /// 
-    /// <para>A SequenceInputStream will only hold reference to an underlying stream long enough
-    /// for the stream to be filled. Thus the state of a SequenceInputStream will always only 
-    /// reflect the state of the underlying streams that it has not yet released.
+    /// <para>A SequenceInputDataStream will only hold reference to an underlying stream long enough
+    /// for the stream to be filled. Thus the state of a SequenceInputDataStream will only reflect 
+    /// the state of the underlying streams that it has not yet released.
     /// </para>
     /// </summary>
-    public class SequenceInputStream : IInputStream
+    public class SequenceInputDataStream : IInputDataStream
     {
-        Queue<IInputStream> Streams { get; set; }
+        Queue<IInputDataStream> Streams { get; set; }
 
-        public SequenceInputStream()
+        public SequenceInputDataStream()
         {
-            Streams = new Queue<IInputStream>();
+            Streams = new Queue<IInputDataStream>();
         }
 
         public virtual bool IsAddingCompleted { get; private set; }
@@ -506,10 +506,10 @@ namespace Symphony.Core
         }
 
         /// <summary>
-        /// Adds an IInputStream to the end of the sequence.
+        /// Adds an IInputDataStream to the end of the sequence.
         /// </summary>
         /// <param name="stream">Stream to add to the end of the sequence</param>
-        public virtual void Add(IInputStream stream)
+        public virtual void Add(IInputDataStream stream)
         {
             if (IsAddingCompleted)
                 throw new InvalidOperationException("Stream marked as adding complete");
@@ -594,22 +594,22 @@ namespace Symphony.Core
         }
         
         /// <summary>
-        /// Returns a thread-safe wrapper for SequenceInputStream.
+        /// Returns a thread-safe wrapper for SequenceInputDataStream.
         /// </summary>
         /// <param name="s"></param>
         /// <returns></returns>
-        public static SequenceInputStream Synchronized(SequenceInputStream s)
+        public static SequenceInputDataStream Synchronized(SequenceInputDataStream s)
         {
-            return new SyncSequenceInputStream(s);
+            return new SyncSequenceInputDataStream(s);
         }
 
-        private class SyncSequenceInputStream : SequenceInputStream
+        private class SyncSequenceInputDataStream : SequenceInputDataStream
         {
             private readonly object _syncLock = new object();
 
-            private SequenceInputStream _stream;
+            private SequenceInputDataStream _stream;
 
-            internal SyncSequenceInputStream(SequenceInputStream stream)
+            internal SyncSequenceInputDataStream(SequenceInputDataStream stream)
             {
                 _stream = stream;
             }
@@ -624,7 +624,7 @@ namespace Symphony.Core
                 lock (_syncLock) _stream.CompleteAdding();
             }
 
-            public override void Add(IInputStream stream)
+            public override void Add(IInputDataStream stream)
             {
                 lock (_syncLock) _stream.Add(stream);
             }
@@ -657,18 +657,18 @@ namespace Symphony.Core
     }
 
     /// <summary>
-    /// An input stream around a Response.
+    /// An input data stream around a Response.
     /// </summary>
-    public class ResponseInputStream : IInputStream
+    public class ResponseInputDataStream : IInputDataStream
     {
         private Response Response { get; set; }
 
         /// <summary>
-        /// Constructs an input stream around a given Response of a given duration.
+        /// Constructs an input data stream around a given Response of a given duration.
         /// </summary>
         /// <param name="response">Response to stream</param>
         /// <param name="duration">Duration of stream</param>
-        public ResponseInputStream(Response response, Option<TimeSpan> duration)
+        public ResponseInputDataStream(Response response, Option<TimeSpan> duration)
         {
             if (response == null)
                 throw new ArgumentNullException("response");
@@ -713,24 +713,24 @@ namespace Symphony.Core
     }
 
     /// <summary>
-    /// An input stream with no backing store. A NullInputStream will advance its position as 
+    /// An input data stream with no backing store. A NullInputDataStream will advance its position as 
     /// data is pushed, but the pushed data will not be stored.
     /// </summary>
-    public class NullInputStream : IInputStream
+    public class NullInputDataStream : IInputDataStream
     {
         /// <summary>
-        /// Constructs a NullInputStream of indefinite duration.
+        /// Constructs a NullInputDataStream of indefinite duration.
         /// </summary>
-        public NullInputStream()
+        public NullInputDataStream()
             : this(Option<TimeSpan>.None())
         {
         }
 
         /// <summary>
-        /// Constructs a NullInputStream of the given duration.
+        /// Constructs a NullInputDataStream of the given duration.
         /// </summary>
         /// <param name="duration">Duration of stream</param>
-        public NullInputStream(Option<TimeSpan> duration)
+        public NullInputDataStream(Option<TimeSpan> duration)
         {
             if (duration == null)
                 throw new ArgumentNullException("duration");
