@@ -587,7 +587,7 @@ namespace Symphony.ExternalDevices
         /// <remarks>Appends this Device's Configuration to the IOutputData</remarks>
         /// <param name="stream">Stream for output</param>
         /// <param name="duration">Requested duration</param>
-        /// <returns>IOutputData of duration less than or equal to duration, or null if the data source is drained.</returns>
+        /// <returns>IOutputData of duration less than or equal to duration</returns>
         /// <exception cref="ExternalDeviceException">Requested duration is less than one sample</exception>
         public override IOutputData PullOutputData(IDAQOutputStream stream, TimeSpan duration)
         {
@@ -611,10 +611,6 @@ namespace Symphony.ExternalDevices
                                 UnitsForScaleFactorUnits(deviceParameters.ScaleFactorUnits));
 
                 IOutputData data = this.Controller.PullOutputData(this, duration);
-                if (data == null)
-                {
-                    return null;
-                }
 
                 return data.DataWithConversion(m => ConvertOutput(m, deviceParameters))
                     .DataWithExternalDeviceConfiguration(this, config);
