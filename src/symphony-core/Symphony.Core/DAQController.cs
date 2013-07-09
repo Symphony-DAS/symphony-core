@@ -480,7 +480,7 @@ namespace Symphony.Core
         {
             var outgoingData = new Dictionary<IDAQOutputStream, Task<IOutputData>>();
 
-            foreach (var stream in ActiveOutputStreams)
+            foreach (var stream in ActiveOutputStreamsWithData)
             {
                 var s = stream;
                 var newTask = Task.Factory.StartNew(() => NextOutputDataForStream(s), TaskCreationOptions.PreferFairness);

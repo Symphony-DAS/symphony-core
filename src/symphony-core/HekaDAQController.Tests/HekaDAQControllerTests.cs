@@ -302,6 +302,39 @@ namespace Heka
             }
         }
 
+        /// <summary>
+        /// Controller should exeptional-stop when an output stream's buffer underruns
+        /// </summary>
+        [Test]
+        [Timeout(5 * 1000)]
+        public void ExceptionalStopOnOutputUnderrun()
+        {
+            foreach (HekaDAQController daq in HekaDAQController.AvailableControllers())
+            {
+        
+                try
+                {
+                    bool receivedExc = false;
+        
+                    FixtureForController(daq, durationSeconds: 1.0);
+        
+                    InputDevice.InputData[InputStream] = new List<IInputData>();
+        
+                    daq.ExceptionalStop += (c, args) => receivedExc = true;
+        
+                    daq.Start(false);
+        
+                    Assert.That(receivedExc, Is.True.After(1000,10));
+                }
+                finally
+                {
+                    if(daq.HardwareReady)
+                        daq.CloseHardware();
+                }
+        
+            }
+        }
+
         [Test]
         public void ShouldResetHardwareWhenStopsWithException()
         {
