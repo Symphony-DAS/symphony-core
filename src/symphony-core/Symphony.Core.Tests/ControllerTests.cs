@@ -19,6 +19,49 @@ namespace Symphony.Core
         Measurement UNUSED_BACKGROUND = new Measurement(0, "V");
         
         [Test]
+        public void PullOutputDataShouldReturnBackgroundStreamWithNoRemainingEpochs()
+        {
+            var daq = new SimpleDAQController();
+            Controller c = new NonValidatingController() { DAQController = daq };
+            IExternalDevice dev = new UnitConvertingExternalDevice(UNUSED_DEVICE_NAME, UNUSED_DEVICE_MANUFACTURER, c, UNUSED_BACKGROUND);
+            dev.BindStream(new DAQOutputStream("out"));
+
+            var srate = new Measurement(1000, "Hz");
+            var background = new Background(new Measurement(1, "V"), srate);
+            c.BackgroundStreams[dev] = new BackgroundOutputStream(background);
+
+            TimeSpan dur = TimeSpan.FromSeconds(0.5);
+            var samples = (int)dur.Samples(srate);
+
+            var e = new Epoch("");
+            e.Stimuli[dev] = new RenderedStimulus("RenderedStimulus", new Dictionary<string, object>(), new OutputData(Enumerable.Repeat(new Measurement(0, "V"), samples), srate));
+
+            IOutputData pull1 = null;
+            IOutputData pull2 = null;
+            bool pulled = false;
+            daq.Started += (evt, args) =>
+            {
+                // Pull out epoch data
+                c.PullOutputData(dev, dur);
+
+                pull1 = c.PullOutputData(dev, dur);
+                pull2 = c.PullOutputData(dev, dur);
+                pulled = true;
+            };
+            
+            c.EnqueueEpoch(e);
+            c.StartAsync(null);
+
+            while (!pulled) { }
+
+            var expected = Enumerable.Repeat(background.Value, samples).ToList();
+
+            Assert.AreEqual(expected, pull1.Data);
+            Assert.AreEqual(expected, pull2.Data);
+        }
+
+
+        [Test]
         public void ControllerImplementsTimelineProducer()
         {
             Assert.IsInstanceOf<ITimelineProducer>(new Controller());
@@ -55,7 +98,7 @@ namespace Symphony.Core
         }
 
         [Test]
-        public void GetDeivceReturnsDevice()
+        public void GetDeviceReturnsDevice()
         {
             Controller c = new Controller();
 
