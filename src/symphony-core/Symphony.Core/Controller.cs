@@ -951,8 +951,6 @@ namespace Symphony.Core
 
         private void BufferEpoch(Epoch epoch)
         {
-            log.DebugFormat("Buffering epoch: {0}", epoch.ProtocolID);
-
             foreach (var kv in OutputStreams)
             {
                 var stream = epoch.GetOutputStream(kv.Key, DAQController.ProcessInterval);
@@ -964,12 +962,12 @@ namespace Symphony.Core
                 var stream = epoch.GetInputStream(kv.Key) ?? new NullInputStream(epoch.Duration);
                 kv.Value.Add(stream);
             }
+
+            log.DebugFormat("Buffered epoch: {0}", epoch.ProtocolID);
         }
 
         private void BufferBackground()
         {
-            log.DebugFormat("Buffering background streams");
-
             foreach (var kv in OutputStreams)
             {
                 kv.Value.Add(BackgroundStreams[kv.Key]);
@@ -979,6 +977,8 @@ namespace Symphony.Core
             {
                 kv.Value.Add(new NullInputStream());
             }
+
+            log.DebugFormat("Buffered background streams");
         }
 
         private static readonly ILog log = LogManager.GetLogger(typeof(Controller));
