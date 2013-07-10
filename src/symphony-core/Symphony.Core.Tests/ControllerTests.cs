@@ -390,6 +390,71 @@ namespace Symphony.Core
         }
 
         [Test]
+        public void ShouldNotPersistEpochWithShouldBePersistedSetFalse()
+        {
+            Converters.Register("V", "V",
+                (IMeasurement m) => m);
+
+            var c = new Controller();
+            bool evt = false;
+
+            c.DAQController = new TestDAQController();
+            c.Clock = c.DAQController as IClock;
+            var persistor = new FakeEpochPersistor();
+
+            c.SavedEpoch += (co, args) =>
+            {
+                evt = true;
+            };
+
+            var srate = new Measurement(10, "Hz");
+
+            var dev = new UnitConvertingExternalDevice(UNUSED_DEVICE_NAME, UNUSED_DEVICE_MANUFACTURER, c, UNUSED_BACKGROUND)
+            {
+                MeasurementConversionTarget = "V",
+                Clock = c.Clock,
+                OutputSampleRate = srate,
+                InputSampleRate = srate
+            };
+
+            var outStream = new DAQOutputStream("outStream") { MeasurementConversionTarget = "V", Clock = c.Clock };
+
+            var inStream = new DAQInputStream("inStream") { MeasurementConversionTarget = "V", Clock = c.Clock };
+
+            (c.DAQController as IMutableDAQController).AddStream(outStream);
+            (c.DAQController as IMutableDAQController).AddStream(inStream);
+
+            outStream.SampleRate = srate;
+            inStream.SampleRate = srate;
+
+            dev.BindStream(outStream);
+            dev.BindStream(inStream);
+
+            var e = new Epoch(UNUSED_PROTOCOL) { ShouldBePersisted = false };
+
+            var samples = new List<IMeasurement> { new Measurement(1.0m, "V"), new Measurement(1.0m, "V"), new Measurement(1.0m, "V") };
+            var data = new OutputData(samples,
+                srate,
+                true);
+
+            e.Stimuli[dev] = new RenderedStimulus((string)"stimID",
+                                                  (IDictionary<string, object>)new Dictionary<string, object>(),
+                                                  (IOutputData)data);
+            e.Responses[dev] = new Response();
+            e.Backgrounds[dev] = new Background(new Measurement(0, "V"), srate);
+
+            var back = new Background(UNUSED_BACKGROUND, srate);
+            c.BackgroundDataStreams[dev] = new BackgroundOutputDataStream(back);
+
+            ((TestDAQController)c.DAQController).AddStreamMapping(outStream, inStream);
+
+            c.RunEpoch(e, persistor);
+
+            Assert.That(evt, Is.False.After(10 * 1000, 100));
+            Assert.That(persistor.PersistedEpochs, Is.Empty);
+        }
+
+        [Test]
         public void ShouldSurfaceExceptionInPersistorTask()
         {
             Converters.Register("V", "V",
