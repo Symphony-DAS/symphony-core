@@ -347,7 +347,7 @@ namespace Symphony.Core
     }
 
     /// <summary>
-    /// Describes a simple "background" for output pipeline.
+    /// Describes a simple "background" in the absence of a stimulus.
     /// </summary>
     public class Background
     {
