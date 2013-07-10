@@ -266,12 +266,12 @@ namespace Symphony.Core
         /// <summary>
         /// This controller pulled output data from an output stream.
         /// </summary>
-        public event EventHandler<TimeStampedDeviceOutputStreamEventArgs> PulledOutputData;
+        public event EventHandler<TimeStampedDeviceDataStreamEventArgs> PulledOutputData;
 
         /// <summary>
         /// This controller pushed input data to an input stream.
         /// </summary>
-        public event EventHandler<TimeStampedDeviceInputStreamEventArgs> PushedInputData;
+        public event EventHandler<TimeStampedDeviceDataStreamEventArgs> PushedInputData;
 
         /// <summary>
         /// This controller persisted a completed Epoch.
@@ -362,17 +362,11 @@ namespace Symphony.Core
         {
             FireEvent(evt, new TimeStampedDeviceDataEventArgs(Clock, device, data));
         }
-        
-        private void FireEvent(EventHandler<TimeStampedDeviceOutputStreamEventArgs> evt, IExternalDevice device,
-                               IOutputDataStream stream)
-        {
-            FireEvent(evt, new TimeStampedDeviceOutputStreamEventArgs(Clock, device, stream));
-        }
 
-        private void FireEvent(EventHandler<TimeStampedDeviceInputStreamEventArgs> evt, IExternalDevice device,
-                               IInputDataStream stream)
+        private void FireEvent(EventHandler<TimeStampedDeviceDataStreamEventArgs> evt, IExternalDevice device,
+                               IIODataStream stream)
         {
-            FireEvent(evt, new TimeStampedDeviceInputStreamEventArgs(Clock, device, stream));
+            FireEvent(evt, new TimeStampedDeviceDataStreamEventArgs(Clock, device, stream));
         }
 
         private void FireEvent(EventHandler<TimeStampedEventArgs> evt)
@@ -774,7 +768,7 @@ namespace Symphony.Core
                     DAQController.RequestStop();
                 };
 
-            EventHandler<TimeStampedDeviceOutputStreamEventArgs> outputPulled = (c, args) =>
+            EventHandler<TimeStampedDeviceDataStreamEventArgs> outputPulled = (c, args) =>
                 {
                     var stream = args.Stream;
 
@@ -811,7 +805,7 @@ namespace Symphony.Core
                     }
                 };
 
-            EventHandler<TimeStampedDeviceInputStreamEventArgs> inputPushed = (c, args) =>
+            EventHandler<TimeStampedDeviceDataStreamEventArgs> inputPushed = (c, args) =>
                 {
                     Epoch currentEpoch;
                     if (!incompleteEpochs.TryPeek(out currentEpoch))

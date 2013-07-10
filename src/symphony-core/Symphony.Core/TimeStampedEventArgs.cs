@@ -82,11 +82,11 @@ namespace Symphony.Core
 
     /// <summary>
     /// .Net event TimeStampedEventArgs subclass that describes an event
-    /// related to an input stream associated with a particular device.
+    /// related to a data stream associated with a particular device.
     /// </summary>
-    public class TimeStampedDeviceInputStreamEventArgs : TimeStampedEventArgs
+    public class TimeStampedDeviceDataStreamEventArgs : TimeStampedEventArgs
     {
-        public TimeStampedDeviceInputStreamEventArgs(IClock clock, IExternalDevice device, IInputDataStream stream)
+        public TimeStampedDeviceDataStreamEventArgs(IClock clock, IExternalDevice device, IIODataStream stream)
             : base(clock)
         {
             Device = device;
@@ -94,24 +94,7 @@ namespace Symphony.Core
         }
 
         public IExternalDevice Device { get; private set; }
-        public IInputDataStream Stream { get; private set; }
-    }
-
-    /// <summary>
-    /// .Net event TimeStampedEventArgs subclass that describes an event
-    /// related to an output stream associated with a particular device.
-    /// </summary>
-    public class TimeStampedDeviceOutputStreamEventArgs : TimeStampedEventArgs
-    {
-        public TimeStampedDeviceOutputStreamEventArgs(IClock clock, IExternalDevice device, IOutputDataStream stream)
-            : base(clock)
-        {
-            Device = device;
-            Stream = stream;
-        }
-
-        public IExternalDevice Device { get; private set; }
-        public IOutputDataStream Stream { get; private set; }
+        public IIODataStream Stream { get; private set; }
     }
 
     /// <summary>
