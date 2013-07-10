@@ -205,15 +205,6 @@ namespace Symphony.Core
             Assert.That(e.IsIndefinite, Is.False);
         }
 
-        [Test]
-        public void GetOutputStreamShouldProvideNullForMissingDevice()
-        {
-            var e = new Epoch(UNUSED_PROTOCOL_ID);
-            var dev = new UnitConvertingExternalDevice("name", "co", new Measurement(1.0m, "units"));
-
-            Assert.Null(e.GetOutputStream(dev));
-        }
-
         private const string UNUSED_PROTOCOL_ID = "UNUSED";
         
         [Test]

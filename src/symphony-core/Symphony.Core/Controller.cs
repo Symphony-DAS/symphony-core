@@ -77,22 +77,14 @@ namespace Symphony.Core
             CompletedEpochTasks = new List<Task>();
             PersistEpochTasks = new List<Task>();
             Configuration = new Dictionary<string, object>();
-            CompletedEpochTaskScheduler = new SerialTaskScheduler();
-            PersistEpochTaskScheduler = new SerialTaskScheduler();
-        }
-
-        private class SerialTaskScheduler : LimitedConcurrencyLevelTaskScheduler
-        {
-            public SerialTaskScheduler()
-                : base(1)
-            {   
-            }
+            CompletedEpochTaskScheduler = new LimitedConcurrencyLevelTaskScheduler(1);
+            PersistEpochTaskScheduler = new LimitedConcurrencyLevelTaskScheduler(1);
         }
 
         /// <summary>
         /// A task scheduler for tasks firing the CompletedEpoch event.
         /// </summary>
-        private SerialTaskScheduler CompletedEpochTaskScheduler { get; set; }
+        private LimitedConcurrencyLevelTaskScheduler CompletedEpochTaskScheduler { get; set; }
 
         /// <summary>
         /// A list of incomplete tasks firing the CompletedEpoch event.
@@ -110,7 +102,7 @@ namespace Symphony.Core
         /// <summary>
         /// A task scheduler for tasks persisting completed Epochs.
         /// </summary>
-        private SerialTaskScheduler PersistEpochTaskScheduler { get; set; }
+        private LimitedConcurrencyLevelTaskScheduler PersistEpochTaskScheduler { get; set; }
 
         /// <summary>
         /// A list of incomplete tasks persisting completed Epochs. 
@@ -520,11 +512,17 @@ namespace Symphony.Core
 
             foreach (var dev in Devices)
             {
-                if (dev.OutputStreams.Any() && epoch.GetOutputStream(dev) == null)
-                    return Maybe<string>.No("Epoch is missing a stimulus/background for device " + dev.Name);
+                if (dev.OutputStreams.Any())
+                {
+                    if (!epoch.Stimuli.ContainsKey(dev) && !epoch.Backgrounds.ContainsKey(dev))
+                        return Maybe<string>.No("Epoch is missing a stimulus/background for device " + dev.Name);
 
-                if (dev.OutputStreams.Any() && !Equals(dev.OutputSampleRate, epoch.GetOutputStream(dev).SampleRate))
-                    return Maybe<string>.No("Epoch stimulus/background sample rate does not match sample rate for device " + dev.Name);
+                    if (epoch.Stimuli.ContainsKey(dev) && !Equals(dev.OutputSampleRate, epoch.Stimuli[dev].SampleRate))
+                        return Maybe<string>.No("Epoch stimulus sample rate does not match sample rate for device " + dev.Name);
+
+                    if (epoch.Backgrounds.ContainsKey(dev) && !Equals(dev.OutputSampleRate, epoch.Backgrounds[dev].SampleRate))
+                        return Maybe<string>.No("Epoch background sample rate does not match sample rate for device " + dev.Name);
+                }
             }
 
             foreach (var dev in epoch.Stimuli.Keys)
@@ -951,14 +949,43 @@ namespace Symphony.Core
         {
             foreach (var kv in OutputDataStreams)
             {
-                var stream = epoch.GetOutputStream(kv.Key, DAQController.ProcessInterval);
-                kv.Value.Add(stream);
+                var device = kv.Key;
+                var sequenceOutStream = kv.Value;
+
+                IOutputDataStream outStream;
+                if (epoch.Stimuli.ContainsKey(device))
+                {
+                    outStream = new StimulusOutputDataStream(epoch.Stimuli[device], DAQController.ProcessInterval);
+                }
+                else if (epoch.Backgrounds.ContainsKey(device))
+                {
+                    outStream = new BackgroundOutputDataStream(epoch.Backgrounds[device], epoch.Duration);
+                }
+                else
+                {
+                    // Should never occur with a properly validated epoch.
+                    throw new SymphonyControllerException("Epoch is missing a stimulus/background");
+                }
+
+                sequenceOutStream.Add(outStream);
             }
 
             foreach (var kv in InputDataStreams)
             {
-                var stream = epoch.GetInputStream(kv.Key) ?? new NullInputDataStream(epoch.Duration);
-                kv.Value.Add(stream);
+                var device = kv.Key;
+                var sequenceInStream = kv.Value;
+
+                IInputDataStream inStream;
+                if (epoch.Responses.ContainsKey(device))
+                {
+                    inStream = new ResponseInputDataStream(epoch.Responses[device], epoch.Duration);
+                }
+                else
+                {
+                    inStream = new NullInputDataStream(epoch.Duration);
+                }
+
+                sequenceInStream.Add(inStream);
             }
 
             log.DebugFormat("Buffered epoch: {0}", epoch.ProtocolID);
