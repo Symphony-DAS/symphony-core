@@ -310,7 +310,6 @@ namespace Symphony.Core
 
             var start = DateTimeOffset.Parse("1/11/2011 6:03:29 PM -08:00");
             // Do this to match the XML stored in the EpochXML.txt resource
-            //e.StartTime = Maybe<DateTimeOffset>.Yes(start);
 
             e.Backgrounds[dev1] = new Background(new Measurement(0, "V"), new Measurement(1000, "Hz"));
             e.Backgrounds[dev2] = new Background(new Measurement(1, "V"), new Measurement(1000, "Hz"));
