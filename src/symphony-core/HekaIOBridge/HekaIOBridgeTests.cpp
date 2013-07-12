@@ -16,6 +16,7 @@
 using namespace std;
 using namespace System::Collections::Generic;
 using namespace System::Linq;
+using namespace System::Threading;
 
 namespace Heka {
 
@@ -194,7 +195,8 @@ namespace Heka {
 				inputList->Add(cIn);
 				inputDict = ReadWrite(outputDict,
 					inputList,
-					managedOut->Length - nOut);
+					managedOut->Length - nOut,
+					CancellationToken::None);
 				managedIn = inputDict[cIn];
 
 				
@@ -207,7 +209,8 @@ namespace Heka {
 
 					ReadWrite(outputDict,
 						inputList,
-						managedOut->Length - nOut);
+						managedOut->Length - nOut,
+						CancellationToken::None);
 				}
 
 				err = ITC_Stop(dev, NULL);

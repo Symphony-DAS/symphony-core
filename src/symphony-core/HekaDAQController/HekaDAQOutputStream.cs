@@ -31,7 +31,7 @@ namespace Heka
             this.MeasurementConversionTarget = (ChannelType == StreamType.DIGITAL_OUT || ChannelType == StreamType.AUX_OUT)
                 ? Measurement.UNITLESS : DAQCountUnits;
             this.Controller = controller;
-            this.Clock = controller;
+            this.Clock = controller.Clock;
         }
 
         public override IDictionary<string, object> Configuration
@@ -49,6 +49,11 @@ namespace Heka
         {
             get { return this.Controller.SampleRate; }
             set { throw new NotSupportedException("HekaDAQOutputStream.SampleRate set by DAQController."); }
+        }
+
+        public override bool CanSetSampleRate
+        {
+            get { return false; }
         }
 
         /// <summary>

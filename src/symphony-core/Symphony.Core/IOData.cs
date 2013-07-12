@@ -523,7 +523,7 @@ namespace Symphony.Core
             return new OutputData(this, this.Data);
         }
     }
-
+    
     /// <summary>
     /// IInputData implementation for the Symphony input/output pipelines
     /// </summary>

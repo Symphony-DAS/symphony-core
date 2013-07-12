@@ -113,7 +113,7 @@ namespace Symphony.Core
         }
 
 
-        protected override void WriteBackground(Epoch e, IDictionary<IExternalDevice, Epoch.EpochBackground> background)
+        protected override void WriteBackground(Epoch e, IDictionary<IExternalDevice, Background> background)
         {
             writer.WriteStartElement("background");
             base.WriteBackground(e, background);
@@ -127,12 +127,12 @@ namespace Symphony.Core
             writer.WriteEndElement();
         }
 
-        protected override void WriteBackgroundElement(Epoch e, IExternalDevice ed, Epoch.EpochBackground bg)
+        protected override void WriteBackgroundElement(Epoch e, IExternalDevice ed, Background bg)
         {
             writer.WriteStartElement(ed.Name);
 
             writer.WriteStartElement("backgroundMeasurement");
-            WriteMeasurement(bg.Background);
+            WriteMeasurement(bg.Value);
             writer.WriteEndElement();
 
             writer.WriteStartElement("sampleRate");

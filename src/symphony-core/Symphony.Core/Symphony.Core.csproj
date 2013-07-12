@@ -113,6 +113,7 @@
     <Compile Include="Controller.cs" />
     <Compile Include="DAQController.cs" />
     <Compile Include="DAQStream.cs" />
+    <Compile Include="IODataStream.cs" />
     <Compile Include="Epoch.cs" />
     <Compile Include="EpochHDF5Persistor.cs" />
     <Compile Include="EpochPersistor.cs" />
@@ -139,7 +140,9 @@
   <ItemGroup>
     <None Include="packages.config" />
     <None Include="physion_authenticode.pfx" />
-    <None Include="Symphony.Core.cd" />
+    <None Include="Symphony.Core.cd">
+      <SubType>Designer</SubType>
+    </None>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>

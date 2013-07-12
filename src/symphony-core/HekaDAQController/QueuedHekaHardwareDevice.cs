@@ -61,10 +61,11 @@ namespace Heka
 
         public IEnumerable<KeyValuePair<ChannelIdentifier, short[]>>
             ReadWrite(IDictionary<ChannelIdentifier, short[]> output,
-                        IList<ChannelIdentifier> input,
-                        int nsamples)
+                      IList<ChannelIdentifier> input,
+                      int nsamples,
+                      CancellationToken token)
         {
-            return ItcmmCall(() => Bridge.ReadWrite(output, input, nsamples));
+            return ItcmmCall(() => Bridge.ReadWrite(output, input, nsamples, token));
         }
 
         public DateTimeOffset Now

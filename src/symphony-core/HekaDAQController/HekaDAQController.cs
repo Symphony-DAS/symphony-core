@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics.Contracts;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Heka.NativeInterop;
 using log4net;
@@ -39,13 +41,14 @@ namespace Heka
     /// Encapsulates interaction with the ITCMM driver. Client code should not use this interface
     /// directly; a IHekaDevice is managed by the HekaDAQController.
     /// </summary>
-    public interface IHekaDevice : IClock
+    public interface IHekaDevice
     {
         void PreloadSamples(StreamType channelType, ushort channelNumber, IList<short> samples);
 
         IEnumerable<KeyValuePair<ChannelIdentifier, short[]>> ReadWrite(IDictionary<ChannelIdentifier, short[]> output,
-                                                          IList<ChannelIdentifier> input,
-                                                          int nsamples);
+                                                                        IList<ChannelIdentifier> input,
+                                                                        int nsamples,
+                                                                        CancellationToken token);
 
         void SetStreamBackgroundAsyncIO(HekaDAQOutputStream stream);
 
@@ -82,7 +85,7 @@ namespace Heka
     /// The ITC hardware supports heterogeneous sampling rates for each channel. The current
     /// controller supports only a single sampling rate.
     /// </summary>
-    public sealed class HekaDAQController : DAQControllerBase, IClock, IDisposable
+    public sealed class HekaDAQController : DAQControllerBase, IDisposable
     {
         private const double DEFAULT_TRANSFER_BLOCK_SECONDS = 0.25;
         private const double PRELOAD_DURATION_SECONDS = 2 * DEFAULT_TRANSFER_BLOCK_SECONDS;
@@ -129,7 +132,7 @@ namespace Heka
 
         public override void ApplyStreamBackgroundAsync(IDAQOutputStream s, IMeasurement background)
         {
-            if(Running && !StopRequested)
+            if(IsRunning && !IsStopRequested)
             {
                 throw new HekaDAQException("Cannot set stream background while running");
             }
@@ -169,7 +172,7 @@ namespace Heka
         {
             get
             {
-                return Running;
+                return IsRunning;
             }
         }
         
@@ -179,27 +182,40 @@ namespace Heka
         }
 
         /// <summary>
-        /// Constructs a new HekaDAQController for the given device type and number.
+        /// Constructs a new HekaDAQController for the given device type and number, using 
+        /// the system (CPU) clock.
         /// </summary>
         /// <param name="deviceType">Heka device type (e.g. ITCMM.ITC18_ID)</param>
         /// <param name="deviceNumber">Device number (0-indexed)</param>
         public HekaDAQController(uint deviceType, uint deviceNumber)
+            : this(deviceType, deviceNumber, new SystemClock())
         {
-            this.DeviceType = deviceType;
-            this.DeviceNumber = deviceNumber;
-            this.HardwareReady = false;
-            this.ProcessInterval = TimeSpan.FromSeconds(DEFAULT_TRANSFER_BLOCK_SECONDS);
-            this.Clock = this;
         }
 
         /// <summary>
-        /// Constructs a HekaDAQController for the default PCI-18 #0 device.
+        /// Constructs a HekaDAQController for the default PCI-18 #0 device, using the system 
+        /// (CPU) clock.
         /// </summary>
         public HekaDAQController()
             : this(ITCMM.ITC18_ID, 0)
         {
         }
 
+        /// <summary>
+        /// Constructs a new HekaDAQController for the given device type and number, using
+        /// the given clock.
+        /// </summary>
+        /// <param name="deviceType"></param>
+        /// <param name="deviceNumber"></param>
+        /// <param name="clock"></param>
+        public HekaDAQController(uint deviceType, uint deviceNumber, IClock clock)
+        {
+            this.DeviceType = deviceType;
+            this.DeviceNumber = deviceNumber;
+            this.HardwareReady = false;
+            this.ProcessInterval = TimeSpan.FromSeconds(DEFAULT_TRANSFER_BLOCK_SECONDS);
+            this.Clock = clock;
+        }
 
         /// <summary>
         /// Initializes the Heka/Instructech hardware.
@@ -372,12 +388,12 @@ namespace Heka
 
         protected override bool ShouldStop()
         {
-            return StopRequested;
+            return IsStopRequested;
         }
 
         protected override void CommonStop()
         {
-            if (Running)
+            if (IsRunning)
             {
                 Device.StopHardware();
             }
@@ -397,25 +413,24 @@ namespace Heka
         private static readonly ILog log = LogManager.GetLogger(typeof(HekaDAQController));
         private bool _disposed = false;
 
-        protected override IDictionary<IDAQInputStream, IInputData> ProcessLoopIteration(IDictionary<IDAQOutputStream, IOutputData> outData, TimeSpan deficit)
+        protected override IDictionary<IDAQInputStream, IInputData> ProcessLoopIteration(IDictionary<IDAQOutputStream, IOutputData> outData, TimeSpan deficit, CancellationToken token)
         {
-
             IDictionary<ChannelIdentifier, short[]> output = new Dictionary<ChannelIdentifier, short[]>();
             IDictionary<ChannelIdentifier, short[]> deficitOutput = new Dictionary<ChannelIdentifier, short[]>();
-
-
 
             foreach (var s in ActiveOutputStreams.Cast<HekaDAQOutputStream>())
             {
                 var outputData = outData[s];
+
                 var cons = outputData.DataWithUnits(HekaDAQOutputStream.DAQCountUnits).SplitData(deficit);
 
-                short[] outputSamples = cons.Rest.Data.Select((m) => (short)m.QuantityInBaseUnit).ToArray();
                 short[] deficitOutputSamples = cons.Head.Data.Select((m) => (short)m.QuantityInBaseUnit).ToArray();
-                output[new ChannelIdentifier { ChannelNumber = s.ChannelNumber, ChannelType = (ushort)s.ChannelType }] =
-                    outputSamples;
                 deficitOutput[new ChannelIdentifier { ChannelNumber = s.ChannelNumber, ChannelType = (ushort)s.ChannelType }] =
                     deficitOutputSamples;
+
+                short[] outputSamples = cons.Rest.Data.Select((m) => (short)m.QuantityInBaseUnit).ToArray();
+                output[new ChannelIdentifier { ChannelNumber = s.ChannelNumber, ChannelType = (ushort)s.ChannelType }] =
+                    outputSamples;
             }
 
             if(deficitOutput.Any())
@@ -442,7 +457,7 @@ namespace Heka
                 nsamples = (int)TimeSpan.FromSeconds(DEFAULT_TRANSFER_BLOCK_SECONDS).Samples(SampleRate);
             }
 
-            IEnumerable<KeyValuePair<ChannelIdentifier, short[]>> input = Device.ReadWrite(output, inputChannels, nsamples);
+            IEnumerable<KeyValuePair<ChannelIdentifier, short[]>> input = Device.ReadWrite(output, inputChannels, nsamples, token);
 
             var result = new ConcurrentDictionary<IDAQInputStream, IInputData>();
             Parallel.ForEach(input, (kvp) =>
@@ -472,9 +487,7 @@ namespace Heka
 
             return result;
         }
-
-
-
+        
         private HekaDAQStream StreamWithIdentifier(ChannelIdentifier channelIdentifier)
         {
             HekaDAQStream result =
@@ -517,11 +530,6 @@ namespace Heka
             StopWithException(e);
         }
 
-        public DateTimeOffset Now
-        {
-            get { return Device.Now; }
-        }
-
         public static IEnumerable<HekaDAQController> AvailableControllers()
         {
             return QueuedHekaHardwareDevice.AvailableControllers();
@@ -529,7 +537,7 @@ namespace Heka
 
         public void ConfigureChannels()
         {
-            if(Running)
+            if(IsRunning)
             {
                 throw new HekaDAQException("Cannot configure channels while hardware is running.");
             }

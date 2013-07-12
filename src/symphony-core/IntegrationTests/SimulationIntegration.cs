@@ -78,7 +78,7 @@ namespace IntegrationTests
 
 
         [Test]
-        //[UseReporter(typeof(FileLauncherReporter))]
+        [UseReporter(typeof(NUnitReporter))]
         public void SingleEpochHDF5Persistence()
         {
             if (File.Exists("SingleEpochHDF5Persistence.h5"))
@@ -197,8 +197,8 @@ namespace IntegrationTests
             e.Responses[dev0] = new Response();
             e.Responses[dev1] = new Response();
 
-            e.Background[dev1] = new Epoch.EpochBackground(new Measurement(0, "V"), srate);
-            e.Background[dev0] = new Epoch.EpochBackground(new Measurement(0, "V"), srate);
+            e.Backgrounds[dev1] = new Background(new Measurement(0, "V"), srate);
+            e.Backgrounds[dev0] = new Background(new Measurement(0, "V"), srate);
 
             Assert.DoesNotThrow(() => controller.RunEpoch(e, new FakeEpochPersistor()));
 
@@ -268,6 +268,12 @@ namespace IntegrationTests
             dev0 = controller.GetDevice("Device0");
             dev1 = controller.GetDevice("Device1");
 
+            dev0.InputSampleRate = new Measurement((decimal)sampleRate, "Hz");
+            dev0.OutputSampleRate = new Measurement((decimal)sampleRate, "Hz");
+
+            dev1.InputSampleRate = new Measurement((decimal)sampleRate, "Hz");
+            dev1.OutputSampleRate = new Measurement((decimal)sampleRate, "Hz");
+
             if (nChannels == 1)
             {
                 dev1.UnbindStream(dev1.Streams.Values.First().Name);
@@ -294,8 +300,11 @@ namespace IntegrationTests
             if (nChannels > 1)
                 e.Responses[dev1] = new Response();
 
-            e.Background[dev1] = new Epoch.EpochBackground(new Measurement(0, "V"), srate);
-            e.Background[dev0] = new Epoch.EpochBackground(new Measurement(0, "V"), srate);
+            controller.BackgroundDataStreams[dev0] = new BackgroundOutputDataStream(new Background(new Measurement(0, "V"), srate));
+            controller.BackgroundDataStreams[dev1] = new BackgroundOutputDataStream(new Background(new Measurement(0, "V"), srate));
+
+            e.Backgrounds[dev0] = new Background(new Measurement(0, "V"), srate);
+            e.Backgrounds[dev1] = new Background(new Measurement(0, "V"), srate);
 
             return controller;
         }

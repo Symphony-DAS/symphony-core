@@ -104,7 +104,7 @@ namespace Symphony.Core
             // write e.ProtocolID;
             WriteEpochStart(e, e.ProtocolID, e.StartTime, fileTag);
 
-            WriteBackground(e, e.Background);
+            WriteBackground(e, e.Backgrounds);
 
             WriteProtocolParams(e, e.ProtocolParameters);
 
@@ -167,15 +167,15 @@ namespace Symphony.Core
             Console.WriteLine("Epoch start: {0} {1}", protocolID, (startTime.Item1 ? startTime.Item2.ToString() : "<No>"), (fileTag != null ? fileTag : "<<no file tag>>"));
         }
 
-        protected virtual void WriteBackground(Epoch e, IDictionary<IExternalDevice, Epoch.EpochBackground> background)
+        protected virtual void WriteBackground(Epoch e, IDictionary<IExternalDevice, Background> background)
         {
             foreach (var ed in background.Keys)
                 WriteBackgroundElement(e, ed, background[ed]);
         }
-        protected virtual void WriteBackgroundElement(Epoch e, IExternalDevice ed, Epoch.EpochBackground bg)
+        protected virtual void WriteBackgroundElement(Epoch e, IExternalDevice ed, Background bg)
         {
             Console.WriteLine("Epoch background element for device {0} for measurement {1}, samplerate {2}",
-                              ed.Name, bg.Background.ToString(), bg.SampleRate.ToString());
+                              ed.Name, bg.Value.ToString(), bg.SampleRate.ToString());
         }
 
         protected virtual void WriteProtocolParams(Epoch e, IDictionary<string, object> protoParams)

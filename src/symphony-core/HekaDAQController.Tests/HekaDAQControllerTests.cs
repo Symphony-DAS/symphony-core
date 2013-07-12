@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 using HekkaDAQ.Tests.Properties;
 
 namespace Heka
@@ -41,7 +42,7 @@ namespace Heka
         {
             foreach (HekaDAQController controller in HekaDAQController.AvailableControllers())
             {
-                if (controller.Running)
+                if (controller.IsRunning)
                 {
                     controller.Stop();
                 }
@@ -141,19 +142,13 @@ namespace Heka
 
         private void FixtureForController(HekaDAQController controller, double durationSeconds = 10)
         {
-            controller.Clock = controller;
-
             controller.SampleRate = new Measurement(10000, "Hz");
             controller.InitHardware();
 
             OutStream = controller.OutputStreams
-                .OfType<HekaDAQOutputStream>()
-                .Where(str => str.ChannelNumber == 0)
-                .First();
+                                  .OfType<HekaDAQOutputStream>().First(str => str.ChannelNumber == 0);
             InputStream = controller.InputStreams
-                .OfType<HekaDAQInputStream>()
-                .Where(str => str.ChannelNumber == 0)
-                .First();
+                                    .OfType<HekaDAQInputStream>().First(str => str.ChannelNumber == 0);
 
             InputStream.Configuration["SampleRate"] = InputStream.SampleRate;
 
@@ -183,7 +178,7 @@ namespace Heka
 
 
             OutDevice = new TestDevice("Output", dataQueue);
-            InputDevice = new TestDevice("Intput", null);
+            InputDevice = new TestDevice("Input", null);
 
             OutDevice.MeasurementConversionTarget = "V";
             InputDevice.MeasurementConversionTarget = "V";
@@ -311,23 +306,24 @@ namespace Heka
         /// Controller should exeptional-stop when an output stream's buffer underruns
         /// </summary>
         [Test]
+        [Timeout(5 * 1000)]
         public void ExceptionalStopOnOutputUnderrun()
         {
             foreach (HekaDAQController daq in HekaDAQController.AvailableControllers())
             {
-
+        
                 try
                 {
                     bool receivedExc = false;
-
+        
                     FixtureForController(daq, durationSeconds: 1.0);
-
+        
                     InputDevice.InputData[InputStream] = new List<IInputData>();
-
+        
                     daq.ExceptionalStop += (c, args) => receivedExc = true;
-
+        
                     daq.Start(false);
-
+        
                     Assert.That(receivedExc, Is.True.After(1000,10));
                 }
                 finally
@@ -335,7 +331,7 @@ namespace Heka
                     if(daq.HardwareReady)
                         daq.CloseHardware();
                 }
-
+        
             }
         }
 

@@ -13,6 +13,7 @@
 #pragma warning (default : 4412)
 using namespace System;
 using namespace System::Collections::Generic;
+using namespace System::Threading;
 using namespace Heka::NativeInterop;
 
 #include <cstdint>
@@ -63,7 +64,8 @@ namespace Heka {
 		IDictionary<ChannelIdentifier, array<itcsample_t>^>^ 
 			ReadWrite(IDictionary<ChannelIdentifier, array<itcsample_t>^>^ output,
 			IList<ChannelIdentifier>^ input,
-			int32_t nsamples);
+			int32_t nsamples,
+			CancellationToken^ token);
 
 		void Preload(IDictionary<ChannelIdentifier, array<itcsample_t>^>^ output);
 		void Write(IDictionary<ChannelIdentifier, array<itcsample_t>^>^ output);

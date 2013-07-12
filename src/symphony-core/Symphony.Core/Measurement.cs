@@ -70,7 +70,7 @@ namespace Symphony.Core
         {
             get
             {
-                var siUnits = InternationalSystem.DefaultSystem;
+                var siUnits = InternationalSystem.Default;
                 return string.Format("{0}{1}", siUnits.ToPrefix(Exponent), BaseUnit);
             }
         }
@@ -82,7 +82,7 @@ namespace Symphony.Core
         /// <param name="u">The (whatever)s we have (howevermany)s of</param>
         public Measurement(decimal q, string u)
         {
-            var siUnits = InternationalSystem.DefaultSystem;
+            var siUnits = InternationalSystem.Default;
 
             Quantity = q;
             Exponent = siUnits.Exponent(u);
@@ -133,7 +133,7 @@ namespace Symphony.Core
         /// <returns>IList of Measurements</returns>
         public static IList<IMeasurement> FromArray(decimal[] quantities, string unit)
         {
-            var siUnits = InternationalSystem.DefaultSystem;
+            var siUnits = InternationalSystem.Default;
 
             var exponent = siUnits.Exponent(unit);
             var baseUnit = siUnits.BaseUnit(unit);
@@ -307,14 +307,14 @@ namespace Symphony.Core
 
     public class InternationalSystem : IUnitSystem
     {
-        private static readonly InternationalSystem defaultSystem = new InternationalSystem();
+        private static readonly InternationalSystem _default = new InternationalSystem();
 
         /// <summary>
         /// Returns a shared international system.
         /// </summary>
-        public static InternationalSystem DefaultSystem
+        public static InternationalSystem Default
         {
-            get { return defaultSystem; }
+            get { return _default; }
         }
 
         public int ToExponent(string prefix)
@@ -333,28 +333,18 @@ namespace Symphony.Core
             return _exponentToPrefix[exponent];
         }
 
-        private readonly IDictionary<string, string> _baseUnitsCache = new Dictionary<string, string>()
-            {
-                // preload with common units
-                {"V", "V"},
-                {"mV", "V"},
-                {"µV", "V"},
-                {"A", "A"},
-                {"mA", "A"},
-                {"µA", "A"},
-                {"nA", "A"},
-                {"pA", "A"}
-            };
+        private readonly IDictionary<string, string> _baseUnitsCache = new Dictionary<string, string>();
 
         public string BaseUnit(string units)
         {
-            if(_baseUnitsCache.ContainsKey(units))
+            string result;
+            if (_baseUnitsCache.TryGetValue(units, out result))
             {
-                return _baseUnitsCache[units];
+                return result;
             }
 
             var prefix = UnitPrefix(units);
-            var result = HasPrefix(units, prefix) ? units.Substring(prefix.Length) : units;
+            result = HasPrefix(units, prefix) ? units.Substring(prefix.Length) : units;
 
             _baseUnitsCache[units] = result;
 
@@ -374,27 +364,17 @@ namespace Symphony.Core
         }
 
 
-        private readonly IDictionary<string, string> _unitPrefixCache = new Dictionary<string, string>()
-            {
-                // preload with common units
-                {"V", null},
-                {"mV", "m"},
-                {"µV", "µ"},
-                {"A", null},
-                {"mA", "m"},
-                {"µA", "µ"},
-                {"nA", "n"},
-                {"pA", "p"}
-            };
+        private readonly IDictionary<string, string> _unitPrefixCache = new Dictionary<string, string>();
 
         private string UnitPrefix(string units)
         {
-            if(_unitPrefixCache.ContainsKey(units))
+            string result;
+            if (_unitPrefixCache.TryGetValue(units, out result))
             {
-                return _unitPrefixCache[units];
+                return result;
             }
 
-            var result = _prefixToExponent.Keys.Where(k => !string.IsNullOrEmpty(k)).FirstOrDefault(units.StartsWith);
+            result = _prefixToExponent.Keys.Where(k => !string.IsNullOrEmpty(k)).FirstOrDefault(units.StartsWith);
             _unitPrefixCache[units] = result;
 
             return result;

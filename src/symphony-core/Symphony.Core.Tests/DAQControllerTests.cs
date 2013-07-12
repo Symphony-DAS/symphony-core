@@ -125,7 +125,7 @@ namespace Symphony.Core
 
             c.Start(false);
 
-            while (c.Running) ;
+            while (c.IsRunning) ;
 
             Assert.That(fired, Is.True.After(1000,10));
         }

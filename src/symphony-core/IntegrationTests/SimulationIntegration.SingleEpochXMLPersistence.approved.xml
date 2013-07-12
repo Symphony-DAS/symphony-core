@@ -4,14 +4,6 @@
     <properties />
     <epoch protocolID="LowGainSimulation" UUID="a5839fe9-90ef-4e39-bf26-8f75048306a3" startTime="1/1/0001 12:00:00 AM +00:00">
       <background>
-        <Device1>
-          <backgroundMeasurement>
-            <measurement qty="0" unit="V" />
-          </backgroundMeasurement>
-          <sampleRate>
-            <measurement qty="5" unit="Hz" />
-          </sampleRate>
-        </Device1>
         <Device0>
           <backgroundMeasurement>
             <measurement qty="0" unit="V" />
@@ -20,6 +12,14 @@
             <measurement qty="5" unit="Hz" />
           </sampleRate>
         </Device0>
+        <Device1>
+          <backgroundMeasurement>
+            <measurement qty="0" unit="V" />
+          </backgroundMeasurement>
+          <sampleRate>
+            <measurement qty="5" unit="Hz" />
+          </sampleRate>
+        </Device1>
       </background>
       <protocolParameters>
         <key1>value1</key1>
@@ -237,7 +237,7 @@
                 <Clock>Clock</Clock>
               </SimulationDAQController>
             </nodeConfigurationSpan>
-            <nodeConfigurationSpan startTimeSeconds="9.6" timeSpanSeconds="0.6">
+            <nodeConfigurationSpan startTimeSeconds="9.6" timeSpanSeconds="0.4">
               <Device0>
                 <MeasurementConversionTarget>V</MeasurementConversionTarget>
                 <Clock>Clock</Clock>
@@ -463,7 +463,7 @@
                 <Clock>Clock</Clock>
               </SimulationDAQController>
             </nodeConfigurationSpan>
-            <nodeConfigurationSpan startTimeSeconds="9.6" timeSpanSeconds="0.6">
+            <nodeConfigurationSpan startTimeSeconds="9.6" timeSpanSeconds="0.4">
               <Device1>
                 <MeasurementConversionTarget>V</MeasurementConversionTarget>
                 <Clock>Clock</Clock>

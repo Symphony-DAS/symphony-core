@@ -58,6 +58,28 @@ namespace Symphony.Core
         IDictionary<string, IDAQStream> Streams { get; }
 
         /// <summary>
+        /// Of all Streams associated with this ExternalDevice, the IDAQInputStreams
+        /// </summary>
+        IEnumerable<IDAQInputStream> InputStreams { get; }
+
+        /// <summary>
+        /// Of all Streams associated with this IExternalDevice, the IDAQOutputStreams
+        /// </summary>
+        IEnumerable<IDAQOutputStream> OutputStreams { get; }
+
+        /// <summary>
+        /// The input sampling rate of this IExternalDevice. InputSampleRate is distinct from the sample rate of
+        /// bound IDAQInputStreams because a device may be bound to multiple input streams with varying sample rates. 
+        /// </summary>
+        IMeasurement InputSampleRate { get; set; }
+
+        /// <summary>
+        /// The output sampling rate of this IExternalDevice. OutputSampleRate is distinct from the sample rate of
+        /// bound IDAQOutputStreams because a device may be bound to multiple output streams with varying sample rates. 
+        /// </summary>
+        IMeasurement OutputSampleRate { get; set; }
+            
+        /// <summary>
         /// The value, in device  units, that should
         /// be applied to any IOutputStreams bound to this device when stopped.
         /// </summary>
@@ -67,6 +89,11 @@ namespace Symphony.Core
         /// The current Background, in output units.
         /// </summary>
         IMeasurement OutputBackground { get; }
+
+        /// <summary>
+        /// Applies OutputBackground to all bound output streams.
+        /// </summary>
+        void ApplyBackground();
 
         /// <summary>
         /// The name of this external device, principally for human-recognition
@@ -137,7 +164,7 @@ namespace Symphony.Core
         /// <remarks>Appends this Device's Configuration to the IOutputData</remarks>
         /// <param name="stream">Stream for output</param>
         /// <param name="duration">Requested duration</param>
-        /// <returns>IOutputData of duration less than or equal to duration</returns>
+        /// <returns>IOutputData of duration greater than or equal to requested duration.</returns>
         /// <exception cref="ExternalDeviceException">Requested duration is less than one sample</exception>
         IOutputData PullOutputData(IDAQOutputStream stream, TimeSpan duration);
 
@@ -240,6 +267,59 @@ namespace Symphony.Core
         /// </summary>
         public virtual IDictionary<string, IDAQStream> Streams { get; private set; }
 
+        public virtual IEnumerable<IDAQInputStream> InputStreams
+        {
+            get
+            {
+                return StreamsOfType<IDAQInputStream>().OrderBy(s => s.Name);
+            }
+        }
+
+        public virtual IEnumerable<IDAQOutputStream> OutputStreams
+        {
+            get
+            {
+                return StreamsOfType<IDAQOutputStream>().OrderBy(s => s.Name);
+            }
+        }
+        
+        private IEnumerable<T> StreamsOfType<T>() where T : IDAQStream
+        {
+            return Streams.Values.OfType<T>();
+        }
+
+
+        public virtual IMeasurement InputSampleRate
+        {
+            get { return _inputSampleRate; }
+            set
+            {
+                if (value.Quantity < 0 || value.BaseUnit.ToLower() != "hz")
+                {
+                    throw new ArgumentException("Illegal SampleRate");
+                }
+
+                _inputSampleRate = value;
+            }
+        }
+        private IMeasurement _inputSampleRate;
+
+
+        public virtual IMeasurement OutputSampleRate
+        {
+            get { return _outputSampleRate; }
+            set
+            {
+                if (value.Quantity < 0 || value.BaseUnit.ToLower() != "hz")
+                {
+                    throw new ArgumentException("Illegal SampleRate");
+                }
+
+                _outputSampleRate = value;
+            }
+        }
+        private IMeasurement _outputSampleRate;
+
         /// <summary>
         /// The value, in MeasurementConversionTarget input units, that should
         /// be applied to any IOutputStreams bound to this device when stopped.
@@ -254,6 +334,14 @@ namespace Symphony.Core
         public virtual IMeasurement OutputBackground
         {
             get { return ConvertOutput(Background); }
+        }
+        
+        public void ApplyBackground()
+        {
+            foreach (var s in OutputStreams)
+            {
+                s.ApplyBackground();
+            }
         }
 
         protected virtual IMeasurement ConvertOutput(IMeasurement deviceOutput)
@@ -328,7 +416,6 @@ namespace Symphony.Core
             }
         }
 
-
         /// <summary>
         /// The name of this external device, principally for human-recognition
         /// purposes (log files, etc)
@@ -360,7 +447,7 @@ namespace Symphony.Core
         /// <remarks>Appends this Device's Configuration to the IOutputData</remarks>
         /// <param name="stream">Stream for output</param>
         /// <param name="duration">Requested duration</param>
-        /// <returns>IOutputData of duration less than or equal to duration</returns>
+        /// <returns>IOutputData of duration greater than or equal to the requested duration.</returns>
         /// <exception cref="ExternalDeviceException">Requested duration is less than one sample</exception>
         public abstract IOutputData PullOutputData(IDAQOutputStream stream, TimeSpan duration);
 
@@ -373,7 +460,7 @@ namespace Symphony.Core
         /// <param name="inData">IInputData to push to the controller</param>
         public abstract void PushInputData(IDAQInputStream stream, IInputData inData);
 
-        public void DidOutputData(IDAQOutputStream stream, DateTimeOffset outputTime, TimeSpan duration, IEnumerable<IPipelineNodeConfiguration> configuration)
+        public virtual void DidOutputData(IDAQOutputStream stream, DateTimeOffset outputTime, TimeSpan duration, IEnumerable<IPipelineNodeConfiguration> configuration)
         {
             Controller.DidOutputData(this, outputTime, duration, configuration);
         }
@@ -398,14 +485,19 @@ namespace Symphony.Core
                 if (!sVal)
                     return Maybe<string>.No("DAQStream " +
                         stream.Name + " failed validation: " +
-                        sVal.Item2);
+                        sVal.Item2);    
             }
+
+            if (OutputSampleRate == null && OutputStreams.Any())
+                return Maybe<string>.No("Output sample rate required.");
+
+            if (InputSampleRate == null && InputStreams.Any())
+                return Maybe<string>.No("Input sample rate required.");
 
             if (Clock == null)
                 return Maybe<string>.No("Clock must not be null.");
 
-            if (Background == null &&
-                Streams.Values.Where(s => s.GetType().IsSubclassOf(typeof(IDAQOutputStream))).Any())
+            if (Background == null && OutputStreams.Any())
                 return Maybe<string>.No("Background value required.");
 
             return Maybe<string>.Yes();
@@ -463,6 +555,9 @@ namespace Symphony.Core
             {
                 IOutputData data = this.Controller.PullOutputData(this, duration);
 
+                if (!data.SampleRate.Equals(this.OutputSampleRate))
+                    throw new ExternalDeviceException("Sample rate mismatch.");
+
                 return data.DataWithUnits(MeasurementConversionTarget)
                     .DataWithExternalDeviceConfiguration(this, Configuration);
             }
@@ -483,6 +578,8 @@ namespace Symphony.Core
         {
             try
             {
+                if (!inData.SampleRate.Equals(this.InputSampleRate))
+                    throw new ExternalDeviceException("Sample rate mismatch");
 
                 IInputData convertedData = inData.DataWithUnits(MeasurementConversionTarget)
                     .DataWithExternalDeviceConfiguration(this, Configuration);

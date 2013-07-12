@@ -38,15 +38,22 @@ namespace Symphony.Core
                                     SampleRate = srate,
                                     MeasurementConversionTarget = "V"
                                 };
+            var inStream = new DAQInputStream("IN")
+                                {
+                                    SampleRate = srate,
+                                    MeasurementConversionTarget = "V"
+                                };
 
             var controller = new Controller() { Clock = daq, DAQController = daq };
 
             var dev = new UnitConvertingExternalDevice("dev", "co", controller, new Measurement(0, "V"))
                           {
                               Clock = daq,
-                              MeasurementConversionTarget = "V"
+                              MeasurementConversionTarget = "V",
+                              OutputSampleRate = srate,
+                              InputSampleRate = srate
                           };
-            dev.BindStream(outStream);
+            dev.BindStream(outStream).BindStream(inStream);
 
             // Setup Epoch
             var e = new Epoch("OutputPipelineContinuity");
@@ -61,10 +68,9 @@ namespace Symphony.Core
                                             stimOutputData);
             e.Stimuli[dev] = stim;
             e.Responses[dev] = new Response();
-            e.Background[dev] = new Epoch.EpochBackground(new Measurement(0, "V"), srate);
+            e.Backgrounds[dev] = new Background(new Measurement(0, "V"), srate);
 
             controller.EnqueueEpoch(e);
-            controller.NextEpoch();
 
             var blockSpan = TimeSpan.FromSeconds(blockDurationSeconds);
             foreach (var stimBlock in stim.DataBlocks(blockSpan))

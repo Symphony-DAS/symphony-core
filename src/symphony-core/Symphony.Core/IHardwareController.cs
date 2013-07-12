@@ -15,7 +15,7 @@ namespace Symphony.Core
         /// <summary>
         /// Indicates if the hardware is running (i.e. DAQ running, video output running)
         /// </summary>
-        bool Running { get; }
+        bool IsRunning { get; }
 
         /// <summary>
         /// Start this hardware controller and associated device. Optinally holds hardware start for a hardware

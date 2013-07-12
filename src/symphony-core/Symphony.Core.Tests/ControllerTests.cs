@@ -15,27 +15,51 @@ namespace Symphony.Core
     {
         private const string UNUSED_DEVICE_NAME = "TEST-DEVICE";
         private const string UNUSED_DEVICE_MANUFACTURER = "TEST-DEVICE-CO";
+        private const string UNUSED_STREAM_NAME = "TEST-STREAM";
         Measurement UNUSED_BACKGROUND = new Measurement(0, "V");
-
-
+        
         [Test]
-        public void PullOutputDataShouldReturnNullWithNullCurrentEpoch()
+        public void PullOutputDataShouldReturnBackgroundStreamWithNoRemainingEpochs()
         {
-            Controller c = new Controller();
+            var daq = new SimpleDAQController();
+            Controller c = new NonValidatingController() { DAQController = daq };
             IExternalDevice dev = new UnitConvertingExternalDevice(UNUSED_DEVICE_NAME, UNUSED_DEVICE_MANUFACTURER, c, UNUSED_BACKGROUND);
+            dev.BindStream(new DAQOutputStream("out"));
 
-            IList<IMeasurement> data = (IList<IMeasurement>) Enumerable.Range(0, 1000).Select(i => new Measurement(i, "V") as IMeasurement).ToList();
-            var sampleRate = new Measurement(1000, "Hz");
+            var srate = new Measurement(1000, "Hz");
+            var background = new Background(new Measurement(1, "V"), srate);
+            c.BackgroundDataStreams[dev] = new BackgroundOutputDataStream(background);
 
-            IOutputData data1 = new OutputData(data, sampleRate, false);
+            TimeSpan dur = TimeSpan.FromSeconds(0.5);
+            var samples = (int)dur.Samples(srate);
 
             var e = new Epoch("");
-            e.Stimuli[dev] = new RenderedStimulus((string) "RenderedStimulus", (IDictionary<string, object>) new Dictionary<string, object>(),
-                data1);
-            e.Background[dev] = new Epoch.EpochBackground(new Measurement(0, "V"), sampleRate);
+            e.Stimuli[dev] = new RenderedStimulus("RenderedStimulus", new Dictionary<string, object>(), new OutputData(Enumerable.Repeat(new Measurement(0, "V"), samples), srate));
 
-            Assert.Null(c.PullOutputData(dev, TimeSpan.FromSeconds(1)));
+            IOutputData pull1 = null;
+            IOutputData pull2 = null;
+            bool pulled = false;
+            daq.Started += (evt, args) =>
+            {
+                // Pull out epoch data
+                c.PullOutputData(dev, dur);
+
+                pull1 = c.PullOutputData(dev, dur);
+                pull2 = c.PullOutputData(dev, dur);
+                pulled = true;
+            };
+            
+            c.EnqueueEpoch(e);
+            c.StartAsync(null);
+
+            while (!pulled) { }
+
+            var expected = Enumerable.Repeat(background.Value, samples).ToList();
+
+            Assert.AreEqual(expected, pull1.Data);
+            Assert.AreEqual(expected, pull2.Data);
         }
+
 
         [Test]
         public void ControllerImplementsTimelineProducer()
@@ -74,7 +98,7 @@ namespace Symphony.Core
         }
 
         [Test]
-        public void GetDeivceReturnsDevice()
+        public void GetDeviceReturnsDevice()
         {
             Controller c = new Controller();
 
@@ -150,18 +174,24 @@ namespace Symphony.Core
 
             con.Clock = clock;
 
+            var sampleRate = new Measurement(10000, "Hz");
+
             // Three ExternalDevices
             CoalescingDevice amp = new CoalescingDevice("Amp", UNUSED_DEVICE_MANUFACTURER, con, UNUSED_BACKGROUND)
                                        {
-                                           MeasurementConversionTarget = "units"
+                                           MeasurementConversionTarget = "units",
+                                           OutputSampleRate = sampleRate,
+                                           InputSampleRate = sampleRate
                                        };
             var LED = new UnitConvertingExternalDevice("LED", UNUSED_DEVICE_MANUFACTURER, UNUSED_BACKGROUND)
             {
-                MeasurementConversionTarget = "units"
+                MeasurementConversionTarget = "units",
+                OutputSampleRate = sampleRate
             };
             var temp = new UnitConvertingExternalDevice("Temp", UNUSED_DEVICE_MANUFACTURER, UNUSED_BACKGROUND)
             {
-                MeasurementConversionTarget = "units"
+                MeasurementConversionTarget = "units",
+                InputSampleRate = sampleRate
             };
             amp.Clock = clock;
             LED.Clock = clock;
@@ -170,7 +200,6 @@ namespace Symphony.Core
             // There should be no difference whether we use the
             // ExternalDevice constructor to wire up the Controller
             // to the ExternalDevice, or the explicit Add() call
-
 
             Assert.IsNotNull(amp.Controller);
             Assert.IsNotNull(LED.Controller);
@@ -223,6 +252,10 @@ namespace Symphony.Core
             Assert.IsTrue(dc.OutputStreams.Contains(out0));
             Assert.IsTrue(dc.OutputStreams.Contains(out0));
 
+            // We need to associate a background stream with each output device
+            con.BackgroundDataStreams[LED] = new BackgroundOutputDataStream(new Background(UNUSED_BACKGROUND, new Measurement(1, "Hz")));
+            con.BackgroundDataStreams[amp] = new BackgroundOutputDataStream(new Background(UNUSED_BACKGROUND, new Measurement(1, "Hz")));
+
             // Validate and report the validation results
             Maybe<string> conVal = con.Validate();
             Assert.IsTrue(conVal, conVal.Item2);
@@ -240,52 +273,64 @@ namespace Symphony.Core
             Assert.AreEqual(new IHardwareController[] { daq } as IEnumerable<IHardwareController>, controller.HardwareControllers);
         }
 
-        [Test]
+        [Test, Timeout(2000)]
         public void PullsOutputData()
         {
-            var c = new SingleEpochController();
-            IExternalDevice dev = new UnitConvertingExternalDevice(UNUSED_DEVICE_NAME, UNUSED_DEVICE_MANUFACTURER, c, UNUSED_BACKGROUND);
+            var daq = new SimpleDAQController();
+            var c = new NonValidatingController { DAQController = daq };
+            var dev = new UnitConvertingExternalDevice(UNUSED_DEVICE_NAME, UNUSED_DEVICE_MANUFACTURER, c, UNUSED_BACKGROUND);
+            dev.BindStream(new DAQOutputStream("out"));
 
             const int srate = 1000;
             IList<IMeasurement> data = (IList<IMeasurement>) Enumerable.Range(0, srate * 2).Select(i => new Measurement(i, "V") as IMeasurement).ToList();
             var sampleRate = new Measurement(srate, "Hz");
+
+            var background = new Background(new Measurement(3, "V"), sampleRate);
+            c.BackgroundDataStreams[dev] = new BackgroundOutputDataStream(background);
 
             IOutputData data1 = new OutputData(data, sampleRate, false);
 
             var e = new Epoch("");
             e.Stimuli[dev] = new RenderedStimulus((string) "RenderedStimulus", (IDictionary<string, object>) new Dictionary<string, object>(),
                 data1);
-            e.Background[dev] = new Epoch.EpochBackground(new Measurement(0, "V"), sampleRate);
-
-            c.SetCurrentEpoch(e);
-
 
             TimeSpan d1 = TimeSpan.FromSeconds(0.75);
 
-            c.EnqueueEpoch(e);
-            c.NextEpoch();
-            var pull1 = c.PullOutputData(dev, d1);
-            var pull2 = c.PullOutputData(dev, d1);
+            IOutputData pull1 = null;
+            IOutputData pull2 = null;
+            IOutputData pull3 = null;
+            bool pulled = false;
+            daq.Started += (evt, args) =>
+            {
+                pull1 = c.PullOutputData(dev, d1);
+                pull2 = c.PullOutputData(dev, d1);
+                pull3 = c.PullOutputData(dev, d1);
+                pulled = true;
+            };
 
+            c.EnqueueEpoch(e);
+            c.StartAsync(null);
+
+            while (!pulled) { }
 
             var samples = (int)d1.Samples(new Measurement(srate, "Hz"));
             Assert.AreEqual(data.Take(samples).ToList(),
                 pull1.Data);
             Assert.AreEqual(data.Skip(samples).Take(samples).ToList(),
                 pull2.Data);
-
-            var pull3 = c.PullOutputData(dev, d1);
             Assert.AreEqual(data.Skip(2 * samples)
                 .Take(samples)
-                .Concat(Enumerable.Range(0, srate - samples).Select(i => e.Background[dev].Background))
+                .Concat(Enumerable.Range(0, srate - samples).Select(i => background.Value))
                 .ToList(),
                 pull3.Data);
-
         }
 
         [Test]
         public void ShouldPersistCompletedEpochs()
         {
+            Converters.Register("V", "V",
+                (IMeasurement m) => m);
+
             var c = new Controller();
             bool evt = false;
 
@@ -298,20 +343,23 @@ namespace Symphony.Core
                                     evt = true;
                                 };
 
-            var dev = new UnitConvertingExternalDevice(UNUSED_DEVICE_NAME, UNUSED_DEVICE_MANUFACTURER, UNUSED_BACKGROUND)
+            var srate = new Measurement(10, "Hz");
+
+            var dev = new UnitConvertingExternalDevice(UNUSED_DEVICE_NAME, UNUSED_DEVICE_MANUFACTURER, c, UNUSED_BACKGROUND)
                           {
-                              Controller = c,
-                              MeasurementConversionTarget = "V"
+                              MeasurementConversionTarget = "V",
+                              Clock = c.Clock,
+                              OutputSampleRate = srate,
+                              InputSampleRate = srate
                           };
 
-            var outStream = new DAQOutputStream("outStream") { MeasurementConversionTarget = "V" };
+            var outStream = new DAQOutputStream("outStream") { MeasurementConversionTarget = "V", Clock = c.Clock };
 
-            var inStream = new DAQInputStream("inStream") { MeasurementConversionTarget = "V" };
+            var inStream = new DAQInputStream("inStream") { MeasurementConversionTarget = "V", Clock = c.Clock };
 
             (c.DAQController as IMutableDAQController).AddStream(outStream);
             (c.DAQController as IMutableDAQController).AddStream(inStream);
 
-            var srate = new Measurement(10, "Hz");
             outStream.SampleRate = srate;
             inStream.SampleRate = srate;
 
@@ -328,7 +376,10 @@ namespace Symphony.Core
                                                   (IDictionary<string, object>) new Dictionary<string, object>(),
                                                   (IOutputData) data);
             e.Responses[dev] = new Response();
-            e.Background[dev] = new Epoch.EpochBackground(new Measurement(0, "V"), srate);
+            e.Backgrounds[dev] = new Background(new Measurement(0, "V"), srate);
+
+            var back = new Background(UNUSED_BACKGROUND, srate);
+            c.BackgroundDataStreams[dev] = new BackgroundOutputDataStream(back);
 
             ((TestDAQController)c.DAQController).AddStreamMapping(outStream, inStream);
 
@@ -339,8 +390,76 @@ namespace Symphony.Core
         }
 
         [Test]
+        public void ShouldNotPersistEpochWithShouldBePersistedSetFalse()
+        {
+            Converters.Register("V", "V",
+                (IMeasurement m) => m);
+
+            var c = new Controller();
+            bool evt = false;
+
+            c.DAQController = new TestDAQController();
+            c.Clock = c.DAQController as IClock;
+            var persistor = new FakeEpochPersistor();
+
+            c.SavedEpoch += (co, args) =>
+            {
+                evt = true;
+            };
+
+            var srate = new Measurement(10, "Hz");
+
+            var dev = new UnitConvertingExternalDevice(UNUSED_DEVICE_NAME, UNUSED_DEVICE_MANUFACTURER, c, UNUSED_BACKGROUND)
+            {
+                MeasurementConversionTarget = "V",
+                Clock = c.Clock,
+                OutputSampleRate = srate,
+                InputSampleRate = srate
+            };
+
+            var outStream = new DAQOutputStream("outStream") { MeasurementConversionTarget = "V", Clock = c.Clock };
+
+            var inStream = new DAQInputStream("inStream") { MeasurementConversionTarget = "V", Clock = c.Clock };
+
+            (c.DAQController as IMutableDAQController).AddStream(outStream);
+            (c.DAQController as IMutableDAQController).AddStream(inStream);
+
+            outStream.SampleRate = srate;
+            inStream.SampleRate = srate;
+
+            dev.BindStream(outStream);
+            dev.BindStream(inStream);
+
+            var e = new Epoch(UNUSED_PROTOCOL) { ShouldBePersisted = false };
+
+            var samples = new List<IMeasurement> { new Measurement(1.0m, "V"), new Measurement(1.0m, "V"), new Measurement(1.0m, "V") };
+            var data = new OutputData(samples,
+                srate,
+                true);
+
+            e.Stimuli[dev] = new RenderedStimulus((string)"stimID",
+                                                  (IDictionary<string, object>)new Dictionary<string, object>(),
+                                                  (IOutputData)data);
+            e.Responses[dev] = new Response();
+            e.Backgrounds[dev] = new Background(new Measurement(0, "V"), srate);
+
+            var back = new Background(UNUSED_BACKGROUND, srate);
+            c.BackgroundDataStreams[dev] = new BackgroundOutputDataStream(back);
+
+            ((TestDAQController)c.DAQController).AddStreamMapping(outStream, inStream);
+
+            c.RunEpoch(e, persistor);
+
+            Assert.That(evt, Is.False.After(10 * 1000, 100));
+            Assert.That(persistor.PersistedEpochs, Is.Empty);
+        }
+
+        [Test]
         public void ShouldSurfaceExceptionInPersistorTask()
         {
+            Converters.Register("V", "V",
+                (IMeasurement m) => m);
+
             var c = new Controller();
             bool evt = false;
 
@@ -353,25 +472,31 @@ namespace Symphony.Core
                 evt = true;
             };
 
-            var dev = new UnitConvertingExternalDevice(UNUSED_DEVICE_NAME, UNUSED_DEVICE_MANUFACTURER, UNUSED_BACKGROUND)
+            var srate = new Measurement(10, "Hz");
+
+            var dev = new UnitConvertingExternalDevice(UNUSED_DEVICE_NAME, UNUSED_DEVICE_MANUFACTURER, c, UNUSED_BACKGROUND)
             {
-                Controller = c,
-                MeasurementConversionTarget = "V"
+                MeasurementConversionTarget = "V",
+                Clock = c.Clock,
+                OutputSampleRate = srate,
+                InputSampleRate = srate
             };
 
-            var outStream = new DAQOutputStream("outStream") { MeasurementConversionTarget = "V" };
+            var outStream = new DAQOutputStream("outStream") { MeasurementConversionTarget = "V", Clock = c.Clock };
 
-            var inStream = new DAQInputStream("inStream") { MeasurementConversionTarget = "V" };
+            var inStream = new DAQInputStream("inStream") { MeasurementConversionTarget = "V", Clock = c.Clock };
 
             (c.DAQController as IMutableDAQController).AddStream(outStream);
             (c.DAQController as IMutableDAQController).AddStream(inStream);
 
-            var srate = new Measurement(10, "Hz");
             outStream.SampleRate = srate;
             inStream.SampleRate = srate;
 
             dev.BindStream(outStream);
             dev.BindStream(inStream);
+
+            var back = new Background(UNUSED_BACKGROUND, srate);
+            c.BackgroundDataStreams[dev] = new BackgroundOutputDataStream(back);
 
             var e = new Epoch(UNUSED_PROTOCOL);
             var samples = new List<IMeasurement> { new Measurement(1.0m, "V"), new Measurement(1.0m, "V"), new Measurement(1.0m, "V") };
@@ -383,7 +508,7 @@ namespace Symphony.Core
                                                   (IDictionary<string, object>) new Dictionary<string, object>(),
                                                   (IOutputData) data);
             e.Responses[dev] = new Response();
-            e.Background[dev] = new Epoch.EpochBackground(new Measurement(0, "V"), srate);
+            e.Backgrounds[dev] = new Background(new Measurement(0, "V"), srate);
 
             ((TestDAQController)c.DAQController).AddStreamMapping(outStream, inStream);
 
@@ -417,12 +542,20 @@ namespace Symphony.Core
             Assert.False(persistor.PersistedEpochs.ToList().Contains(e));
         }
 
-        [Test]
+        [Test, Timeout(2000)]
         public void ShouldSupplyEpochBackgroundForExternalDevicesWithoutStimuli()
         {
-            var c = new SingleEpochController();
+            Converters.Register("V", "V",
+                (IMeasurement m) => m);
+
+            var daq = new SimpleDAQController();
+            var c = new NonValidatingController { DAQController = daq };
+
             var dev1 = new UnitConvertingExternalDevice("dev1", "co", c, new Measurement(0, "V"));
             var dev2 = new UnitConvertingExternalDevice("dev2", "co", c, new Measurement(0, "V"));
+
+            dev1.BindStream(new DAQOutputStream("out1"));
+            dev2.BindStream(new DAQOutputStream("out2"));
 
             int baseSamples = 1000;
             IList<IMeasurement> data = (IList<IMeasurement>)Enumerable.Range(0, baseSamples)
@@ -430,6 +563,10 @@ namespace Symphony.Core
                 .ToList();
 
             Measurement sampleRate = new Measurement(baseSamples, "Hz");
+
+            c.BackgroundDataStreams[dev1] = new BackgroundOutputDataStream(new Background(UNUSED_BACKGROUND, sampleRate));
+            c.BackgroundDataStreams[dev2] = new BackgroundOutputDataStream(new Background(UNUSED_BACKGROUND, sampleRate));
+
             var config = new Dictionary<string, object>();
 
             IOutputData data1 = new OutputData(data, sampleRate, true);
@@ -438,14 +575,25 @@ namespace Symphony.Core
             e.Stimuli[dev1] = new RenderedStimulus((string) "RenderedStimulus", (IDictionary<string, object>) config, data1);
 
             var backgroundMeasurement = new Measurement(3.2m, "V");
+            e.Backgrounds[dev2] = new Background(backgroundMeasurement, sampleRate);
 
-            e.Background[dev2] = new Epoch.EpochBackground(backgroundMeasurement, sampleRate);
+            IOutputData out1 = null;
+            IOutputData out2 = null;
+            bool pulled = false;
+            daq.Started += (evt, args) =>
+            {
+                out1 = c.PullOutputData(dev1, e.Duration);
+                out2 = c.PullOutputData(dev2, e.Duration);
+                pulled = true;
+            };
 
-            c.SetCurrentEpoch(e);
-            var out1 = c.PullOutputData(dev1, e.Duration);
+            c.EnqueueEpoch(e);
+            c.StartAsync(null);
+
+            while (!pulled) { }
+
             Assert.NotNull(out1);
 
-            var out2 = c.PullOutputData(dev2, e.Duration);
             Assert.NotNull(out2);
             Assert.AreEqual((TimeSpan)e.Duration, out2.Duration);
             Assert.AreEqual(backgroundMeasurement, out2.Data.First());
@@ -478,6 +626,10 @@ namespace Symphony.Core
 
             var sampleRate = new Measurement(1, "Hz");
 
+            var back = new Background(UNUSED_BACKGROUND, sampleRate);
+            c.BackgroundDataStreams[dev1] = new BackgroundOutputDataStream(back);
+            c.BackgroundDataStreams[dev2] = new BackgroundOutputDataStream(back);
+
             e.Stimuli[dev1] = new RenderedStimulus((string) "ID1",
                                                    (IDictionary<string, object>) new Dictionary<string, object>(),
                                                    (IOutputData) new OutputData(new List<IMeasurement> { new Measurement(1, "V") },
@@ -490,7 +642,7 @@ namespace Symphony.Core
 
             Assert.That(() => c.RunEpoch(e, new FakeEpochPersistor()), Throws.Exception.TypeOf<ArgumentException>());
 
-            e.Stimuli[dev2] = new DelegatedStimulus("ID2", "V",
+            e.Stimuli[dev2] = new DelegatedStimulus("ID2", "V", sampleRate,
                                                     new Dictionary<string, object>(),
                                                     (x, y) => null,
                                                     (p) => Option<TimeSpan>.None());
@@ -518,7 +670,10 @@ namespace Symphony.Core
 
             var sampleRate = new Measurement(1, "Hz");
 
-            e.Stimuli[dev2] = new DelegatedStimulus("ID2", "units",
+            var back = new Background(UNUSED_BACKGROUND, sampleRate);
+            c.BackgroundDataStreams[dev2] = new BackgroundOutputDataStream(back);
+
+            e.Stimuli[dev2] = new DelegatedStimulus("ID2", "units", new Measurement(10, "Hz"), 
                                                     new Dictionary<string, object>(),
                                                     (x, y) => null,
                                                     (p) => Option<TimeSpan>.None());
@@ -528,32 +683,48 @@ namespace Symphony.Core
         }
 
         [Test]
-        [Timeout(5 * 1000)]
+        [Timeout(5000)]
         public void RunEpochThrowsWhenRunningSimultaneousEpochs()
         {
             Converters.Register("V", "V",
                 // just an identity conversion for now, to pass Validate()
                                 (IMeasurement m) => m);
 
-            var c = new Controller { DAQController = new SimpleDAQController2() };
+            var c = new Controller { DAQController = new SimpleDAQController() };
             c.DAQController.Clock = c.DAQController as IClock;
 
+            var sampleRate = new Measurement(1, "Hz");
+
             var e = new Epoch(UNUSED_PROTOCOL);
-            var dev1 = new UnitConvertingExternalDevice("dev1", "co", c, new Measurement(0, "V"))
+            var dev = new UnitConvertingExternalDevice("dev", "co", c, new Measurement(0, "V"))
+            {
+                MeasurementConversionTarget = "V",
+                Clock = c.Clock,
+                OutputSampleRate = sampleRate
+            };
+            var outStream = new DAQOutputStream("out")
             {
                 MeasurementConversionTarget = "V",
                 Clock = c.Clock
             };
+            dev.BindStream(outStream);
 
-            var sampleRate = new Measurement(1, "Hz");
+            c.BackgroundDataStreams[dev] = new BackgroundOutputDataStream(new Background(UNUSED_BACKGROUND, sampleRate));
 
-            e.Stimuli[dev1] = new DelegatedStimulus("ID1", "units", new Dictionary<string, object>(),
-                                                    (parameters, duration) =>
-                                                    new OutputData(new List<IMeasurement>(), sampleRate, false),
+            e.Stimuli[dev] = new DelegatedStimulus("ID1", "units", sampleRate, new Dictionary<string, object>(),
+                                                    (parameters, duration) => null,
                                                     objects => Option<TimeSpan>.None());
 
+            bool started = false;
+            c.Started += (evt, args) =>
+            {
+                started = true;
+            };
 
-            c.RunEpochAsync(e, new FakeEpochPersistor());
+            c.EnqueueEpoch(e);
+            c.StartAsync(null);
+
+            while (!started) { }
 
             Assert.That(() => c.RunEpoch(e, new FakeEpochPersistor()), Throws.Exception.TypeOf<SymphonyControllerException>());
         }
@@ -568,7 +739,7 @@ namespace Symphony.Core
 
             var sampleRate = new Measurement(1, "Hz");
 
-            e.Stimuli[dev2] = new DelegatedStimulus("ID2", "units",
+            e.Stimuli[dev2] = new DelegatedStimulus("ID2", "units", new Measurement(1000, "Hz"), 
                                                     new Dictionary<string, object>(),
                                                     (x, y) => null,
                                                     (p) => Option<TimeSpan>.None());
@@ -593,35 +764,54 @@ namespace Symphony.Core
         [Test]
         public void ShouldTruncateResponseAtEpochBoundary()
         {
-            var c = new SingleEpochController();
+            Converters.Register("V", "V",
+                (IMeasurement m) => m);
 
-            var e = new Epoch(UNUSED_PROTOCOL);
-            var dev1 = new UnitConvertingExternalDevice("dev2", "co", c, new Measurement(0, "V"));
+            var daq = new SimpleDAQController();
+            var c = new NonValidatingController { DAQController = daq };
+            var dev = new UnitConvertingExternalDevice("dev", UNUSED_DEVICE_MANUFACTURER, c, UNUSED_BACKGROUND);
+            var outStream = new DAQOutputStream("out");
+            var inStream = new DAQInputStream("in");
+            dev.BindStream(outStream).BindStream(inStream);
 
             var sampleRate = new Measurement(1, "Hz");
+
+            c.BackgroundDataStreams[dev] = new BackgroundOutputDataStream(new Background(UNUSED_BACKGROUND, sampleRate));
 
             var samples = new List<IMeasurement> { new Measurement(1, "V"), new Measurement(2, "V"), new Measurement(3, "V") };
 
             var data = new OutputData(samples,
                                       sampleRate, true);
 
-            e.Stimuli[dev1] = new RenderedStimulus((string) "ID1",
+            var e = new Epoch(UNUSED_PROTOCOL);
+
+            e.Stimuli[dev] = new RenderedStimulus((string) "ID1",
                                                    (IDictionary<string, object>) new Dictionary<string, object>(),
                                                    (IOutputData) data);
-            e.Responses[dev1] = new Response();
+            e.Responses[dev] = new Response();
 
-            c.SetCurrentEpoch(e);
-            c.PushInputData(dev1, new InputData(samples.Concat(samples).ToList(),
-                sampleRate,
-                DateTimeOffset.Now)
-                .DataWithStreamConfiguration(streamFake, new Dictionary<string, object>())
-                .DataWithExternalDeviceConfiguration(devFake, new Dictionary<string, object>()));
+            bool pushed = false;
+            daq.Started += (evt, args) =>
+            {
+                c.PullOutputData(dev, data.Duration);
+                c.PushInputData(dev, new InputData(samples.Concat(samples).ToList(),
+                                                   sampleRate,
+                                                   DateTimeOffset.Now)
+                                         .DataWithStreamConfiguration(streamFake, new Dictionary<string, object>())
+                                         .DataWithExternalDeviceConfiguration(devFake, new Dictionary<string, object>()));
+                pushed = true;
+            };
 
-            Assert.That(((TimeSpan)e.Responses[dev1].Duration), Is.EqualTo((TimeSpan)e.Duration));
+            c.EnqueueEpoch(e);
+            c.StartAsync(null);
+
+            while (!pushed) { }
+
+            Assert.That(((TimeSpan)e.Responses[dev].Duration), Is.EqualTo((TimeSpan)e.Duration));
         }
 
         [Test]
-        [Ignore("NextEpoch requires the controller to be running")]
+        [Ignore("Allowing NextEpoch is sort of a mess. We may re-implement this later.")]
         public void NexEpochShouldDequeueEpoch()
         {
             var c = new Controller();
@@ -643,15 +833,15 @@ namespace Symphony.Core
 
             c.EnqueueEpoch(e);
 
-            Assert.That(c.CurrentEpoch, Is.Null);
+            //Assert.That(c.CurrentEpoch, Is.Null);
 
-            c.NextEpoch();
+            //c.NextEpoch();
 
-            Assert.That(c.CurrentEpoch, Is.EqualTo(e));
+            //Assert.That(c.CurrentEpoch, Is.EqualTo(e));
         }
 
         [Test]
-        [Ignore("NextEpoch requires the controller to be running")]
+        [Ignore("Allowing NextEpoch is sort of a mess. We may re-implement this later.")]
         public void NextEpochThrowsIfCannotDequeue()
         {
             var c = new Controller();
@@ -673,9 +863,9 @@ namespace Symphony.Core
 
             c.EnqueueEpoch(e);
 
-            c.NextEpoch();
+            //c.NextEpoch();
 
-            Assert.Throws<SymphonyControllerException>(() => c.NextEpoch());
+            //Assert.Throws<SymphonyControllerException>(() => c.NextEpoch());
         }
 
         [Test]
@@ -705,22 +895,18 @@ namespace Symphony.Core
 
         }
 
-        class SingleEpochController : Controller
-        {
-            public void SetCurrentEpoch(Epoch e)
-            {
-                typeof(Controller).GetProperty("CurrentEpoch").SetValue(this, e, null);
-            }
-        }
-
-        [Test]
+        [Test, Timeout(2000)]
         public void PushesDataToEpoch()
         {
             const string UNUSED_NAME = "UNUSED";
 
-            var c = new SingleEpochController();
-            var dev = new UnitConvertingExternalDevice(UNUSED_NAME, UNUSED_DEVICE_MANUFACTURER, UNUSED_BACKGROUND);
-            c.AddDevice(dev);
+            var daq = new SimpleDAQController();
+            var c = new NonValidatingController { DAQController = daq };
+            var dev = new UnitConvertingExternalDevice(UNUSED_NAME, UNUSED_DEVICE_MANUFACTURER, c, UNUSED_BACKGROUND);
+            var outStream = new DAQOutputStream("out");
+            var inStream = new DAQInputStream("in");
+
+            dev.BindStream(outStream).BindStream(inStream);
 
             var srate = new Measurement(100, "Hz");
             var samples = Enumerable.Range(0, 100).Select(i => new Measurement(1, "V")).ToList();
@@ -730,75 +916,24 @@ namespace Symphony.Core
 
             e.Stimuli[dev] = new RenderedStimulus((string) "ID1", (IDictionary<string, object>) new Dictionary<string, object>(), (IOutputData) new OutputData(samples, srate, false));
 
-            c.SetCurrentEpoch(e);
+            var data = new InputData(samples, srate, DateTimeOffset.Now).DataWithStreamConfiguration(inStream, new Dictionary<string, object>());
+            bool pushed = false;
 
-            var streamFake = new DAQInputStream("StreamFake");
+            daq.Started += (evt, args) =>
+                {
+                    c.PushInputData(dev, data);
+                    pushed = true;
+                };
 
-            var data = new InputData(samples, srate, DateTimeOffset.Now)
-                .DataWithStreamConfiguration(streamFake, new Dictionary<string, object>());
+            c.EnqueueEpoch(e);
+            c.StartAsync(null);
 
-            c.PushInputData(dev, data);
+            while (!pushed) { }
 
             Assert.That(e.Responses[dev].Data, Is.EqualTo(data.Data));
             Assert.That(e.Responses[dev].InputTime, Is.EqualTo(data.InputTime));
             Assert.That(e.Responses[dev].DataConfigurationSpans.First().Nodes.First(),
-                Is.EqualTo(data.NodeConfigurationWithName(streamFake.Name)));
-        }
-
-        [Test]
-        public void PushesStimulusConfigurationSpansToEpoch()
-        {
-            const string UNUSED_NAME = "UNUSED";
-
-            var c = new SingleEpochController();
-            var dev = new UnitConvertingExternalDevice(UNUSED_NAME, UNUSED_DEVICE_MANUFACTURER, UNUSED_BACKGROUND);
-
-            var outputTime = DateTimeOffset.Now;
-            var configuration = new List<IPipelineNodeConfiguration>();
-            var config = new Dictionary<string, object>();
-            config["key"] = "value";
-
-            configuration.Add(new PipelineNodeConfiguration(UNUSED_NAME, config));
-
-            var epochMock = new Mock<Epoch>("test-epoch");
-            epochMock.Setup(epoch => epoch.DidOutputData(dev, outputTime, TimeSpan.FromSeconds(0.1), configuration)).AtMostOnce();
-            epochMock.Setup(epoch => epoch.IsComplete).Returns(false);
-
-
-            c.SetCurrentEpoch(epochMock.Object);
-
-
-            c.DidOutputData(dev, outputTime, TimeSpan.FromSeconds(0.1), configuration);
-
-            epochMock.Verify(epoch => epoch.DidOutputData(dev, outputTime, TimeSpan.FromSeconds(0.1), configuration));
-        }
-
-        [Test]
-        public void DoesNotPushStimulusConfigurationSpansToCompletedEpochs()
-        {
-            const string UNUSED_NAME = "UNUSED";
-
-            var c = new SingleEpochController();
-            var dev = new UnitConvertingExternalDevice(UNUSED_NAME, UNUSED_DEVICE_MANUFACTURER, UNUSED_BACKGROUND);
-
-            var outputTime = DateTimeOffset.Now;
-            var configuration = new List<IPipelineNodeConfiguration>();
-            var config = new Dictionary<string, object>();
-            config["key"] = "value";
-
-            configuration.Add(new PipelineNodeConfiguration(UNUSED_NAME, config));
-
-            var epochMock = new Mock<Epoch>("test-epoch");
-            epochMock.Setup(epoch => epoch.DidOutputData(dev, outputTime, TimeSpan.FromSeconds(0.1), configuration));
-            epochMock.Setup(epoch => epoch.IsComplete).Returns(true);
-
-
-            c.SetCurrentEpoch(epochMock.Object);
-
-
-            c.DidOutputData(dev, outputTime, TimeSpan.FromSeconds(0.1), configuration);
-
-            epochMock.Verify(epoch => epoch.DidOutputData(dev, outputTime, TimeSpan.FromSeconds(0.1), configuration), Times.AtMost(0));
+                Is.EqualTo(data.NodeConfigurationWithName(inStream.Name)));
         }
 
         [Test, Timeout(5000)]
@@ -810,23 +945,32 @@ namespace Symphony.Core
             c.DAQController = new TestDAQController();
             c.Clock = c.DAQController as IClock;
 
+            Converters.Register("V", "V",
+                // just an identity conversion for now, to pass Validate()
+                    (IMeasurement m) => m);
 
             c.DiscardedEpoch += (co, args) => Assert.Fail("Run failed");
 
-            var dev = new UnitConvertingExternalDevice(UNUSED_DEVICE_NAME, UNUSED_DEVICE_MANUFACTURER, UNUSED_BACKGROUND)
+            var srate = new Measurement(10, "Hz");
+
+            var dev = new UnitConvertingExternalDevice(UNUSED_DEVICE_NAME, UNUSED_DEVICE_MANUFACTURER, c, UNUSED_BACKGROUND)
             {
-                Controller = c,
-                MeasurementConversionTarget = "V"
+                Clock = c.Clock,
+                MeasurementConversionTarget = "V",
+                OutputSampleRate = srate,
+                InputSampleRate = srate
             };
 
-            var outStream = new DAQOutputStream("outStream") { MeasurementConversionTarget = "V" };
+            var back = new Background(UNUSED_BACKGROUND, srate);
+            c.BackgroundDataStreams.Add(dev, new BackgroundOutputDataStream(back));
 
-            var inStream = new DAQInputStream("inStream") { MeasurementConversionTarget = "V" };
+            var outStream = new DAQOutputStream("outStream") { MeasurementConversionTarget = "V", Clock = c.Clock };
+
+            var inStream = new DAQInputStream("inStream") { MeasurementConversionTarget = "V", Clock = c.Clock };
 
             (c.DAQController as IMutableDAQController).AddStream(outStream);
             (c.DAQController as IMutableDAQController).AddStream(inStream);
 
-            var srate = new Measurement(10, "Hz");
             outStream.SampleRate = srate;
             inStream.SampleRate = srate;
 
@@ -843,17 +987,16 @@ namespace Symphony.Core
                                                   (IDictionary<string, object>) new Dictionary<string, object>(),
                                                   (IOutputData) data);
             e.Responses[dev] = new Response();
-            e.Background[dev] = new Epoch.EpochBackground(new Measurement(0, "V"), srate);
 
             ((TestDAQController)c.DAQController).AddStreamMapping(outStream, inStream);
 
             c.RunEpoch(e, null);
-
-
+            
             Assert.Pass();
         }
 
         [Test]
+        [Ignore("Allowing NextEpoch is sort of a mess. We may re-implement this later.")]
         public void NextEpochShouldFireNextEpochEvent()
         {
             var c = new Controller();
@@ -877,16 +1020,16 @@ namespace Symphony.Core
             c.EnqueueEpoch(e);
 
             bool evt = false;
-            c.NextEpochRequested += (sender, args) => evt = true;
+            //c.NextEpochRequested += (sender, args) => evt = true;
 
-            c.NextEpoch();
+            //c.NextEpoch();
 
             Assert.True(evt);
         }
 
         [Test]
         [Timeout(5 * 1000)]
-        public void RunEpochShouldDiscardEpochWhenCancelEpochCalled()
+        public void RunEpochShouldDiscardEpochWhenRequestStopCalled()
         {
             Converters.Register("V", "V",
                 // just an identity conversion for now, to pass Validate()
@@ -895,21 +1038,30 @@ namespace Symphony.Core
             var c = new Controller { DAQController = new SimpleDAQController2() };
             c.DAQController.Clock = c.DAQController as IClock;
 
-            var e = new Epoch(UNUSED_PROTOCOL);
-            var dev1 = new UnitConvertingExternalDevice("dev1", "co", c, new Measurement(0, "V"))
-                           {
-                               MeasurementConversionTarget = "V",
-                               Clock = c.Clock
-                           };
-
             var sampleRate = new Measurement(1, "Hz");
 
-            e.Stimuli[dev1] = new DelegatedStimulus("ID1", "units", new Dictionary<string, object>(),
+            var e = new Epoch(UNUSED_PROTOCOL);
+            var dev1 = new UnitConvertingExternalDevice("dev1", "co", c, new Measurement(0, "V"))
+                {
+                    MeasurementConversionTarget = "V",
+                    Clock = c.Clock,
+                    OutputSampleRate = sampleRate
+                };
+            var outStream = new DAQOutputStream("out")
+                {
+                    MeasurementConversionTarget = "V",
+                    Clock = c.Clock
+                };
+            dev1.BindStream(outStream);
+
+            var back = new Background(UNUSED_BACKGROUND, sampleRate);
+            c.BackgroundDataStreams[dev1] = new BackgroundOutputDataStream(back);
+
+            e.Stimuli[dev1] = new DelegatedStimulus("ID1", "units", sampleRate, new Dictionary<string, object>(),
                                                     (parameters, duration) =>
                                                     new OutputData(new List<IMeasurement>(), sampleRate, false),
                                                     objects => Option<TimeSpan>.None());
-
-
+            
             bool epochDiscarded = false;
             c.DiscardedEpoch += (sender, args) =>
                                     {
@@ -920,7 +1072,7 @@ namespace Symphony.Core
             c.DAQController.ProcessIteration += (o, eventArgs) =>
                                        {
                                            Console.WriteLine("Process iteration");
-                                           c.CancelRun();
+                                           c.RequestStop();
                                        };
 
             c.RunEpoch(e, new FakeEpochPersistor());
@@ -933,23 +1085,42 @@ namespace Symphony.Core
         {
             var c = new Controller();
             
-            var daq = new DynamicMock(typeof (IDAQController));
-            daq.Expect("Start", true);
-            c.DAQController = daq.MockInstance as IDAQController;
+            var daq = new SimpleDAQController();
+            daq.Clock = new SystemClock();
+
+            c.DAQController = daq;
 
             var e = new Epoch(UNUSED_PROTOCOL) { WaitForTrigger = true };
 
+            new TaskFactory().StartNew(() =>
+            {
+                Thread.Sleep(TimeSpan.FromSeconds(1));
+                c.RequestStop();
+            },
+            TaskCreationOptions.LongRunning);
+
             c.RunEpoch(e, new FakeEpochPersistor());
 
-            daq.Verify();
+            Assert.IsTrue(daq.WaitedForTrigger);
         }
 
-    }
+        class NonValidatingController : Controller
+        {
+            protected override Maybe<string> ValidateEpoch(Epoch epoch)
+            {
+                return Maybe<string>.Yes();
+            }
 
+            public override Maybe<string> Validate()
+            {
+                return Maybe<string>.Yes();
+            }
+        }
+    }
 
     class SimpleDAQController : DAQControllerBase, IClock, IMutableDAQController
     {
-        public SimpleDAQController()
+        public SimpleDAQController() : this(new IDAQStream[] {})
         {
         }
         public SimpleDAQController(IDAQStream[] streams)
@@ -960,16 +1131,18 @@ namespace Symphony.Core
             }
 
             BackgroundSet = false;
+            WaitedForTrigger = false;
+            ProcessInterval = TimeSpan.FromSeconds(0.25);
         }
 
         public void SetRunning(bool runnig)
         {
-            Running = runnig;
+            IsRunning = runnig;
         }
 
         protected override void StartHardware(bool wait)
         {
-            //pass
+            WaitedForTrigger = wait;
         }
 
         public IMeasurement AsyncBackground { get; set; }
@@ -979,7 +1152,7 @@ namespace Symphony.Core
             AsyncBackground = background;
         }
 
-        protected override IDictionary<IDAQInputStream, IInputData> ProcessLoopIteration(IDictionary<IDAQOutputStream, IOutputData> outData, TimeSpan deficit)
+        protected override IDictionary<IDAQInputStream, IInputData> ProcessLoopIteration(IDictionary<IDAQOutputStream, IOutputData> outData, TimeSpan deficit, CancellationToken token)
         {
             return new Dictionary<IDAQInputStream, IInputData>();
         }
@@ -989,13 +1162,18 @@ namespace Symphony.Core
             BackgroundSet = true;
         }
 
-
         public bool BackgroundSet { get; set; }
+        public bool WaitedForTrigger { get; set; }
 
         public DateTimeOffset Now { get { return DateTimeOffset.Now; } }
         public void AddStream(IDAQStream stream)
         {
             DAQStreams.Add(stream);
+        }
+
+        protected override bool ShouldStop()
+        {
+            return IsStopRequested;
         }
     }
 
@@ -1003,21 +1181,21 @@ namespace Symphony.Core
     {
         protected override bool ShouldStop()
         {
-            return StopRequested;
+            return IsStopRequested;
         }
     }
 
     class ExceptionThrowingDAQController : SimpleDAQController, IClock
     {
 
-        protected override IDictionary<IDAQInputStream, IInputData> ProcessLoopIteration(IDictionary<IDAQOutputStream, IOutputData> outData, TimeSpan deficit)
+        protected override IDictionary<IDAQInputStream, IInputData> ProcessLoopIteration(IDictionary<IDAQOutputStream, IOutputData> outData, TimeSpan deficit, CancellationToken token)
         {
             throw new Exception("Exception thrown in ProcessLoopIteration");
         }
 
         protected override bool ShouldStop()
         {
-            return StopRequested;
+            return IsStopRequested;
         }
     }
 

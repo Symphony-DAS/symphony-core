@@ -67,7 +67,7 @@ namespace Symphony.Core
             ArgumentException caught = null;
             try
             {
-                t.Samples(new Measurement(0, "hz"));
+                t.Samples(new Measurement(0, "Hz"));
             }
             catch (ArgumentException e)
             {
@@ -85,7 +85,7 @@ namespace Symphony.Core
             ArgumentException caught = null;
             try
             {
-                t.Samples(new Measurement(-1, "hz"));
+                t.Samples(new Measurement(-1, "Hz"));
             }
             catch (ArgumentException e)
             {

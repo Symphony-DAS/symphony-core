@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 using System.Collections.Concurrent;
+using System.Threading;
 using System.Threading.Tasks;
 using log4net;
 
@@ -56,24 +56,27 @@ namespace Symphony.Core
         /// <returns>Stream of given type and name or null if none exists</returns>
         /// <exception cref="InvalidOperationException">More than one stream exists with given name</exception>
         T GetStream<T>(string name) where T : class, IDAQStream;
-
-
+        
         /// <summary>
-        /// Of all Streams assoiated with this DAQController, the IDAQInputStreams
+        /// Of all Streams associated with this DAQController, the IDAQInputStreams
         /// </summary>
         IEnumerable<IDAQInputStream> InputStreams { get; }
 
         /// <summary>
-        /// Of all Streams assoiated with this DAQController, the IDAQOutputStreams
+        /// Of all Streams associated with this DAQController, the IDAQOutputStreams
         /// </summary>
         IEnumerable<IDAQOutputStream> OutputStreams { get; }
-
-
+        
         /// <summary>
         /// Validates the configuration of this IDAQController
         /// </summary>
         /// <returns>A Maybe monad indicating validation (bool) or error (string)</returns>
         Maybe<string> Validate();
+
+        /// <summary>
+        /// The interval this IDAQController attempts to maintain for process iterations.
+        /// </summary>
+        TimeSpan ProcessInterval { get; }
 
         /// <summary>
         /// Event indicating that the DAQController processed a single iteration (typically ProcessInterval in duration)
@@ -172,14 +175,14 @@ namespace Symphony.Core
             this.DAQStreams = new HashSet<IDAQStream>();
             this.Configuration = new Dictionary<string, object>();
             this.InputTasks = new List<Task>();
-
+            this.OutputTasks = new List<Task>();
         }
 
 
         /// <summary>
         /// Flag indicating whether or not the represented hardware device is running
         /// </summary>
-        public virtual bool Running { get; protected set; }
+        public virtual bool IsRunning { get; protected set; }
 
         protected IEnumerable<IDAQOutputStream> ActiveOutputStreamsWithData
         {
@@ -225,10 +228,10 @@ namespace Symphony.Core
         /// is a NOP.</remarks>
         public virtual void Start(bool waitForTrigger)
         {
-            if (!Running)
+            if (!IsRunning)
             {
-                Running = true;
-                StopRequested = false;
+                IsRunning = true;
+                IsStopRequested = false;
                 OnStarted();
 
                 Process(waitForTrigger);
@@ -240,8 +243,8 @@ namespace Symphony.Core
         /// 
         /// Will be called before Process() loop begins.
         /// 
-        /// Subclasses should immediately (synchronously) start the hardware device or block,
-        /// waiting for trigger if waitForTrigger is true.
+        /// Subclasses should immediately (synchronously) start the hardware device. They should not block if indicated 
+        /// to wait for trigger. They should only block in ProcessLoopIteration, which is a cancellable operation.
         /// </summary>
         /// <param name="waitForTrigger">Indicates whether the hardware device should wait for a trigger to start</param>
         protected abstract void StartHardware(bool waitForTrigger);
@@ -271,8 +274,10 @@ namespace Symphony.Core
             }
             finally
             {
-                if (Running)
+                if (IsRunning)
+                {
                     Stop();
+                }
 
                 DidEndProcessLoop();
             }
@@ -289,71 +294,85 @@ namespace Symphony.Core
 
         private void ProcessLoop(bool waitForTrigger)
         {
-
             TimeSpan deficit = TimeSpan.Zero;
 
             // Pull outgoing data
             var outgoingDataTasks = NextOutgoingData();
             bool start = true;
 
-
             var iterationStart = DateTimeOffset.Now;
 
-            while (Running && !ShouldStop())
+            var cts = new CancellationTokenSource();
+
+            EventHandler<TimeStampedEventArgs> stopRequested = (c, args) =>
             {
-                
-                // Collect outgoing data task results
-                var outgoingData = new Dictionary<IDAQOutputStream, IOutputData>();
-                bool warningShown = false;
-                foreach (KeyValuePair<IDAQOutputStream, Task<IOutputData>> task in outgoingDataTasks)
+                cts.Cancel();
+            };
+
+            try
+            {
+                RequestedStop += stopRequested;
+
+                while (IsRunning && !ShouldStop())
                 {
 
-                    if (task.Value.IsFaulted)
+                    // Collect outgoing data task results
+                    var outgoingData = new Dictionary<IDAQOutputStream, IOutputData>();
+                    bool warningShown = false;
+                    foreach (KeyValuePair<IDAQOutputStream, Task<IOutputData>> task in outgoingDataTasks)
                     {
-                        if (task.Value.Exception != null)
+
+                        if (task.Value.IsFaulted)
                         {
-                            log.ErrorFormat("An error occurred pulling output data: {0}", task.Value.Exception);
-                            throw task.Value.Exception;
+                            if (task.Value.Exception != null)
+                            {
+                                log.ErrorFormat("An error occurred pulling output data: {0}", task.Value.Exception);
+                                throw task.Value.Exception;
+                            }
                         }
-                    }  
 
-                    if (!task.Value.IsCompleted && !start && !warningShown)
-                    {
-                        log.Debug("At least one DAQ output task has not completed. This may cause an output underrun.");
-                        warningShown = true;
+                        if (!task.Value.IsCompleted && !start && !warningShown)
+                        {
+                            log.Debug("At least one DAQ output task has not completed. This may cause an output underrun.");
+                            warningShown = true;
+                        }
+
+                        outgoingData.Add(task.Key, task.Value.Result);
                     }
- 
-                    outgoingData.Add(task.Key, task.Value.Result);
+
+
+                    // Pull next outgoing data
+                    outgoingDataTasks = NextOutgoingData();
+
+                    // Start hardware on first iteration
+                    if (start)
+                    {
+                        StartHardware(waitForTrigger);
+                        OnStartedHardware();
+                        start = false;
+                    }
+
+                    // Run iteration
+                    var outputTime = Clock.Now;
+                    var incomingData = ProcessLoopIteration(outgoingData, deficit, cts.Token);
+
+                    // Push Output events
+                    PushOutputDataEvents(outputTime, outgoingData);
+
+                    // Push Data
+                    PushIncomingData(incomingData);
+
+                    OnProcessIteration();
+
+                    //Wait for rest of the process interval
+                    deficit = SleepForRestOfIteration(iterationStart, ProcessInterval);
+
+                    iterationStart += ProcessInterval;
                 }
-
-
-                // Pull next outgoing data
-                outgoingDataTasks = NextOutgoingData();
-
-                // Start hardware on first iteration
-                if (start)
-                {
-                    StartHardware(waitForTrigger);
-                    start = false;
-                }
-
-                // Run iteration
-                var outputTime = Clock.Now;
-                var incomingData = ProcessLoopIteration(outgoingData, deficit);
-
-                // Push Data
-                PushIncomingData(incomingData);
-
-                // Push Output events
-                PushOutputDataEvents(outputTime, outgoingData);
-
-
-                OnProcessIteration();
-
-                //Wait for rest of the process interval
-                deficit = SleepForRestOfIteration(iterationStart, ProcessInterval);
-
-                iterationStart += ProcessInterval;
+            }
+            finally
+            {
+                RequestedStop -= stopRequested;
             }
         }
 
@@ -388,12 +407,12 @@ namespace Symphony.Core
                                                                      }
                                                                  })
                               : Task.Factory.StartNew(() =>
-                                                          {
-                                                              foreach (var kvp in incomingData)
-                                                              {
-                                                                  kvp.Key.PushInputData(kvp.Value);
-                                                              }
-                                                          });
+                                      {
+                                          foreach (var kvp in incomingData)
+                                          {
+                                              kvp.Key.PushInputData(kvp.Value);
+                                          }
+                                      });
 
 
 
@@ -413,7 +432,7 @@ namespace Symphony.Core
                 throw new DAQException("Output stream does not use this DAQ controller.");
             }
 
-            if(Running && !StopRequested)
+            if(IsRunning && !IsStopRequested)
             {
                 throw new DAQException("Attempted to set background on running stream");
             }
@@ -452,18 +471,25 @@ namespace Symphony.Core
                                      }
                                  });
 
-            if (exceptions.Count() > 0) throw new AggregateException(exceptions);
+            if (exceptions.Any()) throw new AggregateException(exceptions);
         }
+
+        private IList<Task> OutputTasks { get; set; } 
 
         private IEnumerable<KeyValuePair<IDAQOutputStream, Task<IOutputData>>> NextOutgoingData()
         {
-            var outgoingData = ActiveOutputStreams.ToDictionary(
-                s => s,
-                s => Task.Factory.StartNew(
-                    () => NextOutputDataForStream(s),
-                    TaskCreationOptions.PreferFairness
-                    )
-                );
+            var outgoingData = new Dictionary<IDAQOutputStream, Task<IOutputData>>();
+
+            foreach (var stream in ActiveOutputStreamsWithData)
+            {
+                var s = stream;
+                var newTask = Task.Factory.StartNew(() => NextOutputDataForStream(s), TaskCreationOptions.PreferFairness);
+                outgoingData.Add(s, newTask);
+                
+                OutputTasks.Add(newTask);
+            }
+
+            OutputTasks = OutputTasks.Where(t => !t.IsCompleted).ToList();
 
             return outgoingData;
         }
@@ -481,10 +507,10 @@ namespace Symphony.Core
         /// <returns>true if the DAQController should stop (e.g. data exausted)</returns>
         protected virtual bool ShouldStop()
         {
-            return (ActiveOutputStreamsWithData.Count() == 0 || StopRequested);
+            return (!ActiveOutputStreamsWithData.Any() || IsStopRequested);
         }
 
-        protected bool StopRequested { get; private set; }
+        protected bool IsStopRequested { get; private set; }
 
         private void OnProcessIteration()
         {
@@ -506,6 +532,26 @@ namespace Symphony.Core
             }
         }
 
+        private void OnStartedHardware()
+        {
+            lock (eventLock)
+            {
+                var evt = StartedHardware;
+                if (evt != null)
+                    evt(this, new TimeStampedEventArgs(Clock));
+            }
+        }
+
+        private void OnRequestedStop()
+        {
+            lock (eventLock)
+            {
+                var evt = RequestedStop;
+                if (evt != null)
+                    evt(this, new TimeStampedEventArgs(Clock));
+            }
+        }
+
         private void OnStimulusOutput(DateTimeOffset time, IDAQOutputStream stream, IIOData data)
         {
             lock(eventLock)
@@ -516,7 +562,7 @@ namespace Symphony.Core
             }
         }
 
-        protected abstract IDictionary<IDAQInputStream, IInputData> ProcessLoopIteration(IDictionary<IDAQOutputStream, IOutputData> outData, TimeSpan deficit);
+        protected abstract IDictionary<IDAQInputStream, IInputData> ProcessLoopIteration(IDictionary<IDAQOutputStream, IOutputData> outData, TimeSpan deficit, CancellationToken token);
 
         /// <summary>
         /// Stops this DAQController. This method blocks until the DAQ hardware stops.
@@ -527,7 +573,7 @@ namespace Symphony.Core
             OnStopped();
             CommonStop();
 
-            Running = false;
+            IsRunning = false;
         }
 
         public event EventHandler<TimeStampedStimulusOutputEventArgs> StimulusOutput;
@@ -537,14 +583,17 @@ namespace Symphony.Core
         /// </summary>
         public void RequestStop()
         {
-            StopRequested = true;
+            IsStopRequested = true;
+            OnRequestedStop();
         }
-
-
+        
         protected virtual void CommonStop()
-        {
-            //OutputTaskCTS.Cancel();
+        {           
             RequestStop();
+
+            //OutputTaskCTS.Cancel();
+            Task.WaitAll(OutputTasks.ToArray());
+
             SetStreamsBackground();
         }
 
@@ -565,7 +614,7 @@ namespace Symphony.Core
 
         protected virtual void StopWithException(Exception e)
         {
-            Running = false;
+            IsRunning = false;
             OnExceptionalStop(e);
             CommonStop();
         }
@@ -705,6 +754,14 @@ namespace Symphony.Core
         /// gets fired after the Thread has started)
         /// </summary>
         public virtual event EventHandler<TimeStampedEventArgs> Started;
+        /// <summary>
+        /// Fired after the DAQController starts the DAQ hardware.
+        /// </summary>
+        public virtual event EventHandler<TimeStampedEventArgs> StartedHardware;
+        /// <summary>
+        /// Fired when the DAQController receives a RequestStop() request.
+        /// </summary>
+        public virtual event EventHandler<TimeStampedEventArgs> RequestedStop;
         /// <summary>
         /// Fires when the ThreadedDAQController is told to stop (meaning this event is fired
         /// after the Thread has been successfully stopped, and is NOT fired if the thread is not

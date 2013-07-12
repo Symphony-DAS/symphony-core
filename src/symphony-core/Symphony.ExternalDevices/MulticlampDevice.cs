@@ -60,7 +60,7 @@ namespace Symphony.ExternalDevices
                                                    {
                                                        OutputParameters[mdArgs.TimeStamp.ToUniversalTime()] = mdArgs;
 
-                                                       foreach (var outputStream in Streams.Values.OfType<IDAQOutputStream>().Where(s => s.DAQ != null && s.DAQ.Running == false).ToList())
+                                                       foreach (var outputStream in Streams.Values.OfType<IDAQOutputStream>().Where(s => s.DAQ != null && s.DAQ.IsRunning == false).ToList())
                                                        {
                                                            log.DebugFormat("Setting new background for stream {0}", outputStream.Name);
                                                            outputStream.ApplyBackground();
@@ -602,8 +602,6 @@ namespace Symphony.ExternalDevices
             try
             {
                 //TODO should raise exception if duration is less than one sample
-                IOutputData data = this.Controller.PullOutputData(this, duration);
-
 
                 var deviceParameters = DeviceParametersForOutput(Clock.Now.UtcDateTime).Data;
                 var config = MergeDeviceParametersIntoConfiguration(Configuration, deviceParameters);
@@ -611,6 +609,8 @@ namespace Symphony.ExternalDevices
                 log.DebugFormat("Pulling OutputData with parameters {0} (units {1})",
                                 config,
                                 UnitsForScaleFactorUnits(deviceParameters.ScaleFactorUnits));
+
+                IOutputData data = this.Controller.PullOutputData(this, duration);
 
                 return data.DataWithConversion(m => ConvertOutput(m, deviceParameters))
                     .DataWithExternalDeviceConfiguration(this, config);
@@ -791,7 +791,7 @@ namespace Symphony.ExternalDevices
         /// </summary>
         /// <param name="operatingMode">Device operating mode</param>
         /// <returns>Background Measurement for the given mode.</returns>
-        public IMeasurement BackgroudForMode(MultiClampInterop.OperatingMode operatingMode)
+        public IMeasurement BackgroundForMode(MultiClampInterop.OperatingMode operatingMode)
         {
             return Backgrounds[operatingMode];
         }

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 
 namespace Symphony.Core
 {
@@ -69,6 +70,14 @@ namespace Symphony.Core
             }
 
             InputData[stream].Add(inData);
+        }
+
+        public override void DidOutputData(IDAQOutputStream stream, DateTimeOffset outputTime, TimeSpan duration, IEnumerable<IPipelineNodeConfiguration> configuration)
+        {
+            if (Controller != null)
+            {
+                base.DidOutputData(stream, outputTime, duration, configuration);
+            }
         }
     }
 
@@ -143,7 +152,7 @@ namespace Symphony.Core
             throw new NotImplementedException();
         }
 
-        protected override IDictionary<IDAQInputStream, IInputData> ProcessLoopIteration(IDictionary<IDAQOutputStream, IOutputData> outData, TimeSpan deficit)
+        protected override IDictionary<IDAQInputStream, IInputData> ProcessLoopIteration(IDictionary<IDAQOutputStream, IOutputData> outData, TimeSpan deficit, CancellationToken token)
         {
             var result = new Dictionary<IDAQInputStream, IInputData>();
 
