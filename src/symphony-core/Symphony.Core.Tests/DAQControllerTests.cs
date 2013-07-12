@@ -119,8 +119,9 @@ namespace Symphony.Core
                                         Assert.That(args.Data != null);
                                         Assert.That(args.Data.Configuration.Count() > 0);
                                         fired = true;
+
+                                        ((IDAQController) daq).RequestStop();
                                     };
-            c.ProcessIteration += (daq, args) => ((IDAQController) daq).RequestStop();
 
             c.AddStreamMapping(outStream, inStream);
 
@@ -131,7 +132,7 @@ namespace Symphony.Core
                 Thread.Sleep(1);
             }
 
-            Assert.That(fired, Is.True.After(1000,10));
+            Assert.That(fired, Is.True);
         }
 
 
