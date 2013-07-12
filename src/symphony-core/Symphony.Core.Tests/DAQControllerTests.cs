@@ -81,6 +81,7 @@ namespace Symphony.Core
         }
 
         [Test]
+        [Timeout(5000)]
         public void FiresStimulusOutputEvents()
         {
             var c = new TestDAQController();
@@ -125,7 +126,10 @@ namespace Symphony.Core
 
             c.Start(false);
 
-            while (c.IsRunning) ;
+            while (c.IsRunning)
+            {
+                Thread.Sleep(1);
+            }
 
             Assert.That(fired, Is.True.After(1000,10));
         }

@@ -370,7 +370,10 @@ namespace IntegrationTests
                         }
                     }
                     
-                    while (controller.IsRunning) { }
+                    while (controller.IsRunning)
+                    {
+                        Thread.Sleep(1);
+                    }
 
                     controller.WaitForCompletedEpochTasks();
                     var stopTime = controller.Clock.Now;
