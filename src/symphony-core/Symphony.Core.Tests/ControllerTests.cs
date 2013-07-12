@@ -19,6 +19,7 @@ namespace Symphony.Core
         Measurement UNUSED_BACKGROUND = new Measurement(0, "V");
         
         [Test]
+        [Timeout(1000)]
         public void PullOutputDataShouldReturnBackgroundStreamWithNoRemainingEpochs()
         {
             var daq = new SimpleDAQController();
@@ -47,12 +48,17 @@ namespace Symphony.Core
                 pull1 = c.PullOutputData(dev, dur);
                 pull2 = c.PullOutputData(dev, dur);
                 pulled = true;
+
+                c.RequestStop();
             };
             
             c.EnqueueEpoch(e);
             c.StartAsync(null);
 
-            while (!pulled) { }
+            while (!pulled)
+            {
+                Thread.Sleep(1);
+            }
 
             var expected = Enumerable.Repeat(background.Value, samples).ToList();
 
@@ -306,12 +312,17 @@ namespace Symphony.Core
                 pull2 = c.PullOutputData(dev, d1);
                 pull3 = c.PullOutputData(dev, d1);
                 pulled = true;
+
+                c.RequestStop();
             };
 
             c.EnqueueEpoch(e);
             c.StartAsync(null);
 
-            while (!pulled) { }
+            while (!pulled)
+            {
+                Thread.Sleep(1);
+            }
 
             var samples = (int)d1.Samples(new Measurement(srate, "Hz"));
             Assert.AreEqual(data.Take(samples).ToList(),
@@ -585,12 +596,17 @@ namespace Symphony.Core
                 out1 = c.PullOutputData(dev1, e.Duration);
                 out2 = c.PullOutputData(dev2, e.Duration);
                 pulled = true;
+
+                c.RequestStop();
             };
 
             c.EnqueueEpoch(e);
             c.StartAsync(null);
 
-            while (!pulled) { }
+            while (!pulled)
+            {
+                Thread.Sleep(1);
+            }
 
             Assert.NotNull(out1);
 
@@ -724,7 +740,10 @@ namespace Symphony.Core
             c.EnqueueEpoch(e);
             c.StartAsync(null);
 
-            while (!started) { }
+            while (!started)
+            {
+                Thread.Sleep(1);
+            }
 
             Assert.That(() => c.RunEpoch(e, new FakeEpochPersistor()), Throws.Exception.TypeOf<SymphonyControllerException>());
         }
@@ -762,6 +781,7 @@ namespace Symphony.Core
         private readonly IDAQStream streamFake = new DAQOutputStream("StreamFake");
 
         [Test]
+        [Timeout(5000)]
         public void ShouldTruncateResponseAtEpochBoundary()
         {
             Converters.Register("V", "V",
@@ -800,12 +820,17 @@ namespace Symphony.Core
                                          .DataWithStreamConfiguration(streamFake, new Dictionary<string, object>())
                                          .DataWithExternalDeviceConfiguration(devFake, new Dictionary<string, object>()));
                 pushed = true;
+
+                c.RequestStop();
             };
 
             c.EnqueueEpoch(e);
             c.StartAsync(null);
 
-            while (!pushed) { }
+            while (!pushed)
+            {
+                Thread.Sleep(1);
+            }
 
             Assert.That(((TimeSpan)e.Responses[dev].Duration), Is.EqualTo((TimeSpan)e.Duration));
         }
@@ -923,12 +948,17 @@ namespace Symphony.Core
                 {
                     c.PushInputData(dev, data);
                     pushed = true;
+
+                    c.RequestStop();
                 };
 
             c.EnqueueEpoch(e);
             c.StartAsync(null);
 
-            while (!pushed) { }
+            while (!pushed)
+            {
+                Thread.Sleep(1);
+            }
 
             Assert.That(e.Responses[dev].Data, Is.EqualTo(data.Data));
             Assert.That(e.Responses[dev].InputTime, Is.EqualTo(data.InputTime));
