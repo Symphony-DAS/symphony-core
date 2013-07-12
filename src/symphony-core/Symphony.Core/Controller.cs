@@ -815,7 +815,11 @@ namespace Symphony.Core
                     {
                         log.DebugFormat("Completed Epoch: {0}", currentEpoch.ProtocolID);
 
-                        var completeTask = Task.Factory.StartNew(() => OnCompletedEpoch(currentEpoch),
+                        Epoch completedEpoch;
+                        if (!incompleteEpochs.TryDequeue(out completedEpoch) || completedEpoch != currentEpoch)
+                            throw new SymphonyControllerException("Failed to dequeue completed epoch");
+
+                        var completeTask = Task.Factory.StartNew(() => OnCompletedEpoch(completedEpoch),
                                                                  CancellationToken.None,
                                                                  TaskCreationOptions.None,
                                                                  CompletedEpochTaskScheduler);
@@ -823,12 +827,12 @@ namespace Symphony.Core
                         CompletedEpochTasks = CompletedEpochTasks.Where(t => !t.IsCompleted).ToList();
                         CompletedEpochTasks.Add(completeTask);
 
-                        if (persistor != null && currentEpoch.ShouldBePersisted)
+                        if (persistor != null && completedEpoch.ShouldBePersisted)
                         {
                             var persistTask = Task.Factory.StartNew(() =>
                                 {
-                                    log.DebugFormat("Saving completed Epoch ({0})...", currentEpoch.StartTime);
-                                    SaveEpoch(persistor, currentEpoch);
+                                    log.DebugFormat("Saving completed Epoch ({0})...", completedEpoch.StartTime);
+                                    SaveEpoch(persistor, completedEpoch);
                                 },
                                 cancellationToken,
                                 TaskCreationOptions.PreferFairness,
@@ -848,10 +852,6 @@ namespace Symphony.Core
                             PersistEpochTasks = PersistEpochTasks.Where(t => !t.IsCompleted).ToList();
                             PersistEpochTasks.Add(persistTask);
                         }
-
-                        Epoch completedEpoch;
-                        if (!incompleteEpochs.TryDequeue(out completedEpoch) || completedEpoch != currentEpoch)
-                            throw new SymphonyControllerException("Failed to dequeue completed epoch");
 
                         if (incompleteEpochs.IsEmpty)
                         {
