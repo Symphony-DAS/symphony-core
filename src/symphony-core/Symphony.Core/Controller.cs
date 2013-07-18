@@ -34,8 +34,6 @@ namespace Symphony.Core
     /// </summary>
     public class Controller : ITimelineProducer
     {
-        private readonly object _eventLock = new Object();
-
         /// <summary>
         /// Construct a Controller object and input/ouput pipeline from the configuration file at
         /// the given path.
@@ -264,16 +262,6 @@ namespace Symphony.Core
         public event EventHandler<TimeStampedDeviceDataEventArgs> ReceivedInputData;
 
         /// <summary>
-        /// This controller pulled output data from an output stream.
-        /// </summary>
-        public event EventHandler<TimeStampedDeviceDataStreamEventArgs> PulledOutputData;
-
-        /// <summary>
-        /// This controller pushed input data to an input stream.
-        /// </summary>
-        public event EventHandler<TimeStampedDeviceDataStreamEventArgs> PushedInputData;
-
-        /// <summary>
         /// This controller persisted a completed Epoch.
         /// </summary>
         public event EventHandler<TimeStampedEpochEventArgs> SavedEpoch;
@@ -303,6 +291,16 @@ namespace Symphony.Core
         /// </summary>
         public event EventHandler<TimeStampedEventArgs> Stopped;
 
+        /// <summary>
+        /// This controller pulled output data from an output stream.
+        /// </summary>
+        private event EventHandler<TimeStampedDeviceDataStreamEventArgs> PulledOutputData;
+
+        /// <summary>
+        /// This controller pushed input data to an input stream.
+        /// </summary>
+        private event EventHandler<TimeStampedDeviceDataStreamEventArgs> PushedInputData;
+
         private void OnStarted()
         {
             FireEvent(Started);
@@ -311,16 +309,6 @@ namespace Symphony.Core
         private void OnReceivedInputData(IExternalDevice device, IIOData data)
         {
             FireEvent(ReceivedInputData, device, data);
-        }
-
-        private void OnPulledOutputData(IExternalDevice device, IOutputDataStream stream)
-        {
-            FireEvent(PulledOutputData, device, stream);
-        }
-
-        private void OnPushedInputData(IExternalDevice device, IInputDataStream stream)
-        {
-            FireEvent(PushedInputData, device, stream);
         }
 
         private void OnSavedEpoch(Epoch epoch)
@@ -353,30 +341,44 @@ namespace Symphony.Core
             FireEvent(Stopped);
         }
 
+        private void OnPulledOutputData(IExternalDevice device, IOutputDataStream stream)
+        {
+            FireEvent(PulledOutputData, device, stream, _pullLock);
+        }
+        private readonly object _pullLock = new object();
+
+        private void OnPushedInputData(IExternalDevice device, IInputDataStream stream)
+        {
+            FireEvent(PushedInputData, device, stream, _pushLock);
+        }
+        private readonly object _pushLock = new object();
+
+        private readonly object _eventLock = new object();
+
         private void FireEvent(EventHandler<TimeStampedEpochEventArgs> evt, Epoch epoch)
         {
-            FireEvent(evt, new TimeStampedEpochEventArgs(Clock, epoch));
+            FireEvent(evt, new TimeStampedEpochEventArgs(Clock, epoch), _eventLock);
         }
 
         private void FireEvent(EventHandler<TimeStampedDeviceDataEventArgs> evt, IExternalDevice device, IIOData data)
         {
-            FireEvent(evt, new TimeStampedDeviceDataEventArgs(Clock, device, data));
+            FireEvent(evt, new TimeStampedDeviceDataEventArgs(Clock, device, data), _eventLock);
         }
 
         private void FireEvent(EventHandler<TimeStampedDeviceDataStreamEventArgs> evt, IExternalDevice device,
-                               IIODataStream stream)
+                               IIODataStream stream, object syncLock)
         {
-            FireEvent(evt, new TimeStampedDeviceDataStreamEventArgs(Clock, device, stream));
+            FireEvent(evt, new TimeStampedDeviceDataStreamEventArgs(Clock, device, stream), syncLock);
         }
 
         private void FireEvent(EventHandler<TimeStampedEventArgs> evt)
         {
-            FireEvent(evt, new TimeStampedEventArgs(Clock));
+            FireEvent(evt, new TimeStampedEventArgs(Clock), _eventLock);
         }
 
-        private void FireEvent<T>(EventHandler<T> evt, T args) where T : TimeStampedEventArgs
+        private void FireEvent<T>(EventHandler<T> evt, T args, object syncLock) where T : TimeStampedEventArgs
         {
-            lock (_eventLock)
+            lock (syncLock)
             {
                 if (evt == null) 
                     return;
@@ -392,7 +394,7 @@ namespace Symphony.Core
                 }
             }
         }
-        
+
         /// <summary>
         /// Pulls IOutputData from the output stream for the given device. Result will have 
         /// a duration greater than or equal to the requested duration.
@@ -799,7 +801,6 @@ namespace Symphony.Core
                             {
                                 kv.Value.Add(new NullInputDataStream());
                             }
-
                             log.DebugFormat("Buffered background streams");
                         }
                     }
@@ -860,11 +861,6 @@ namespace Symphony.Core
                     }
                 };
 
-            EventHandler<TimeStampedEventArgs> daqStopped = (daq, args) =>
-                {
-                    DAQController.WaitForInputTasks();
-                };
-
             EventHandler<TimeStampedExceptionEventArgs> daqExceptionalStop = (daq, args) =>
                 {
                     log.Debug("DAQ Controller stopped due to an exception");
@@ -876,7 +872,6 @@ namespace Symphony.Core
                 RequestedStop += stopRequested;
                 PulledOutputData += outputPulled;
                 PushedInputData += inputPushed;
-                DAQController.Stopped += daqStopped;
                 DAQController.ExceptionalStop += daqExceptionalStop;
 
                 while (!IsPauseRequested && !IsStopRequested)
@@ -901,6 +896,8 @@ namespace Symphony.Core
                         incompleteEpochs.Enqueue(epoch);
 
                         DAQController.Start(epoch.WaitForTrigger);
+
+                        DAQController.WaitForInputTasks();
                     }
                 }
             }
@@ -909,7 +906,6 @@ namespace Symphony.Core
                 RequestedStop -= stopRequested;
                 PulledOutputData -= outputPulled;
                 PushedInputData -= inputPushed;
-                DAQController.Stopped -= daqStopped;
                 DAQController.ExceptionalStop -= daqExceptionalStop;
 
                 DAQController.WaitForInputTasks();
