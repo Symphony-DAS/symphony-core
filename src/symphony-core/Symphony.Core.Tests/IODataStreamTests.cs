@@ -265,7 +265,7 @@ namespace Symphony.Core
             var push3 = new InputData(list.Skip(samples1 + samples2).Take(samples3).ToList(), srate, DateTime.Now);
             stream.PushInputData(push3);
 
-            Assert.AreEqual(list, response.Data);
+            Assert.AreEqual(list, response.Data.ToList());
         }
 
         [Test]
