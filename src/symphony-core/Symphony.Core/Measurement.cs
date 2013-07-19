@@ -319,18 +319,24 @@ namespace Symphony.Core
 
         public int ToExponent(string prefix)
         {
-            if (!_prefixToExponent.ContainsKey(prefix))
-                throw new ArgumentException(string.Format("Unable to determine SI exponent for prefix {0}", prefix));
-
-            return _prefixToExponent[prefix];
+            int result;
+            if (_prefixToExponent.TryGetValue(prefix, out result))
+            {
+                return result;
+            }
+            
+            throw new ArgumentException(string.Format("Unable to determine SI exponent for prefix {0}", prefix));
         }
 
         public string ToPrefix(int exponent)
         {
-            if (!_exponentToPrefix.ContainsKey(exponent))
-                throw new ArgumentException(string.Format("Unable to determine SI prefix for exponent {0}", exponent), "exponent");
+            string result;
+            if (_exponentToPrefix.TryGetValue(exponent, out result))
+            {
+                return result;
+            }
 
-            return _exponentToPrefix[exponent];
+            throw new ArgumentException(string.Format("Unable to determine SI prefix for exponent {0}", exponent), "exponent");
         }
 
         private readonly IDictionary<string, string> _baseUnitsCache = new Dictionary<string, string>();
