@@ -238,12 +238,12 @@ namespace Symphony.ExternalDevices
 
         private bool HasBoundOutputStream
         {
-            get { return Streams.Values.OfType<IDAQOutputStream>().Count() > 0; }
+            get { return Streams.Values.OfType<IDAQOutputStream>().Any(); }
         }
 
         private bool HasBoundInputStream
         {
-            get { return Streams.Values.OfType<IDAQInputStream>().Count() > 0; }
+            get { return Streams.Values.OfType<IDAQInputStream>().Any(); }
         }
 
         private static IEnumerable<MultiClampParametersChangedArgs> DeviceParametersPreceedingDate(
@@ -505,9 +505,20 @@ namespace Symphony.ExternalDevices
 
             }
 
-            return deviceParams.OperatingMode == MultiClampInterop.OperatingMode.I0 ?
-                new Measurement(0, 0, "V") :
-                new Measurement(sample.QuantityInBaseUnit / (decimal)deviceParams.ExternalCommandSensitivity, sample.Exponent, "V");
+            Measurement result;
+
+            if (deviceParams.OperatingMode == MultiClampInterop.OperatingMode.I0)
+            {
+                result = new Measurement(0, 0, "V");
+            }
+            else
+            {
+                result = (decimal)deviceParams.ExternalCommandSensitivity == 0 ? 
+                    new Measurement(sample.QuantityInBaseUnit, sample.Exponent, "V") : 
+                    new Measurement(sample.QuantityInBaseUnit / (decimal)deviceParams.ExternalCommandSensitivity, sample.Exponent, "V");
+            }
+
+            return result;
         }
 
         private static string UnitsForScaleFactorUnits(MultiClampInterop.ScaleFactorUnits scaleFactorUnits)
