@@ -198,21 +198,20 @@ namespace Symphony.ExternalDevices
 
                     rwLock.ReleaseReaderLock();
 
-                    Message msg = m;
-
                     if (handleMessage)
                     {
                         log.DebugFormat("Handling message: {0}", m);
                         MessageEvents.context.Post(
                             (object state) =>
                             {
-                                log.DebugFormat("Posting message: {0}", state);
+                                // Do not use the logger within this delegate.
+
                                 foreach (var h in handlers)
                                 {
                                     h(null, new MessageReceivedEventArgs((Message)state));
                                 }
                             },
-                        msg);
+                            m);
                     }
 
                     base.WndProc(ref m);
