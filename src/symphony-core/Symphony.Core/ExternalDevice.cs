@@ -366,7 +366,7 @@ namespace Symphony.Core
         /// </summary>
         /// <param name="name">Associatino name</param>
         /// <param name="inputStream">Stream to bind</param>
-        public ExternalDeviceBase BindStream(string name, IDAQInputStream inputStream)
+        public virtual ExternalDeviceBase BindStream(string name, IDAQInputStream inputStream)
         {
             Contract.Assert(inputStream != null, "inputStream is null");
             Contract.Assert(name != null && name.Length > 0, "name is null or empty");
@@ -392,7 +392,7 @@ namespace Symphony.Core
         /// </summary>
         /// <param name="name">Association name</param>
         /// <param name="outputStream">Stream to bind</param>
-        public ExternalDeviceBase BindStream(string name, IDAQOutputStream outputStream)
+        public virtual ExternalDeviceBase BindStream(string name, IDAQOutputStream outputStream)
         {
             Contract.Assert(outputStream != null, "outputStream is null");
             Contract.Assert(name != null && name.Length > 0, "name is null or empty");
@@ -405,7 +405,7 @@ namespace Symphony.Core
         /// Remove the Stream associated with this ExternalDevice
         /// </summary>
         /// <param name="name"></param>
-        public void UnbindStream(string name)
+        public virtual void UnbindStream(string name)
         {
             if (Streams.ContainsKey(name))
             {
