@@ -60,10 +60,13 @@ namespace Symphony.ExternalDevices
                                                    {
                                                        OutputParameters[mdArgs.TimeStamp.ToUniversalTime()] = mdArgs;
 
-                                                       foreach (var outputStream in Streams.Values.OfType<IDAQOutputStream>().Where(s => s.DAQ != null && s.DAQ.IsRunning == false).ToList())
+                                                       lock (_bindLock)
                                                        {
-                                                           log.DebugFormat("Setting new background for stream {0}", outputStream.Name);
-                                                           outputStream.ApplyBackground();
+                                                           foreach (var outputStream in OutputStreams.Where(s => s.DAQ != null && s.DAQ.IsRunning == false))
+                                                           {
+                                                               log.DebugFormat("Setting new background for stream {0}", outputStream.Name);
+                                                               outputStream.ApplyBackground();
+                                                           }
                                                        }
                                                    }
                                                };
@@ -236,14 +239,31 @@ namespace Symphony.ExternalDevices
             return ConvertOutput(deviceOutput, CurrentDeviceOutputParameters.Data);
         }
 
+        private readonly object _bindLock = new object();
+
+        public override ExternalDeviceBase BindStream(string name, IDAQInputStream inputStream)
+        {
+            lock(_bindLock) return base.BindStream(name, inputStream);
+        }
+
+        public override ExternalDeviceBase BindStream(string name, IDAQOutputStream outputStream)
+        {
+            lock(_bindLock) return base.BindStream(name, outputStream);
+        }
+
+        public override void UnbindStream(string name)
+        {
+            lock(_bindLock) base.UnbindStream(name);
+        }
+
         private bool HasBoundOutputStream
         {
-            get { return Streams.Values.OfType<IDAQOutputStream>().Any(); }
+            get { return OutputStreams.Any(); }
         }
 
         private bool HasBoundInputStream
         {
-            get { return Streams.Values.OfType<IDAQInputStream>().Any(); }
+            get { return InputStreams.Any(); }
         }
 
         private static IEnumerable<MultiClampParametersChangedArgs> DeviceParametersPreceedingDate(

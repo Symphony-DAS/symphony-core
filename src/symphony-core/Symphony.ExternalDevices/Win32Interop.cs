@@ -196,8 +196,6 @@ namespace Symphony.ExternalDevices
                     ISet<EventHandler<MessageReceivedEventArgs>> handlers;
                     bool handleMessage = messageHandlers.TryGetValue(m.Msg, out handlers) && handlers.Any();
 
-                    rwLock.ReleaseReaderLock();
-
                     if (handleMessage)
                     {
                         log.DebugFormat("Handling message: {0}", m);
@@ -213,6 +211,8 @@ namespace Symphony.ExternalDevices
                             },
                             m);
                     }
+
+                    rwLock.ReleaseReaderLock();
 
                     base.WndProc(ref m);
                 }
