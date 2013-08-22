@@ -47,29 +47,30 @@ namespace Symphony.ExternalDevices
 
             Commander = commander;
             Commander.ParametersChanged += (sender, mdArgs) =>
-                                               {
-                                                   log.DebugFormat("MultiClamp parameters changed. Mode = {0}, External Command Sensistivity Units = {1} Timestamp = {2}",
-                                                       mdArgs.Data.OperatingMode,
-                                                       mdArgs.Data.ExternalCommandSensitivityUnits,
-                                                       mdArgs.TimeStamp);
+                {
+                    lock (_bindLock)
+                    {
+                        log.DebugFormat(
+                            "MultiClamp parameters changed. Mode = {0}, External Command Sensistivity Units = {1} Timestamp = {2}",
+                            mdArgs.Data.OperatingMode,
+                            mdArgs.Data.ExternalCommandSensitivityUnits,
+                            mdArgs.TimeStamp);
 
-                                                   if (HasBoundInputStream)
-                                                       InputParameters[mdArgs.TimeStamp.ToUniversalTime()] = mdArgs;
+                        if (HasBoundInputStream)
+                            InputParameters[mdArgs.TimeStamp.ToUniversalTime()] = mdArgs;
 
-                                                   if (HasBoundOutputStream)
-                                                   {
-                                                       OutputParameters[mdArgs.TimeStamp.ToUniversalTime()] = mdArgs;
+                        if (HasBoundOutputStream)
+                        {
+                            OutputParameters[mdArgs.TimeStamp.ToUniversalTime()] = mdArgs;
 
-                                                       lock (_bindLock)
-                                                       {
-                                                           foreach (var outputStream in OutputStreams.Where(s => s.DAQ != null && s.DAQ.IsRunning == false))
-                                                           {
-                                                               log.DebugFormat("Setting new background for stream {0}", outputStream.Name);
-                                                               outputStream.ApplyBackground();
-                                                           }
-                                                       }
-                                                   }
-                                               };
+                            foreach (var outputStream in OutputStreams.Where(s => s.DAQ != null && s.DAQ.IsRunning == false))
+                            {
+                                log.DebugFormat("Setting new background for stream {0}", outputStream.Name);
+                                outputStream.ApplyBackground();
+                            }
+                        }
+                    }
+                };
 
             Backgrounds = background;
         }
