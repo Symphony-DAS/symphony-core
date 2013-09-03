@@ -128,8 +128,7 @@ namespace Symphony.ExternalDevices
         private void ReceiveWmCopyDataEvent(object sender, Win32Interop.MessageReceivedEventArgs evtArgs)
         {
             // WM_COPYDATA LPARAM is a pointer to a COPYDATASTRUCT structure
-            Win32Interop.COPYDATASTRUCT cds;
-            cds = (Win32Interop.COPYDATASTRUCT) Marshal.PtrToStructure(evtArgs.Message.LParam, typeof (Win32Interop.COPYDATASTRUCT));
+            Win32Interop.COPYDATASTRUCT cds = (Win32Interop.COPYDATASTRUCT) Marshal.PtrToStructure(evtArgs.Message.LParam, typeof (Win32Interop.COPYDATASTRUCT));
 
             // WM_COPYDATA structure (COPYDATASTRUCT)
             // dwData -- RegisterWindowMessage(MCTG_REQUEST_MESSAGE_STR)
@@ -137,7 +136,7 @@ namespace Symphony.ExternalDevices
             // lpData -- MC_TELEGRAPH_DATA*
             try
             {
-                if (cds.lpData == IntPtr.Zero) 
+                if (cds.lpData == IntPtr.Zero || cds.cbData != Marshal.SizeOf(typeof(MultiClampInterop.MC_TELEGRAPH_DATA))) 
                     return;
 
                 var mtd = (MultiClampInterop.MC_TELEGRAPH_DATA) Marshal.PtrToStructure(cds.lpData, typeof (MultiClampInterop.MC_TELEGRAPH_DATA));

@@ -1,11 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.ComponentModel;
 using System.Linq;
-using System.Text;
-using System.Threading;
-using System.Windows.Forms;
 using log4net;
 using Symphony.Core;
 
@@ -47,29 +43,30 @@ namespace Symphony.ExternalDevices
 
             Commander = commander;
             Commander.ParametersChanged += (sender, mdArgs) =>
-                                               {
-                                                   log.DebugFormat("MultiClamp parameters changed. Mode = {0}, External Command Sensistivity Units = {1} Timestamp = {2}",
-                                                       mdArgs.Data.OperatingMode,
-                                                       mdArgs.Data.ExternalCommandSensitivityUnits,
-                                                       mdArgs.TimeStamp);
+                {
+                    lock (_bindLock)
+                    {
+                        log.DebugFormat(
+                            "MultiClamp parameters changed. Mode = {0}, External Command Sensistivity Units = {1} Timestamp = {2}",
+                            mdArgs.Data.OperatingMode,
+                            mdArgs.Data.ExternalCommandSensitivityUnits,
+                            mdArgs.TimeStamp);
 
-                                                   if (HasBoundInputStream)
-                                                       InputParameters[mdArgs.TimeStamp.ToUniversalTime()] = mdArgs;
+                        if (HasBoundInputStream)
+                            InputParameters[mdArgs.TimeStamp.ToUniversalTime()] = mdArgs;
 
-                                                   if (HasBoundOutputStream)
-                                                   {
-                                                       OutputParameters[mdArgs.TimeStamp.ToUniversalTime()] = mdArgs;
+                        if (HasBoundOutputStream)
+                        {
+                            OutputParameters[mdArgs.TimeStamp.ToUniversalTime()] = mdArgs;
 
-                                                       lock (_bindLock)
-                                                       {
-                                                           foreach (var outputStream in OutputStreams.Where(s => s.DAQ != null && s.DAQ.IsRunning == false))
-                                                           {
-                                                               log.DebugFormat("Setting new background for stream {0}", outputStream.Name);
-                                                               outputStream.ApplyBackground();
-                                                           }
-                                                       }
-                                                   }
-                                               };
+                            foreach (var outputStream in OutputStreams.Where(s => s.DAQ != null && s.DAQ.IsRunning == false))
+                            {
+                                log.DebugFormat("Setting new background for stream {0}", outputStream.Name);
+                                outputStream.ApplyBackground();
+                            }
+                        }
+                    }
+                };
 
             Backgrounds = background;
         }
@@ -289,9 +286,7 @@ namespace Symphony.ExternalDevices
                 parameters,
                 dto);
 
-            return e.Count() > 0
-                       ? e.Last()
-                       : null;
+            return e.Any() ? e.Last() : null;
         }
 
 

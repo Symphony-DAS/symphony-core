@@ -143,6 +143,14 @@ namespace Symphony.ExternalDevices
                                 window = new MessageWindow();
                                 hwnd = window.Handle;
                                 mre.Set();
+
+                                AppDomain.CurrentDomain.UnhandledException += 
+                                    (sender, args) =>
+                                        {
+                                            var e = (Exception)args.ExceptionObject;
+                                            log.ErrorFormat("Unhandled exception: {0}\n{1}", e.Message, e.StackTrace);
+                                        };
+
                                 Application.Run();
                             });
                             t.Name = "MessageEvents message loop";
