@@ -569,7 +569,7 @@ namespace Symphony.Core
             var kws = keywords == null ? new string[0] : keywords.ToArray();
             var props = properties ?? new Dictionary<string, object>();
 
-            result.BeginEpochGroup(epochGroupLabel, source, kws, props, Guid.NewGuid(), DateTime.Now);
+            result.BeginEpochGroup(epochGroupLabel, source, kws, props, Guid.NewGuid(), Clock.Now);
 
             return result;
         }

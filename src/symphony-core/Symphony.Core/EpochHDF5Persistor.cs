@@ -277,7 +277,7 @@ namespace Symphony.Core
             WriteDictionary(epochGroup, "properties", properties);
             WriteAttribute(epochGroup, "symphony.uuid", identifier.ToString());
             WriteKeywords(epochGroup, new HashSet<string>(keywords));
-            WriteAttribute(epochGroup, startTimeUtcName, startTime.Ticks);
+            WriteAttribute(epochGroup, startTimeUtcName, startTime.UtcTicks);
             WriteAttribute(epochGroup, startTimeOffsetName, timeZoneOffset);
 
             //H5G.close(subGroups);
@@ -302,7 +302,7 @@ namespace Symphony.Core
 
             // WriteEpochStart and duration
             WriteAttribute(epochID, startTimeOffsetName, ((DateTimeOffset)e.StartTime).Offset.TotalHours); //TimeZone.CurrentTimeZone.GetUtcOffset(((DateTimeOffset)e.StartTime).DateTime).TotalHours);
-            WriteAttribute(epochID, startTimeUtcName, ((DateTimeOffset)e.StartTime).Ticks);
+            WriteAttribute(epochID, startTimeUtcName, ((DateTimeOffset)e.StartTime).UtcTicks);
             WriteAttribute(epochID, "durationSeconds", ((TimeSpan)e.Duration).TotalSeconds);
             if (fileTag != null)
                 WriteAttribute(epochID, "fileTag", fileTag);
