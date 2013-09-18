@@ -233,7 +233,7 @@ namespace Symphony.Core
             device.ExpectAndReturn("get_OutputBackground", background);
 
             s.MeasurementConversionTarget = "V";
-            s.Device = device.MockInstance as IExternalDevice;
+            s.Devices.Add(device.MockInstance as IExternalDevice);
 
             s.ApplyBackground();
 

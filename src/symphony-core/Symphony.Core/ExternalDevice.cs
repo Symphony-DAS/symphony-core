@@ -397,7 +397,7 @@ namespace Symphony.Core
             Contract.Assert(outputStream != null, "outputStream is null");
             Contract.Assert(name != null && name.Length > 0, "name is null or empty");
 
-            outputStream.Device = this;
+            outputStream.Devices.Add(this);
             this.Streams[name] = outputStream;
             return this;
         }

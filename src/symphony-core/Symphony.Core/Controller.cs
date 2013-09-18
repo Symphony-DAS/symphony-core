@@ -207,9 +207,9 @@ namespace Symphony.Core
             // instead of complaining and forcing them to do it.
             foreach (var stream in DAQController.OutputStreams.Where(s => s.Active))
             {
-                if (!Devices.Contains(stream.Device))
+                foreach (var device in stream.Devices.Where(d => !Devices.Contains(d)))
                 {
-                    AddDevice(stream.Device);
+                    AddDevice(device);
                 }
             }
 

@@ -218,6 +218,15 @@ namespace Symphony.Core
         /// <returns>A new IOuputData instance which is the concatenation {this,o}</returns>
         /// <exception cref="ArgumentException">If either this or o has an existing device configuration</exception>
         IOutputData Concat(IOutputData o);
+
+        /// <summary>
+        /// Returns a new IOutputData which is the merger of this data and the supplied IOutputData according to a specified function.
+        /// </summary>
+        /// <param name="o">Data to merge</param>
+        /// <param name="resultSelector">A function that specifies how to merge the data elements</param>
+        /// <returns>A new IOutputData instance which is the merger of this and o</returns>
+        /// <exception cref="ArgumentException">If the underlying data of this and o have a base unit or count mismatch</exception>
+        IOutputData Zip(IOutputData o, Func<IMeasurement, IMeasurement, IMeasurement> resultSelector);
     }
 
 
@@ -392,6 +401,15 @@ namespace Symphony.Core
         {
         }
 
+        protected OutputData(IEnumerable<IMeasurement> data,
+                            IMeasurement sampleRate,
+                            IEnumerable<IPipelineNodeConfiguration> config,
+                            bool isLast)
+            : base(data, sampleRate, config)
+        {
+            IsLast = isLast;
+        }
+
 
         protected OutputData(IOutputData data,
             IPipelineNodeConfiguration config)
@@ -464,6 +482,20 @@ namespace Symphony.Core
                 throw new ArgumentException("Sample rate mismatch");
 
             return new OutputData(this.Data.Concat(o.Data).ToList(), this.SampleRate, this.IsLast || o.IsLast);
+        }
+
+        public IOutputData Zip(IOutputData o, Func<IMeasurement, IMeasurement, IMeasurement> resultSelector)
+        {
+            if (this.Data.Count != o.Data.Count)
+                throw new ArgumentException("Data count mismatch");
+
+            if (!this.Data.BaseUnits().Equals(o.Data.BaseUnits()))
+                throw new ArgumentException("Data base units mismatch");
+
+            if (!this.SampleRate.Equals(o.SampleRate))
+                throw new ArgumentException("Sample rate mismatch");
+
+            return new OutputData(this.Data.Zip(o.Data, resultSelector).ToList(), this.SampleRate, this.Configuration.Concat(o.Configuration), this.IsLast && o.IsLast);
         }
 
         public IOutputData OutputDataForRange(int startSample, int numSamples)

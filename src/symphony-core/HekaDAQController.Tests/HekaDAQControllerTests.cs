@@ -244,7 +244,7 @@ namespace Heka
                         daq.SampleRate = new Measurement(srate, "Hz");
                         TestDevice externalDevice = new TestDevice("OUT-DEVICE", null);
 
-                        s.Device = externalDevice;
+                        s.Devices.Add(externalDevice);
                     }
 
                     daq.ConfigureChannels();

@@ -142,19 +142,19 @@ namespace Symphony.Core
             Assert.IsTrue(ed.Streams.ContainsKey(in0.Name));
             Assert.IsTrue(in0.Devices.Contains(ed));
             Assert.IsTrue(ed.Streams.ContainsKey(out0.Name));
-            Assert.IsTrue(out0.Device == ed);
+            Assert.IsTrue(out0.Devices.Contains(ed));
 
             ed.UnbindStream("In-0");
             Assert.IsFalse(ed.Streams.ContainsKey(in0.Name));
             Assert.IsFalse(in0.Devices.Contains(ed));
             Assert.IsTrue(ed.Streams.ContainsKey(out0.Name));
-            Assert.IsTrue(out0.Device == ed);
+            Assert.IsTrue(out0.Devices.Contains(ed));
 
             ed.UnbindStream("Out-0");
             Assert.IsFalse(ed.Streams.ContainsKey(in0.Name));
             Assert.IsFalse(in0.Devices.Contains(ed));
             Assert.IsFalse(ed.Streams.ContainsKey(out0.Name));
-            Assert.IsFalse(out0.Device == ed);
+            Assert.IsFalse(out0.Devices.Contains(ed));
         }
 
         [Test]
@@ -242,8 +242,8 @@ namespace Symphony.Core
             Assert.IsTrue(in0.Devices.Contains(amp));
             Assert.IsTrue(in1.Devices.Contains(amp));
             Assert.IsTrue(in2.Devices.Contains(temp));
-            Assert.IsTrue(out0.Device == LED);
-            Assert.IsTrue(out1.Device == amp);
+            Assert.IsTrue(out0.Devices.Contains(LED));
+            Assert.IsTrue(out1.Devices.Contains(amp));
 
             // One DAQController
             IDAQController dc =

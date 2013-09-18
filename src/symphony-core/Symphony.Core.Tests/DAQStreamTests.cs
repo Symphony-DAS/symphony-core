@@ -99,7 +99,7 @@ namespace Symphony.Core
 
             TestDevice outDevice = new TestDevice("OUT-DEVICE", outData);
             outDevice.Controller = new Controller();
-            s.Device = outDevice;
+            s.Devices.Add(outDevice);
 
             s.PullOutputData(new TimeSpan(100));
         }
@@ -121,6 +121,42 @@ namespace Symphony.Core
             }
         }
 
+        [Test]
+        public void PullsDataFromMultipleExternalDevices()
+        {
+            const int numDevices = 4;
+
+            IList<IOutputData> data;
+            DAQOutputStream s;
+            OutputStreamFixture(out data, out s, 3);
+
+            for (int i = 1; i < numDevices; i++)
+            {
+                var outData = new Dictionary<IDAQOutputStream, Queue<IOutputData>>(1);
+                outData[s] = new Queue<IOutputData>(data);
+
+                var outDevice = new TestDevice("OUT-DEVICE" + i, outData)
+                {
+                    Controller = new Controller(),
+                    MeasurementConversionTarget = "V"
+                };
+
+                s.Devices.Add(outDevice);
+            }
+            
+            foreach (IOutputData d in data)
+            {
+                var measurements = Measurement.FromArray(d.Data.Select(m => m.QuantityInBaseUnit*numDevices).ToArray(), d.Data.BaseUnits());
+                var expected = new OutputData(measurements, d.SampleRate, d.IsLast);
+
+                var actual = s.PullOutputData(TimeSpan.FromSeconds(1));
+                CollectionAssert.AreEqual(expected.Data, actual.Data);
+                Assert.AreEqual(expected.SampleRate, actual.SampleRate);
+                if (!actual.IsLast)
+                    Assert.True(s.HasMoreData);
+            }
+        }
+
         private const string UNUSED_DEVICE_MANUFACTURER = "DEVICECO";
 
         [Test]
@@ -134,7 +170,7 @@ namespace Symphony.Core
                           };
 
             var stream = new DAQOutputStream(UNUSED_NAME);
-            stream.Device = dev;
+            stream.Devices.Add(dev);
 
             Assert.AreEqual(background.QuantityInBaseUnit, stream.Background.QuantityInBaseUnit);
         }
@@ -172,7 +208,7 @@ namespace Symphony.Core
                                     MeasurementConversionTarget = "V"
                                 };
 
-            s.Device = outDevice;
+            s.Devices.Add(outDevice);
         }
 
         [Test]
@@ -278,8 +314,8 @@ namespace Symphony.Core
             DAQOutputStream s;
             OutputStreamFixture(out data, out s, 1);
             
-            Assert.NotNull(s.Device.Background);
-            Assert.AreEqual(s.Device.OutputBackground, s.Background);
+            Assert.NotNull(s.Devices.First().Background);
+            Assert.AreEqual(s.Devices.First().OutputBackground, s.Background);
         }
 
         [Test]
@@ -292,7 +328,7 @@ namespace Symphony.Core
             var config = new List<IPipelineNodeConfiguration>();
             device.Expect("DidOutputData", new object[] {s, time, TimeSpan.FromSeconds(0.1), config});
 
-            s.Device = device.MockInstance as IExternalDevice;
+            s.Devices.Add(device.MockInstance as IExternalDevice);
 
             s.DidOutputData(time, TimeSpan.FromSeconds(0.1), config);
 
