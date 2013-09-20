@@ -225,7 +225,7 @@ namespace Symphony.Core
         /// <param name="o">Data to merge</param>
         /// <param name="resultSelector">A function that specifies how to merge the data elements</param>
         /// <returns>A new IOutputData instance which is the merger of this and o</returns>
-        /// <exception cref="ArgumentException">If the underlying data of this and o have a base unit or count mismatch</exception>
+        /// <exception cref="ArgumentException">If this and o have mismatching duration or sample rate</exception>
         IOutputData Zip(IOutputData o, Func<IMeasurement, IMeasurement, IMeasurement> resultSelector);
     }
 
@@ -486,16 +486,13 @@ namespace Symphony.Core
 
         public IOutputData Zip(IOutputData o, Func<IMeasurement, IMeasurement, IMeasurement> resultSelector)
         {
-            if (this.Data.Count != o.Data.Count)
-                throw new ArgumentException("Data count mismatch");
-
-            if (!this.Data.BaseUnits().Equals(o.Data.BaseUnits()))
-                throw new ArgumentException("Data base units mismatch");
+            if (!this.Duration.Equals(o.Duration))
+                throw new ArgumentException("Duration mismatch");
 
             if (!this.SampleRate.Equals(o.SampleRate))
                 throw new ArgumentException("Sample rate mismatch");
 
-            return new OutputData(this.Data.Zip(o.Data, resultSelector).ToList(), this.SampleRate, this.Configuration.Concat(o.Configuration), this.IsLast && o.IsLast);
+            return new OutputData(this.Data.Zip(o.Data, resultSelector).ToList(), this.SampleRate, this.Configuration.Concat(o.Configuration), this.IsLast || o.IsLast);
         }
 
         public IOutputData OutputDataForRange(int startSample, int numSamples)

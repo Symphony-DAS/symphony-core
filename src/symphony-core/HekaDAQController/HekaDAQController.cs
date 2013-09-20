@@ -38,6 +38,19 @@ namespace Heka
     }
 
     /// <summary>
+    /// Heka/Instrutech-specific details of a digital DAQ stream. Each digital
+    /// DAQ stream groups 16-bits, where each bit represents a physical port on
+    /// the device.
+    /// 
+    /// All devices associated with a HekaDigitalDAQStream must indicate an
+    /// associated bit number through which to push/pull data.
+    /// </summary>
+    public interface HekaDigitalDAQStream : HekaDAQStream
+    {
+        IDictionary<IExternalDevice, ushort> BitNumbers { get; } 
+    }
+
+    /// <summary>
     /// Encapsulates interaction with the ITCMM driver. Client code should not use this interface
     /// directly; a IHekaDevice is managed by the HekaDAQController.
     /// </summary>
@@ -284,13 +297,13 @@ namespace Heka
                 for (ushort i = 0; i < deviceInfo.NumberOfDIs; i++)
                 {
                     string name = String.Format("{0}.{1}", "DIGITAL_IN", i);
-                    this.DAQStreams.Add(new HekaDAQInputStream(name, StreamType.DIGITAL_IN, i, this));
+                    this.DAQStreams.Add(new HekaDigitalDAQInputStream(name, i, this));
                 }
 
                 for (ushort i = 0; i < deviceInfo.NumberOfDOs; i++)
                 {
                     string name = String.Format("{0}.{1}", "DIGITAL_OUT", i);
-                    this.DAQStreams.Add(new HekaDAQOutputStream(name, StreamType.DIGITAL_OUT, i, this));
+                    this.DAQStreams.Add(new HekaDigitalDAQOutputStream(name, i, this));
                 }
 
                 this.HardwareReady = true;

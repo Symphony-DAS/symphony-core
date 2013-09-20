@@ -13,7 +13,7 @@ namespace Heka
     /// only so that users can call RegisterConverters() until we've MEF-erized
     /// the unit conversion system.
     /// </summary>
-    public sealed class HekaDAQOutputStream : DAQOutputStream, HekaDAQStream
+    public class HekaDAQOutputStream : DAQOutputStream, HekaDAQStream
     {
         private HekaDAQController Controller { get; set; }
 
@@ -105,5 +105,63 @@ namespace Heka
         }
 
         private static readonly ILog log = LogManager.GetLogger(typeof(HekaDAQOutputStream));
+    }
+
+    /// <summary>
+    /// IDAQOutputStream implementation for the Heka/Instrutech digital DAQ streams.
+    /// </summary>
+    public class HekaDigitalDAQOutputStream : HekaDAQOutputStream, HekaDigitalDAQStream
+    {
+        public IDictionary<IExternalDevice, ushort> BitNumbers { get; private set; }
+
+        public HekaDigitalDAQOutputStream(string name, ushort channelNumber, HekaDAQController controller) 
+            : base(name, StreamType.DIGITAL_OUT, channelNumber, controller)
+        {
+            BitNumbers = new Dictionary<IExternalDevice, ushort>();
+        }
+
+        public override IOutputData PullOutputData(TimeSpan duration)
+        {
+            if (!Devices.Any())
+                throw new DAQException("No bound external devices (check configuration)");
+
+            IOutputData outData = null;
+            foreach (var ed in Devices)
+            {
+                var pulled = ed.PullOutputData(this, duration).DataWithUnits(MeasurementConversionTarget);
+
+                ushort bitNumber = BitNumbers[ed];
+                pulled = new OutputData(pulled, pulled.Data.Select(m =>
+                {
+                    if (m.QuantityInBaseUnit != 0 && m.QuantityInBaseUnit != 1)
+                        throw new DAQException(ed.Name + " output data must contain only values of 0 and 1");
+
+                    return new Measurement((short)((short)m.QuantityInBaseUnit << bitNumber), 0, m.BaseUnit);
+                }));
+
+                outData = outData == null
+                    ? pulled
+                    : outData.Zip(pulled, (m1, m2) => new Measurement((short)m1.QuantityInBaseUnit | (short)m2.QuantityInBaseUnit, 0, m1.BaseUnit));
+            }
+
+            if (!outData.SampleRate.Equals(this.SampleRate))
+                throw new DAQException("Sample rate mismatch.");
+
+            if (outData.IsLast)
+                LastDataPulled = true;
+
+            return outData.DataWithStreamConfiguration(this, this.Configuration);
+        }
+
+        public override Maybe<string> Validate()
+        {
+            if (Devices.Any(d => !BitNumbers.ContainsKey(d)))
+                return Maybe<string>.No("All devices must have an associated bit number");
+
+            if (BitNumbers.Values.Any(n => n >= 16))
+                return Maybe<string>.No("No bit number can be greater than or equal to 16");
+
+            return base.Validate();
+        }
     }
 }

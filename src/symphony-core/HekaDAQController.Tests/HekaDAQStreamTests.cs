@@ -113,6 +113,44 @@ namespace Heka
     }
 
     [TestFixture]
+    class HekaDigitalDAQOutputStreamTests
+    {
+        [Test]
+        public void ShouldBitShiftAndMergePulledOutputData()
+        {
+            var controller = new HekaDAQController();
+            var s = new HekaDigitalDAQOutputStream("OUT", 0, controller);
+            controller.SampleRate = new Measurement(10000, 1, "Hz");
+
+            TimeSpan duration = TimeSpan.FromSeconds(0.5);
+
+            for (ushort bitNumber = 1; bitNumber < 16; bitNumber += 2)
+            {
+                var dataQueue = new Dictionary<IDAQOutputStream, Queue<IOutputData>>();
+
+                dataQueue[s] = new Queue<IOutputData>();
+                var data = new OutputData(Enumerable.Range(0, 10000).Select(i => new Measurement(i % 2, Measurement.UNITLESS)).ToList(),
+                    s.SampleRate, false);
+
+                dataQueue[s].Enqueue(data.SplitData(duration).Head);
+                dataQueue[s].Enqueue(data.SplitData(duration).Head);
+
+                TestDevice dev = new TestDevice("OUT-DEVICE" + bitNumber, dataQueue);
+                dev.BindStream(s);
+                s.BitNumbers[dev] = bitNumber;
+            }
+
+            var expected = Enumerable.Range(0, 10000).Select(i => new Measurement((short)(i % 2 * 0xaaaa), Measurement.UNITLESS)).ToList();
+
+            var pull1 = s.PullOutputData(duration);
+            Assert.AreEqual(expected, pull1.Data);
+
+            var pull2 = s.PullOutputData(duration);
+            Assert.AreEqual(expected, pull2.Data);
+        }
+    }
+
+    [TestFixture]
     class HekkaDAQInputStreamTests
     {
         [Test]
@@ -157,4 +195,41 @@ namespace Heka
         }
     }
 
+    [TestFixture]
+    class HekaDigitalDAQInputStreamTests
+    {
+        [Test]
+        public void ShouldBitShiftAndMaskPushedInputData()
+        {
+            var controller = new HekaDAQController();
+            var s = new HekaDigitalDAQInputStream("IN", 0, controller);
+            controller.SampleRate = new Measurement(10000, 1, "Hz");
+
+            TimeSpan duration = TimeSpan.FromSeconds(0.5);
+
+            var devices = new List<TestDevice>();
+
+            for (ushort bitNumber = 1; bitNumber < 16; bitNumber += 2)
+            {
+                TestDevice dev = new TestDevice();
+                dev.BindStream(s);
+                s.BitNumbers[dev] = bitNumber;
+
+                devices.Add(dev);
+            }
+
+            var data = new InputData(Enumerable.Range(0, 10000).Select(i => new Measurement((short)(i % 2 * 0xaaaa), Measurement.UNITLESS)).ToList(),
+                s.SampleRate, DateTime.Now);
+
+            s.PushInputData(data);
+            s.PushInputData(data);
+
+            var expected = Enumerable.Range(0, 10000).Select(i => new Measurement(i % 2, Measurement.UNITLESS)).ToList();
+            foreach (var ed in devices)
+            {
+                Assert.AreEqual(expected, ed.InputData[s].ElementAt(0).Data);
+                Assert.AreEqual(expected, ed.InputData[s].ElementAt(1).Data);
+            }
+        }
+    }
 }

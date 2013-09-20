@@ -346,7 +346,7 @@ namespace Symphony.Core
             this.DAQ = daqController;
         }
 
-        private bool LastDataPulled { get; set; }
+        protected bool LastDataPulled { get; set; }
 
 
         public bool HasMoreData
@@ -491,12 +491,15 @@ namespace Symphony.Core
             if (!Devices.Any())
                 throw new DAQException("No bound external devices (check configuration)");
 
-            var outDataList = Devices.Select(ed => ed.PullOutputData(this, duration));
+            IOutputData outData = null;
+            foreach (var ed in Devices)
+            {
+                var pulled = ed.PullOutputData(this, duration).DataWithUnits(MeasurementConversionTarget);
 
-            IOutputData outData = outDataList.Aggregate<IOutputData, IOutputData>(null, (current, data) => 
-                current == null
-                    ? data 
-                    : current.Zip(data, (m1, m2) => new Measurement(m1.QuantityInBaseUnit + m2.QuantityInBaseUnit, 0, m1.BaseUnit)));
+                outData = outData == null 
+                    ? pulled
+                    : outData.Zip(pulled, (m1, m2) => new Measurement(m1.QuantityInBaseUnit + m2.QuantityInBaseUnit, 0, m1.BaseUnit));
+            }
 
             if (!outData.SampleRate.Equals(this.SampleRate))
                 throw new DAQException("Sample rate mismatch.");
@@ -504,10 +507,7 @@ namespace Symphony.Core
             if (outData.IsLast)
                 LastDataPulled = true;
 
-            var convertedData = outData.DataWithUnits(MeasurementConversionTarget)
-                .DataWithStreamConfiguration(this, this.Configuration);
-
-            return convertedData;
+            return outData.DataWithStreamConfiguration(this, this.Configuration);
         }
 
         private static readonly ILog log = LogManager.GetLogger(typeof(DAQOutputStream));
