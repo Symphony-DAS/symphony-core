@@ -908,7 +908,14 @@ namespace Symphony.Core
                 PushedInputData -= inputPushed;
                 DAQController.ExceptionalStop -= daqExceptionalStop;
 
-                DAQController.WaitForInputTasks();
+                try
+                {
+                    DAQController.WaitForInputTasks();
+                }
+                catch (Exception ex)
+                {
+                    log.WarnFormat("An input task failed during cleanup: {0}", ex);
+                }
 
                 OutputDataStreams.Clear();
                 InputDataStreams.Clear();
