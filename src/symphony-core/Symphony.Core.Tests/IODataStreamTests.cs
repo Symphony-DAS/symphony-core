@@ -27,7 +27,7 @@ namespace Symphony.Core
             stim = new RenderedStimulus("stimID", new Dictionary<string, object>(), data);
             stream = new StimulusOutputDataStream(stim, TimeSpan.FromSeconds(0.13));
 
-            indefiniteStim = new RepeatingRenderedStimulus("indefID", new Dictionary<string, object>(), data, Option<TimeSpan>.None());
+            indefiniteStim = new RenderedStimulus("indefID", new Dictionary<string, object>(), data, Option<TimeSpan>.None());
             indefiniteStream = new StimulusOutputDataStream(indefiniteStim, TimeSpan.FromSeconds(0.52));
         }
 

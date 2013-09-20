@@ -572,7 +572,8 @@ namespace Symphony.Core
     /// </summary>
     public class RenderedStimulus : Stimulus
     {
-        private IOutputData Data { get; set; }
+        private readonly IOutputData _data;
+        private readonly Option<TimeSpan> _duration;
 
         /// <summary>
         /// Constructs a new RenderedStimulus instance.
@@ -580,71 +581,9 @@ namespace Symphony.Core
         /// <param name="stimulusID">Stimulus plugin ID</param>
         /// <param name="parameters">Stimulus parameters</param>
         /// <param name="data">Pre-rendered stimulus data</param>
+        /// <param name="duration">Duration of stimulus, clipping and/or repeating data as necessary</param>
         /// <exception cref="MeasurementIncompatibilityException">If data measurements do not have homogenous BaseUnits</exception>
-        public RenderedStimulus(string stimulusID, IDictionary<string, object> parameters, IOutputData data)
-            : base(stimulusID, data.Data.BaseUnits(), parameters)
-        {
-            if (data == null)
-            {
-                throw new ArgumentException("Data may not be null", "data");
-            }
-
-            if (parameters == null)
-            {
-                throw new ArgumentException("Parameters may not be null", "Parameters");
-            }
-
-            Data = data;
-        }
-
-
-        public override Option<TimeSpan> Duration
-        {
-            get { return Option<TimeSpan>.Some(Data.Duration); }
-        }
-
-
-        public override IMeasurement SampleRate
-        {
-            get { return Data.SampleRate; }
-        }
-
-
-        public override IEnumerable<IOutputData> DataBlocks(TimeSpan blockDuration)
-        {
-            var local = (IOutputData)Data.Clone();
-
-            while (local.Duration > TimeSpan.Zero)
-            {
-                var cons = local.SplitData(blockDuration);
-
-                local = cons.Rest;
-
-                yield return new OutputData(cons.Head, cons.Rest.Duration <= TimeSpan.Zero);
-            }
-        }
-
-        private static readonly ILog log = LogManager.GetLogger(typeof(Epoch));
-    }
-
-    /// <summary>
-    /// A simple IStimulus implementation that holds arbitrary data, prerendered from a plugin, 
-    /// and repeats it for a specified duration.
-    /// </summary>
-    public class RepeatingRenderedStimulus : Stimulus
-    {
-        private readonly IOutputData _data;
-        private readonly Option<TimeSpan> _duration;
-
-        /// <summary>
-        /// Constructs a new RepeatingRenderedStimulus instance.
-        /// </summary>
-        /// <param name="stimulusID">Stimulus plugin ID</param>
-        /// <param name="parameters">Stimulus parameters</param>
-        /// <param name="data">Pre-rendered stimulus data to repeat</param>
-        /// <param name="duration">Duration to repeat the stimulus data</param>
-        /// <exception cref="MeasurementIncompatibilityException">If data measurements do not have homogenous BaseUnits</exception>
-        public RepeatingRenderedStimulus(string stimulusID, IDictionary<string, object> parameters, IOutputData data, Option<TimeSpan> duration)
+        public RenderedStimulus(string stimulusID, IDictionary<string, object> parameters, IOutputData data, Option<TimeSpan> duration)
             : base(stimulusID, data.Data.BaseUnits(), parameters)
         {
             if (data == null)
@@ -658,6 +597,17 @@ namespace Symphony.Core
 
             _data = data;
             _duration = duration;
+        }
+
+        /// <summary>
+        /// Constructs a new RenderedStimulus instance with duration equal to the specified stimulus data.
+        /// </summary>
+        /// <param name="stimulusID">Stimulus plugin ID</param>
+        /// <param name="parameters">Stimulus parameters</param>
+        /// <param name="data">Pre-rendered stimulus data</param>
+        public RenderedStimulus(string stimulusID, IDictionary<string, object> parameters, IOutputData data)
+            : this(stimulusID, parameters, data, Option<TimeSpan>.Some(data.Duration))
+        {
         }
 
         public override IEnumerable<IOutputData> DataBlocks(TimeSpan blockDuration)
