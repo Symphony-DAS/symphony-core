@@ -43,11 +43,11 @@ namespace Heka
     /// the device.
     /// 
     /// All devices associated with a HekaDigitalDAQStream must indicate an
-    /// associated bit number through which to push/pull data.
+    /// associated bit position through which to push/pull data.
     /// </summary>
     public interface HekaDigitalDAQStream : HekaDAQStream
     {
-        IDictionary<IExternalDevice, ushort> BitNumbers { get; } 
+        IDictionary<IExternalDevice, ushort> BitPositions { get; } 
     }
 
     /// <summary>

@@ -112,12 +112,26 @@ namespace Heka
     /// </summary>
     public class HekaDigitalDAQOutputStream : HekaDAQOutputStream, HekaDigitalDAQStream
     {
-        public IDictionary<IExternalDevice, ushort> BitNumbers { get; private set; }
+        public IDictionary<IExternalDevice, ushort> BitPositions { get; private set; }
 
         public HekaDigitalDAQOutputStream(string name, ushort channelNumber, HekaDAQController controller) 
             : base(name, StreamType.DIGITAL_OUT, channelNumber, controller)
         {
-            BitNumbers = new Dictionary<IExternalDevice, ushort>();
+            BitPositions = new Dictionary<IExternalDevice, ushort>();
+        }
+
+        public override IDictionary<string, object> Configuration
+        {
+            get
+            {
+                var config = base.Configuration;
+                foreach (var ed in Devices)
+                {
+                    config[ed.Name + "_bitPosition"] = BitPositions[ed];
+                }
+
+                return config;
+            }
         }
 
         public override IOutputData PullOutputData(TimeSpan duration)
@@ -130,13 +144,13 @@ namespace Heka
             {
                 var pulled = ed.PullOutputData(this, duration).DataWithUnits(MeasurementConversionTarget);
 
-                ushort bitNumber = BitNumbers[ed];
+                ushort bitPosition = BitPositions[ed];
                 pulled = new OutputData(pulled, pulled.Data.Select(m =>
                 {
                     if (m.QuantityInBaseUnit != 0 && m.QuantityInBaseUnit != 1)
                         throw new DAQException(ed.Name + " output data must contain only values of 0 and 1");
 
-                    return new Measurement((short)((short)m.QuantityInBaseUnit << bitNumber), 0, m.BaseUnit);
+                    return new Measurement((short)((short)m.QuantityInBaseUnit << bitPosition), 0, m.BaseUnit);
                 }));
 
                 outData = outData == null
@@ -155,11 +169,11 @@ namespace Heka
 
         public override Maybe<string> Validate()
         {
-            if (Devices.Any(d => !BitNumbers.ContainsKey(d)))
-                return Maybe<string>.No("All devices must have an associated bit number");
+            if (Devices.Any(d => !BitPositions.ContainsKey(d)))
+                return Maybe<string>.No("All devices must have an associated bit position");
 
-            if (BitNumbers.Values.Any(n => n >= 16))
-                return Maybe<string>.No("No bit number can be greater than or equal to 16");
+            if (BitPositions.Values.Any(n => n >= 16))
+                return Maybe<string>.No("No bit position can be greater than or equal to 16");
 
             return base.Validate();
         }

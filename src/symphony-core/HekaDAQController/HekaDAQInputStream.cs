@@ -87,12 +87,26 @@ namespace Heka
     /// </summary>
     public class HekaDigitalDAQInputStream : HekaDAQInputStream, HekaDigitalDAQStream
     {
-        public IDictionary<IExternalDevice, ushort> BitNumbers { get; private set; }
+        public IDictionary<IExternalDevice, ushort> BitPositions { get; private set; }
 
         public HekaDigitalDAQInputStream(string name, ushort channelNumber, HekaDAQController controller) 
             : base(name, StreamType.DIGITAL_IN, channelNumber, controller)
         {
-            BitNumbers = new Dictionary<IExternalDevice, ushort>();
+            BitPositions = new Dictionary<IExternalDevice, ushort>();
+        }
+
+        public override IDictionary<string, object> Configuration
+        {
+            get
+            {
+                var config = base.Configuration;
+                foreach (var ed in Devices)
+                {
+                    config[ed.Name + "_bitPosition"] = BitPositions[ed];
+                }
+
+                return config;
+            }
         }
 
         public override void PushInputData(IInputData inData)
@@ -104,8 +118,8 @@ namespace Heka
             {
                 var data = inData.DataWithUnits(MeasurementConversionTarget);
 
-                ushort bitNumber = BitNumbers[ed];
-                data = new InputData(data, data.Data.Select(m => new Measurement(((short)m.QuantityInBaseUnit >> bitNumber) & 1, 0, Measurement.UNITLESS)));
+                ushort bitPosition = BitPositions[ed];
+                data = new InputData(data, data.Data.Select(m => new Measurement(((short)m.QuantityInBaseUnit >> bitPosition) & 1, 0, Measurement.UNITLESS)));
                 
                 ed.PushInputData(this, data.DataWithStreamConfiguration(this, this.Configuration));
             }
@@ -113,11 +127,11 @@ namespace Heka
 
         public override Maybe<string> Validate()
         {
-            if (Devices.Any(d => !BitNumbers.ContainsKey(d)))
-                return Maybe<string>.No("All devices must have an associated bit number");
+            if (Devices.Any(d => !BitPositions.ContainsKey(d)))
+                return Maybe<string>.No("All devices must have an associated bit position");
 
-            if (BitNumbers.Values.Any(n => n >= 16))
-                return Maybe<string>.No("No bit number can be greater than or equal to 16");
+            if (BitPositions.Values.Any(n => n >= 16))
+                return Maybe<string>.No("No bit position can be greater than or equal to 16");
 
             return base.Validate();
         }

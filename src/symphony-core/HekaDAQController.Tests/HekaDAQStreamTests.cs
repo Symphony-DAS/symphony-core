@@ -124,7 +124,7 @@ namespace Heka
 
             TimeSpan duration = TimeSpan.FromSeconds(0.5);
 
-            for (ushort bitNumber = 1; bitNumber < 16; bitNumber += 2)
+            for (ushort bitPosition = 1; bitPosition < 16; bitPosition += 2)
             {
                 var dataQueue = new Dictionary<IDAQOutputStream, Queue<IOutputData>>();
 
@@ -135,9 +135,9 @@ namespace Heka
                 dataQueue[s].Enqueue(data.SplitData(duration).Head);
                 dataQueue[s].Enqueue(data.SplitData(duration).Head);
 
-                TestDevice dev = new TestDevice("OUT-DEVICE" + bitNumber, dataQueue);
+                TestDevice dev = new TestDevice("OUT-DEVICE" + bitPosition, dataQueue);
                 dev.BindStream(s);
-                s.BitNumbers[dev] = bitNumber;
+                s.BitPositions[dev] = bitPosition;
             }
 
             var expected = Enumerable.Range(0, 10000).Select(i => new Measurement((short)(i % 2 * 0xaaaa), Measurement.UNITLESS)).ToList();
@@ -209,11 +209,11 @@ namespace Heka
 
             var devices = new List<TestDevice>();
 
-            for (ushort bitNumber = 1; bitNumber < 16; bitNumber += 2)
+            for (ushort bitPosition = 1; bitPosition < 16; bitPosition += 2)
             {
                 TestDevice dev = new TestDevice();
                 dev.BindStream(s);
-                s.BitNumbers[dev] = bitNumber;
+                s.BitPositions[dev] = bitPosition;
 
                 devices.Add(dev);
             }
