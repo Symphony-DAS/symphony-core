@@ -203,24 +203,6 @@ namespace Symphony.Core
             if (daqVal != true)
                 return daqVal;
 
-            // I think we're OK just adding all necessary devices the client failed to add
-            // instead of complaining and forcing them to do it.
-            foreach (var stream in DAQController.OutputStreams.Where(s => s.Active))
-            {
-                foreach (var device in stream.Devices.Where(d => !Devices.Contains(d)))
-                {
-                    AddDevice(device);
-                }
-            }
-
-            foreach (var stream in DAQController.InputStreams.Where(s => s.Active))
-            {
-                foreach (var device in stream.Devices.Where(d => !Devices.Contains(d)))
-                {
-                    AddDevice(device);
-                }
-            }
-
             foreach (ExternalDeviceBase ed in Devices)
             {
                 if (ed.Controller != this)

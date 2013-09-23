@@ -213,6 +213,21 @@ namespace Heka
             }
         }
 
+        public ITCMM.GlobalDeviceInfo DeviceInfo
+        {
+            get
+            {
+                var deviceInfo = new ITCMM.GlobalDeviceInfo();
+                var err = ITCMM.ITC_GetDeviceInfo(DevicePtr, ref deviceInfo);
+                if (err != ITCMM.ACQ_SUCCESS)
+                {
+                    throw new HekaDAQException("Unable to get device info", err);
+                }
+
+                return deviceInfo;
+            }
+        }
+
         public void PreloadSamples(StreamType channelType, ushort channelNumber, IList<short> samples)
         {
 
@@ -431,6 +446,5 @@ namespace Heka
 
             return info[0];
         }
-
     }
 }

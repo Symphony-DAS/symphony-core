@@ -76,6 +76,7 @@ namespace Heka
         void StartHardware(bool waitForTrigger);
         void StopHardware();
 
+        ITCMM.GlobalDeviceInfo DeviceInfo { get; }
         ITCMM.ITCChannelInfo ChannelInfo(StreamType channelType, ushort channelNumber);
 
         IInputData ReadStreamAsyncIO(HekaDAQInputStream instream);
@@ -520,7 +521,6 @@ namespace Heka
 
             if (result)
             {
-
                 if (Streams.Any(s => !s.SampleRate.Equals(SampleRate)))
                     return Maybe<string>.No("All streams must have the same sample rate as controller.");
 
@@ -532,11 +532,57 @@ namespace Heka
 
                 if (SampleRate.QuantityInBaseUnit <= 0)
                     return Maybe<string>.No("Sample rate must be greater than 0");
+
+
+                // This is a workaround for issue #41 (https://github.com/Symphony-DAS/Symphony/issues/41)
+                foreach (var s in InputStreams)
+                {
+                    foreach (var ed in s.Devices.OfType<NullDevice>().ToList())
+                    {
+                        s.RemoveDevice(ed);
+                    }
+                }
+
+                var samplingInterval = 1e9m / (SampleRate.QuantityInBaseUnit * Math.Max(ActiveOutputStreams.Count(), ActiveInputStreams.Count()));
+
+                while (samplingInterval % Device.DeviceInfo.MinimumSamplingStep != 0m)
+                {
+                    var inactive = InputStreams.Where(s => !s.Active).ToList();
+
+                    if (!inactive.Any())
+                        return Maybe<string>.No("A well-aligned sampling interval is not possible with the current sampling rate");
+
+                    var dev = new NullDevice();
+                    dev.BindStream(inactive.First());
+                    
+                    samplingInterval = 1e9m / (SampleRate.QuantityInBaseUnit * Math.Max(ActiveOutputStreams.Count(), ActiveInputStreams.Count()));
+                }
             }
 
             return result;
         }
 
+        private class NullDevice : ExternalDeviceBase
+        {
+            public NullDevice()
+                : base("NULL", "NULL", (Measurement)null)
+            {
+            }
+
+            public override IOutputData PullOutputData(IDAQOutputStream stream, TimeSpan duration)
+            {
+                throw new NotImplementedException();
+            }
+
+            public override void PushInputData(IDAQInputStream stream, IInputData inData)
+            {
+            }
+
+            public override Maybe<string> Validate()
+            {
+                return Maybe<string>.Yes();
+            }
+        }
 
         internal void PipelineException(Exception e)
         {
