@@ -543,19 +543,22 @@ namespace Heka
                     }
                 }
 
-                var samplingInterval = 1e9m / (SampleRate.QuantityInBaseUnit * Math.Max(ActiveOutputStreams.Count(), ActiveInputStreams.Count()));
-
-                while (samplingInterval % Device.DeviceInfo.MinimumSamplingStep != 0m)
+                if (Math.Max(ActiveOutputStreams.Count(), ActiveInputStreams.Count()) >= 1)
                 {
-                    var inactive = InputStreams.Where(s => !s.Active).ToList();
+                    var samplingInterval = 1e9m / (SampleRate.QuantityInBaseUnit * Math.Max(ActiveOutputStreams.Count(), ActiveInputStreams.Count()));
 
-                    if (!inactive.Any())
-                        return Maybe<string>.No("A well-aligned sampling interval is not possible with the current sampling rate");
+                    while (samplingInterval % Device.DeviceInfo.MinimumSamplingStep != 0m)
+                    {
+                        var inactive = InputStreams.Where(s => !s.Active).ToList();
 
-                    var dev = new NullDevice();
-                    dev.BindStream(inactive.First());
-                    
-                    samplingInterval = 1e9m / (SampleRate.QuantityInBaseUnit * Math.Max(ActiveOutputStreams.Count(), ActiveInputStreams.Count()));
+                        if (!inactive.Any())
+                            return Maybe<string>.No("A well-aligned sampling interval is not possible with the current sampling rate");
+
+                        var dev = new NullDevice();
+                        dev.BindStream(inactive.First());
+
+                        samplingInterval = 1e9m / (SampleRate.QuantityInBaseUnit * Math.Max(ActiveOutputStreams.Count(), ActiveInputStreams.Count()));
+                    }
                 }
             }
 
