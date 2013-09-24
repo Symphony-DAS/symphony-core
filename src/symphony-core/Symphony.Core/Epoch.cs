@@ -647,4 +647,102 @@ namespace Symphony.Core
             get { return _data.SampleRate; }
         }
     }
+
+    /// <summary>
+    /// An IStimulus implementation that combines multiple stimuli of equal duration into a single stimulus of
+    /// the same duration. The stimuli are combine according to a specified function.
+    /// </summary>
+    public class CombinedStimulus : Stimulus
+    {
+        /// <summary>
+        /// A function that specifies how to combine data blocks of the underlying stimuli.
+        /// </summary>
+        public delegate IOutputData CombineProc(IDictionary<IStimulus, IOutputData> data);
+
+        private readonly CombineProc _combine;
+
+        /// <summary>
+        /// A simple CombineProc that combines data blocks by adding them, producing a stimulus equal to the sum 
+        /// of the underlying stimuli.
+        /// </summary>
+        public static CombineProc Add = data =>
+            data.Values.Aggregate<IOutputData, IOutputData>(null,
+                                                            (current, d) => current == null
+                                                                ? d
+                                                                : current.Zip(d, (m1, m2) => new Measurement(m1.QuantityInBaseUnit + m2.QuantityInBaseUnit, 0, m1.BaseUnit)));
+
+        /// <summary>
+        /// A simple CombineProc that combines data blocks by subtracting them, producing a stimulus equal to the
+        /// difference of the underlying stimuli.
+        /// </summary>
+        public static CombineProc Subtract = data =>
+            data.Values.Aggregate<IOutputData, IOutputData>(null,
+                                                            (current, d) => current == null
+                                                                ? d
+                                                                : current.Zip(d, (m1, m2) => new Measurement(m1.QuantityInBaseUnit - m2.QuantityInBaseUnit, 0, m1.BaseUnit)));
+
+        private readonly IEnumerable<IStimulus> _stimuli;
+
+        /// <summary>
+        /// Constructs a new CombinedStimulus instance from the specified stimuli.
+        /// </summary>
+        /// <param name="stimulusID">Stimulus plugin ID</param>
+        /// <param name="stimuli">Stimuli to combine</param>
+        /// <param name="combine">Function specifing how to combine the stimuli</param>
+        /// <exception cref="ArgumentException">If provided stimuli do not have uniform duration, units, or sample rate</exception>
+        public CombinedStimulus(string stimulusID, IEnumerable<IStimulus> stimuli, CombineProc combine)
+            : base(stimulusID, stimuli.Select(s => s.Units).FirstOrDefault(), CombineParameters(stimuli))
+        {
+            if (stimuli.Select(s => s.Duration).Distinct().Count() > 1)
+                throw new ArgumentException("All stimulus durations must be equal", "stimuli");
+
+            if (stimuli.Select(s => s.Units).Distinct().Count() > 1)
+                throw new ArgumentException("All stimulus units must be equal", "stimuli");
+
+            if (stimuli.Select(s => s.SampleRate).Distinct().Count() > 1)
+                throw new ArgumentException("All stimulus sample rates must be equal", "stimuli");
+
+            _combine = combine;
+            _stimuli = stimuli;
+        }
+
+        private static IDictionary<string, object> CombineParameters(IEnumerable<IStimulus> stimuli)
+        {
+            var parameters = new Dictionary<string, object>();
+
+            int i = 0;
+            foreach (var stim in stimuli)
+            {
+                string prefix = i + "_";
+                parameters.Add(prefix + "stimulusID", stim.StimulusID);
+                foreach (var param in stim.Parameters)
+                {
+                    parameters.Add(prefix + param.Key, param.Value);
+                }
+                i++;
+            }
+
+            return parameters;
+        }
+
+        public override IEnumerable<IOutputData> DataBlocks(TimeSpan blockDuration)
+        {
+            var enumerators = _stimuli.ToDictionary(s => s, s => s.DataBlocks(blockDuration).GetEnumerator());
+
+            while (enumerators.All(e => e.Value.MoveNext()))
+            {
+                yield return _combine(enumerators.ToDictionary(e => e.Key, e => e.Value.Current));
+            }
+        }
+
+        public override Option<TimeSpan> Duration
+        {
+            get { return _stimuli.Select(s => s.Duration).FirstOrDefault(); }
+        }
+
+        public override IMeasurement SampleRate
+        {
+            get { return _stimuli.Select(s => s.SampleRate).FirstOrDefault(); }
+        }
+    }
 }
