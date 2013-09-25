@@ -713,7 +713,7 @@ namespace Symphony.Core
             int i = 0;
             foreach (var stim in stimuli)
             {
-                string prefix = i + "_";
+                string prefix = "stim" + i + "_";
                 parameters.Add(prefix + "stimulusID", stim.StimulusID);
                 foreach (var param in stim.Parameters)
                 {

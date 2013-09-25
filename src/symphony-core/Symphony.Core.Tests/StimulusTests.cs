@@ -341,14 +341,14 @@ namespace Symphony.Core
             var combine = new CombinedStimulus("CombinedStimulus", new List<IStimulus>() {s1, s2}, CombinedStimulus.Add);
 
             var expected = new Dictionary<string, object>();
-            expected["0_stimulusID"] = "stim1";
-            expected["0_key1"] = "value";
-            expected["0_key2"] = 5;
+            expected["stim0_stimulusID"] = "stim1";
+            expected["stim0_key1"] = "value";
+            expected["stim0_key2"] = 5;
 
-            expected["1_stimulusID"] = "stim2";
-            expected["1_key1"] = "value";
-            expected["1_key2"] = 2;
-            expected["1_key3"] = 0;
+            expected["stim1_stimulusID"] = "stim2";
+            expected["stim1_key1"] = "value";
+            expected["stim1_key2"] = 2;
+            expected["stim1_key3"] = 0;
 
             Assert.That(combine.Parameters, Is.EqualTo(expected)); 
         }
