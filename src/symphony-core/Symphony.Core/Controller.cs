@@ -303,66 +303,63 @@ namespace Symphony.Core
 
         private void OnStarted()
         {
-            FireEvent(Started);
-        }
-
-        private void OnReceivedInputData(IExternalDevice device, IIOData data)
-        {
-            FireEvent(ReceivedInputData, device, data);
-        }
-
-        private void OnSavedEpoch(Epoch epoch)
-        {
-            FireEvent(SavedEpoch, epoch);
-        }
-
-        private void OnCompletedEpoch(Epoch epoch)
-        {
-            FireEvent(CompletedEpoch, epoch);
-        }
-
-        private void OnDiscardedEpoch(Epoch epoch)
-        {
-            FireEvent(DiscardedEpoch, epoch);
+            FireEvent(Started, _eventLock);
         }
 
         private void OnRequestedPause()
         {
-            FireEvent(RequestedPause);
+            FireEvent(RequestedPause, _eventLock);
         }
 
         private void OnRequestedStop()
         {
-            FireEvent(RequestedStop);
+            FireEvent(RequestedStop, _eventLock);
         }
 
         private void OnStopped()
         {
-            FireEvent(Stopped);
+            FireEvent(Stopped, _eventLock);
+        }
+
+        private void OnReceivedInputData(IExternalDevice device, IIOData data)
+        {
+            FireEvent(ReceivedInputData, device, data, _pipelineEventLock);
+        }
+
+        private void OnSavedEpoch(Epoch epoch)
+        {
+            FireEvent(SavedEpoch, epoch, _pipelineEventLock);
+        }
+
+        private void OnCompletedEpoch(Epoch epoch)
+        {
+            FireEvent(CompletedEpoch, epoch, _pipelineEventLock);
+        }
+
+        private void OnDiscardedEpoch(Epoch epoch)
+        {
+            FireEvent(DiscardedEpoch, epoch, _pipelineEventLock);
         }
 
         private void OnPulledOutputData(IExternalDevice device, IOutputDataStream stream)
         {
             FireEvent(PulledOutputData, device, stream, _pullLock);
         }
-        private readonly object _pullLock = new object();
 
         private void OnPushedInputData(IExternalDevice device, IInputDataStream stream)
         {
             FireEvent(PushedInputData, device, stream, _pushLock);
         }
-        private readonly object _pushLock = new object();
 
-        private readonly object _eventLock = new object();
-
-        private void FireEvent(EventHandler<TimeStampedEpochEventArgs> evt, Epoch epoch)
+        private void FireEvent(EventHandler<TimeStampedEpochEventArgs> evt, Epoch epoch, object syncLock)
         {
-            FireEvent(evt, new TimeStampedEpochEventArgs(Clock, epoch), _eventLock);
+            FireEvent(evt, new TimeStampedEpochEventArgs(Clock, epoch), syncLock);
         }
 
-        private void FireEvent(EventHandler<TimeStampedDeviceDataEventArgs> evt, IExternalDevice device, IIOData data)
+        private void FireEvent(EventHandler<TimeStampedDeviceDataEventArgs> evt, IExternalDevice device, IIOData data,
+                               object syncLock)
         {
-            FireEvent(evt, new TimeStampedDeviceDataEventArgs(Clock, device, data), _eventLock);
+            FireEvent(evt, new TimeStampedDeviceDataEventArgs(Clock, device, data), syncLock);
         }
 
         private void FireEvent(EventHandler<TimeStampedDeviceDataStreamEventArgs> evt, IExternalDevice device,
@@ -371,9 +368,9 @@ namespace Symphony.Core
             FireEvent(evt, new TimeStampedDeviceDataStreamEventArgs(Clock, device, stream), syncLock);
         }
 
-        private void FireEvent(EventHandler<TimeStampedEventArgs> evt)
+        private void FireEvent(EventHandler<TimeStampedEventArgs> evt, object syncLock)
         {
-            FireEvent(evt, new TimeStampedEventArgs(Clock), _eventLock);
+            FireEvent(evt, new TimeStampedEventArgs(Clock), syncLock);
         }
 
         private void FireEvent<T>(EventHandler<T> evt, T args, object syncLock) where T : TimeStampedEventArgs
@@ -394,6 +391,11 @@ namespace Symphony.Core
                 }
             }
         }
+
+        private readonly object _eventLock = new object();
+        private readonly object _pipelineEventLock = new object();
+        private readonly object _pullLock = new object();
+        private readonly object _pushLock = new object();
 
         /// <summary>
         /// Pulls IOutputData from the output stream for the given device. Result will have 
