@@ -687,11 +687,12 @@ namespace Symphony.Core
         /// Constructs a new CombinedStimulus instance from the specified stimuli.
         /// </summary>
         /// <param name="stimulusID">Stimulus plugin ID</param>
+        /// <param name="parameters">Stimulus parameters of the combined stimulus</param>
         /// <param name="stimuli">Stimuli to combine</param>
         /// <param name="combine">Function specifing how to combine the stimuli</param>
         /// <exception cref="ArgumentException">If provided stimuli do not have uniform duration, units, or sample rate</exception>
-        public CombinedStimulus(string stimulusID, IEnumerable<IStimulus> stimuli, CombineProc combine)
-            : base(stimulusID, stimuli.Select(s => s.Units).FirstOrDefault(), CombineParameters(stimuli))
+        public CombinedStimulus(string stimulusID, IDictionary<string, object> parameters, IEnumerable<IStimulus> stimuli, CombineProc combine)
+            : base(stimulusID, stimuli.Select(s => s.Units).FirstOrDefault(), parameters.Concat(CombineParameters(stimuli)).ToDictionary(kv => kv.Key, kv => kv.Value))
         {
             if (stimuli.Select(s => s.Duration).Distinct().Count() > 1)
                 throw new ArgumentException("All stimulus durations must be equal", "stimuli");

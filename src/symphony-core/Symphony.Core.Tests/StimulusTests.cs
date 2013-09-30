@@ -338,7 +338,7 @@ namespace Symphony.Core
                     {"key3", 0}
                 }, data);
 
-            var combine = new CombinedStimulus("CombinedStimulus", new List<IStimulus>() {s1, s2}, CombinedStimulus.Add);
+            var combine = new CombinedStimulus("CombinedStimulus", new Dictionary<string, object>(),  new List<IStimulus>() {s1, s2}, CombinedStimulus.Add);
 
             var expected = new Dictionary<string, object>();
             expected["stim0_stimulusID"] = "stim1";
@@ -359,7 +359,7 @@ namespace Symphony.Core
             var parameters = new Dictionary<string, object>();
             const string stimID = "my.ID";
 
-            var s = new CombinedStimulus(stimID, new List<IStimulus>(), CombinedStimulus.Add);
+            var s = new CombinedStimulus(stimID, new Dictionary<string, object>(),  new List<IStimulus>(), CombinedStimulus.Add);
 
             Assert.That(s.StimulusID, Is.EqualTo(stimID));
         }
@@ -386,7 +386,7 @@ namespace Symphony.Core
                 stimuli.Add(new RenderedStimulus((string)"RenderedStimulus" + i, (IDictionary<string, object>)parameters, d));
             }
 
-            var combined = new CombinedStimulus("CombinedStimulus", stimuli, CombinedStimulus.Add);
+            var combined = new CombinedStimulus("CombinedStimulus", new Dictionary<string, object>(),  stimuli, CombinedStimulus.Add);
 
             var blockSpan = TimeSpan.FromMilliseconds(blockMilliseconds);
             IEnumerator<IOutputData> iter = combined.DataBlocks(blockSpan).GetEnumerator();
@@ -423,7 +423,7 @@ namespace Symphony.Core
             var s1 = new RenderedStimulus("stim1", new Dictionary<string, object>(), data);
             var s2 = new RenderedStimulus("stim2", new Dictionary<string, object>(), data.SplitData(data.Duration - TimeSpan.FromSeconds(0.1)).Head);
 
-            Assert.That(() => new CombinedStimulus("CombinedStimulus", new List<IStimulus>() { s1, s2 }, CombinedStimulus.Add), Throws.TypeOf(typeof(ArgumentException)));
+            Assert.That(() => new CombinedStimulus("CombinedStimulus", new Dictionary<string, object>(), new List<IStimulus>() { s1, s2 }, CombinedStimulus.Add), Throws.TypeOf(typeof(ArgumentException)));
         }
 
         [Test]
@@ -439,7 +439,7 @@ namespace Symphony.Core
             var s1 = new RenderedStimulus("stim1", new Dictionary<string, object>(), data);
             var s2 = new RenderedStimulus("stim2", new Dictionary<string, object>(), data);
 
-            var combine = new CombinedStimulus("CombinedStimulus", new List<IStimulus>() { s1, s2 }, CombinedStimulus.Add);
+            var combine = new CombinedStimulus("CombinedStimulus", new Dictionary<string, object>(),  new List<IStimulus>() { s1, s2 }, CombinedStimulus.Add);
 
             var block = TimeSpan.FromMilliseconds(100);
             IEnumerator<IOutputData> iter = combine.DataBlocks(block).GetEnumerator();
@@ -465,7 +465,7 @@ namespace Symphony.Core
             var s1 = new RenderedStimulus("stim1", new Dictionary<string, object>(), data);
             var s2 = new RenderedStimulus("stim2", new Dictionary<string, object>(), data);
 
-            var combine = new CombinedStimulus("CombinedStimulus", new List<IStimulus>() { s1, s2 }, CombinedStimulus.Add);
+            var combine = new CombinedStimulus("CombinedStimulus", new Dictionary<string, object>(), new List<IStimulus>() { s1, s2 }, CombinedStimulus.Add);
 
             var block = TimeSpan.FromMilliseconds(100);
             IEnumerator<IOutputData> iter = combine.DataBlocks(block).GetEnumerator();
