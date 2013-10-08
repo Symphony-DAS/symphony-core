@@ -189,7 +189,7 @@ namespace Symphony.ExternalDevices
 
             var expected = operatingMode == MultiClampInterop.OperatingMode.I0 ?
                 new Measurement(0, "V") :
-                new Measurement(cmd.QuantityInBaseUnit / (decimal)data.ExternalCommandSensitivity,
+                new Measurement(cmd.Quantity / (decimal)data.ExternalCommandSensitivity,
                                            cmd.Exponent, "V");
 
             var actual = MultiClampDevice.ConvertOutput(cmd, data);
@@ -211,7 +211,7 @@ namespace Symphony.ExternalDevices
 
             var cmd = new Measurement(20, -3, "V");
 
-            var expected = new Measurement(cmd.QuantityInBaseUnit / (decimal)data.ExternalCommandSensitivity,
+            var expected = new Measurement(cmd.Quantity / (decimal)data.ExternalCommandSensitivity,
                                            cmd.Exponent, "V");
 
             var actual = MultiClampDevice.ConvertOutput(cmd, data);
@@ -658,7 +658,7 @@ namespace Symphony.ExternalDevices
 
             var expected = operatingMode == MultiClampInterop.OperatingMode.I0 ? 
                 new Measurement(0, "V") :
-                new Measurement(bg.QuantityInBaseUnit / (decimal)data.ExternalCommandSensitivity, bg.Exponent, "V");
+                new Measurement(bg.Quantity / (decimal)data.ExternalCommandSensitivity, bg.Exponent, "V");
 
             mc.FireParametersChanged(DateTimeOffset.Now.Subtract(TimeSpan.FromHours(1)), data);
 
@@ -779,7 +779,7 @@ namespace Symphony.ExternalDevices
 
             mcd.Background = newBackground;
 
-            var expected = new Measurement(newBackground.QuantityInBaseUnit / (decimal)data.ExternalCommandSensitivity, newBackground.Exponent, "V");
+            var expected = new Measurement(newBackground.Quantity / (decimal)data.ExternalCommandSensitivity, newBackground.Exponent, "V");
 
             Assert.That(mcd.OutputBackground, Is.EqualTo(expected));
         }
