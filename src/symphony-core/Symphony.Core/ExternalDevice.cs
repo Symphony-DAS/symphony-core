@@ -35,7 +35,7 @@ namespace Symphony.Core
     /// 
     /// <para>Each ExternalDevice has an associated Controller instance. Input data is pushed
     /// to the Controller from the device whereupon the Controller will append that data
-    /// to the relevatn Response of the current Epoch.
+    /// to the relevant Response of the current Epoch.
     /// Similarly, the device pulls data for output from the Controller
     /// which will in turn pull from the appropriate Stimulus for the current Epoch.</para>
     /// 
@@ -397,7 +397,7 @@ namespace Symphony.Core
             Contract.Assert(outputStream != null, "outputStream is null");
             Contract.Assert(name != null && name.Length > 0, "name is null or empty");
 
-            outputStream.Device = this;
+            outputStream.Devices.Add(this);
             this.Streams[name] = outputStream;
             return this;
         }

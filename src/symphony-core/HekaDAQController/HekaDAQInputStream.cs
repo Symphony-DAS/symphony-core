@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Linq;
 using System.Collections.Generic;
 using Heka.NativeInterop;
 using Symphony.Core;
@@ -10,7 +11,7 @@ namespace Heka
     /// only so that users can call RegisterConverters() until we've MEF-erized
     /// the unit conversion system.
     /// </summary>
-    public sealed class HekaDAQInputStream : DAQInputStream, HekaDAQStream
+    public class HekaDAQInputStream : DAQInputStream, HekaDAQStream
     {
         public const string DAQCountUnits = "HekaDAQCounts";
 
@@ -78,6 +79,61 @@ namespace Heka
             Converters.Register(DAQCountUnits,
                 Measurement.UNITLESS,
                 (m) => m);
+        }
+    }
+
+    /// <summary>
+    /// IDAQInputStream implementation for the Heka/Instrutech digital DAQ hardware.
+    /// </summary>
+    public class HekaDigitalDAQInputStream : HekaDAQInputStream, HekaDigitalDAQStream
+    {
+        public IDictionary<IExternalDevice, ushort> BitPositions { get; private set; }
+
+        public HekaDigitalDAQInputStream(string name, ushort channelNumber, HekaDAQController controller) 
+            : base(name, StreamType.DIGITAL_IN, channelNumber, controller)
+        {
+            BitPositions = new Dictionary<IExternalDevice, ushort>();
+        }
+
+        public override IDictionary<string, object> Configuration
+        {
+            get
+            {
+                var config = base.Configuration;
+                foreach (var ed in Devices)
+                {
+                    config[ed.Name + "_bitPosition"] = BitPositions[ed];
+                }
+
+                return config;
+            }
+        }
+
+        public override void PushInputData(IInputData inData)
+        {
+            if (MeasurementConversionTarget == null)
+                throw new DAQException("Input stream has null MeasurementConversionTarget");
+
+            foreach (ExternalDeviceBase ed in Devices)
+            {
+                var data = inData.DataWithUnits(MeasurementConversionTarget);
+
+                ushort bitPosition = BitPositions[ed];
+                data = new InputData(data, data.Data.Select(m => new Measurement(((short)m.QuantityInBaseUnit >> bitPosition) & 1, 0, Measurement.UNITLESS)));
+                
+                ed.PushInputData(this, data.DataWithStreamConfiguration(this, this.Configuration));
+            }
+        }
+
+        public override Maybe<string> Validate()
+        {
+            if (Devices.Any(d => !BitPositions.ContainsKey(d)))
+                return Maybe<string>.No("All devices must have an associated bit position");
+
+            if (BitPositions.Values.Any(n => n >= 16))
+                return Maybe<string>.No("No bit position can be greater than or equal to 16");
+
+            return base.Validate();
         }
     }
 }

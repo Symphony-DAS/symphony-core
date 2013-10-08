@@ -107,7 +107,7 @@ namespace Symphony.SimulationDAQController
             c.Start(false);
             Thread.Sleep(500);
 
-            var actualInput = ((TestDevice)outStream.Device).InputData.ContainsKey(inStream) ? ((TestDevice)outStream.Device).InputData[inStream].First() : null;
+            var actualInput = ((TestDevice)outStream.Devices.First()).InputData.ContainsKey(inStream) ? ((TestDevice)outStream.Devices.First()).InputData[inStream].First() : null;
 
             Assert.That(actualInput, Is.Not.Null);
             Assert.That(actualInput.Data, Is.EqualTo(expectedOutput.Data));
@@ -121,7 +121,7 @@ namespace Symphony.SimulationDAQController
 
             inStream = new DAQInputStream("IN");
             inStream.SampleRate = outStream.SampleRate;
-            outStream.Device.BindStream(inStream);
+            outStream.Devices.First().BindStream(inStream);
             inStream.MeasurementConversionTarget = outStream.MeasurementConversionTarget;
         }
     }

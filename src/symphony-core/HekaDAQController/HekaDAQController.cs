@@ -38,6 +38,19 @@ namespace Heka
     }
 
     /// <summary>
+    /// Heka/Instrutech-specific details of a digital DAQ stream. Each digital
+    /// DAQ stream groups 16-bits, where each bit represents a physical port on
+    /// the device.
+    /// 
+    /// All devices associated with a HekaDigitalDAQStream must indicate an
+    /// associated bit position through which to push/pull data.
+    /// </summary>
+    public interface HekaDigitalDAQStream : HekaDAQStream
+    {
+        IDictionary<IExternalDevice, ushort> BitPositions { get; } 
+    }
+
+    /// <summary>
     /// Encapsulates interaction with the ITCMM driver. Client code should not use this interface
     /// directly; a IHekaDevice is managed by the HekaDAQController.
     /// </summary>
@@ -63,6 +76,7 @@ namespace Heka
         void StartHardware(bool waitForTrigger);
         void StopHardware();
 
+        ITCMM.GlobalDeviceInfo DeviceInfo { get; }
         ITCMM.ITCChannelInfo ChannelInfo(StreamType channelType, ushort channelNumber);
 
         IInputData ReadStreamAsyncIO(HekaDAQInputStream instream);
@@ -284,13 +298,13 @@ namespace Heka
                 for (ushort i = 0; i < deviceInfo.NumberOfDIs; i++)
                 {
                     string name = String.Format("{0}.{1}", "DIGITAL_IN", i);
-                    this.DAQStreams.Add(new HekaDAQInputStream(name, StreamType.DIGITAL_IN, i, this));
+                    this.DAQStreams.Add(new HekaDigitalDAQInputStream(name, i, this));
                 }
 
                 for (ushort i = 0; i < deviceInfo.NumberOfDOs; i++)
                 {
                     string name = String.Format("{0}.{1}", "DIGITAL_OUT", i);
-                    this.DAQStreams.Add(new HekaDAQOutputStream(name, StreamType.DIGITAL_OUT, i, this));
+                    this.DAQStreams.Add(new HekaDigitalDAQOutputStream(name, i, this));
                 }
 
                 this.HardwareReady = true;
@@ -507,7 +521,6 @@ namespace Heka
 
             if (result)
             {
-
                 if (Streams.Any(s => !s.SampleRate.Equals(SampleRate)))
                     return Maybe<string>.No("All streams must have the same sample rate as controller.");
 
@@ -519,11 +532,60 @@ namespace Heka
 
                 if (SampleRate.QuantityInBaseUnit <= 0)
                     return Maybe<string>.No("Sample rate must be greater than 0");
+
+
+                // This is a workaround for issue #41 (https://github.com/Symphony-DAS/Symphony/issues/41)
+                foreach (var s in InputStreams)
+                {
+                    foreach (var ed in s.Devices.OfType<NullDevice>().ToList())
+                    {
+                        s.RemoveDevice(ed);
+                    }
+                }
+
+                if (Math.Max(ActiveOutputStreams.Count(), ActiveInputStreams.Count()) >= 1)
+                {
+                    var samplingInterval = 1e9m / (SampleRate.QuantityInBaseUnit * Math.Max(ActiveOutputStreams.Count(), ActiveInputStreams.Count()));
+
+                    while (samplingInterval % Device.DeviceInfo.MinimumSamplingStep != 0m)
+                    {
+                        var inactive = InputStreams.Where(s => !s.Active).ToList();
+
+                        if (!inactive.Any())
+                            return Maybe<string>.No("A well-aligned sampling interval is not possible with the current sampling rate");
+
+                        var dev = new NullDevice();
+                        dev.BindStream(inactive.First());
+
+                        samplingInterval = 1e9m / (SampleRate.QuantityInBaseUnit * Math.Max(ActiveOutputStreams.Count(), ActiveInputStreams.Count()));
+                    }
+                }
             }
 
             return result;
         }
 
+        private class NullDevice : ExternalDeviceBase
+        {
+            public NullDevice()
+                : base("NULL", "NULL", (Measurement)null)
+            {
+            }
+
+            public override IOutputData PullOutputData(IDAQOutputStream stream, TimeSpan duration)
+            {
+                throw new NotImplementedException();
+            }
+
+            public override void PushInputData(IDAQInputStream stream, IInputData inData)
+            {
+            }
+
+            public override Maybe<string> Validate()
+            {
+                return Maybe<string>.Yes();
+            }
+        }
 
         internal void PipelineException(Exception e)
         {

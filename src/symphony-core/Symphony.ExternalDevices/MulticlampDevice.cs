@@ -480,7 +480,7 @@ namespace Symphony.ExternalDevices
 
                     if (deviceParams.ExternalCommandSensitivityUnits != MultiClampInterop.ExternalCommandSensitivityUnits.V_V)
                     {
-                        throw new MultiClampDeviceException("External command units are not V/V as expected for current deivce mode.");
+                        throw new MultiClampDeviceException("External command units are not V/V as expected for current device mode.");
                     }
 
                     break;
@@ -529,8 +529,8 @@ namespace Symphony.ExternalDevices
             else
             {
                 result = (decimal)deviceParams.ExternalCommandSensitivity == 0 ? 
-                    new Measurement(sample.QuantityInBaseUnit, sample.Exponent, "V") : 
-                    new Measurement(sample.QuantityInBaseUnit / (decimal)deviceParams.ExternalCommandSensitivity, sample.Exponent, "V");
+                    new Measurement(sample.Quantity, sample.Exponent, "V") : 
+                    new Measurement(sample.Quantity / (decimal)deviceParams.ExternalCommandSensitivity, sample.Exponent, "V");
             }
 
             return result;

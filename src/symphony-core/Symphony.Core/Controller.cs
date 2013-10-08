@@ -203,24 +203,6 @@ namespace Symphony.Core
             if (daqVal != true)
                 return daqVal;
 
-            // I think we're OK just adding all necessary devices the client failed to add
-            // instead of complaining and forcing them to do it.
-            foreach (var stream in DAQController.OutputStreams.Where(s => s.Active))
-            {
-                if (!Devices.Contains(stream.Device))
-                {
-                    AddDevice(stream.Device);
-                }
-            }
-
-            foreach (var stream in DAQController.InputStreams.Where(s => s.Active))
-            {
-                foreach (var device in stream.Devices.Where(d => !Devices.Contains(d)))
-                {
-                    AddDevice(device);
-                }
-            }
-
             foreach (ExternalDeviceBase ed in Devices)
             {
                 if (ed.Controller != this)
@@ -910,7 +892,14 @@ namespace Symphony.Core
                 PushedInputData -= inputPushed;
                 DAQController.ExceptionalStop -= daqExceptionalStop;
 
-                DAQController.WaitForInputTasks();
+                try
+                {
+                    DAQController.WaitForInputTasks();
+                }
+                catch (Exception ex)
+                {
+                    log.WarnFormat("An input task failed during cleanup: {0}", ex);
+                }
 
                 OutputDataStreams.Clear();
                 InputDataStreams.Clear();

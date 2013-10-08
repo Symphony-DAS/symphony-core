@@ -90,7 +90,7 @@ namespace Symphony.Core
         /// <summary>
         /// The ExternalDevice instances to which we push IInputData
         /// </summary>
-        IList<ExternalDeviceBase> Devices { get; }
+        IList<IExternalDevice> Devices { get; }
     }
 
     /// <summary>
@@ -99,9 +99,9 @@ namespace Symphony.Core
     public interface IDAQOutputStream : IDAQStream
     {
         /// <summary>
-        /// The device instance from which we pull OutputData
+        /// The ExternalDevice instances with which we pull IOutputData
         /// </summary>
-        IExternalDevice Device { get; set; }
+        IList<IExternalDevice> Devices { get; }
 
         /// <summary>
         /// Indicates if this stream has more output data. Will be false once
@@ -122,7 +122,7 @@ namespace Symphony.Core
 
         /// <summary>
         /// The "background" value to be used when no data is available or upon stopping the 
-        /// DAQ device. This will typically delegate to this.Device.Background.
+        /// DAQ device.
         /// </summary>
         IMeasurement Background { get; }
 
@@ -130,7 +130,7 @@ namespace Symphony.Core
 
 
         /// <summary>
-        /// Applies the attached output device OutputBackground.
+        /// Applies the stream Background.
         /// </summary>
         void ApplyBackground();
 
@@ -163,7 +163,7 @@ namespace Symphony.Core
         /// <param name="daqController"> </param>
         public DAQInputStream(string name, IDAQController daqController)
         {
-            this.Devices = new List<ExternalDeviceBase>();
+            this.Devices = new List<IExternalDevice>();
             this.Configuration = new Dictionary<string, object>();
             this.Name = name;
             this.DAQ = daqController;
@@ -201,7 +201,7 @@ namespace Symphony.Core
         {
             get
             {
-                return Devices.Count() > 0;
+                return Devices.Any();
             }
         }
 
@@ -255,7 +255,7 @@ namespace Symphony.Core
         /// <summary>
         /// The ExternalDevice instances to which we push IInputData
         /// </summary>
-        public virtual IList<ExternalDeviceBase> Devices { get; private set; }
+        public virtual IList<IExternalDevice> Devices { get; private set; }
 
         /// <summary>
         /// Push the input data to the devices associated with this DAQInputStream.
@@ -339,13 +339,14 @@ namespace Symphony.Core
         /// <param name="daqController"> </param>
         public DAQOutputStream(string name, IDAQController daqController)
         {
+            this.Devices = new List<IExternalDevice>();
             this.Name = name;
             this.Configuration = new Dictionary<string, object>();
             this.LastDataPulled = false;
             this.DAQ = daqController;
         }
 
-        private bool LastDataPulled { get; set; }
+        protected bool LastDataPulled { get; set; }
 
 
         public bool HasMoreData
@@ -356,17 +357,32 @@ namespace Symphony.Core
             }
         }
 
+        /// <summary>
+        /// The "background" value to be used when no data is available or upon stopping the 
+        /// DAQ device. The value is the sum of OutputBackgrounds of all associated devices.
+        /// </summary>
         public IMeasurement Background
         {
             get
             {
-                return Device.OutputBackground;
+                var backgrounds = Devices.Select(ed => ed.OutputBackground).ToList();
+
+                var units = backgrounds.Select(b => b.BaseUnit).Distinct().ToList();
+                if (units.Count() > 1)
+                    throw new DAQException("Devices have multiple background base units");
+
+                var quantity = backgrounds.Select(b => b.QuantityInBaseUnit).Sum();
+
+                return new Measurement(quantity, 0, units.First());
             }
         }
 
         public void DidOutputData(DateTimeOffset outputTime, TimeSpan duration, IEnumerable<IPipelineNodeConfiguration> configuration)
         {
-            Device.DidOutputData(this, outputTime, duration, configuration);
+            foreach (var ed in Devices)
+            {
+                ed.DidOutputData(this, outputTime, duration, configuration);
+            }
         }
 
         public void Reset()
@@ -407,21 +423,21 @@ namespace Symphony.Core
         public string Name { get; private set; }
 
         /// <summary>
-        /// Indicates whether this stream is "active". An active output stream has exactly one
+        /// Indicates whether this stream is "active". An active output stream has at least one
         /// attached ExternalDevice.
         /// </summary>
         public bool Active
         {
             get
             {
-                return Device != null;
+                return Devices.Any();
             }
         }
 
         /// <summary>
-        /// The ExternalDevice from which we pull OutputData
+        /// The ExternalDevice instances with which we pull IOutputData
         /// </summary>
-        public virtual IExternalDevice Device { get; set; }
+        public virtual IList<IExternalDevice> Devices { get; private set; }
 
         /// <summary>
         /// Removes the given ExternalDevice from this stream.
@@ -429,11 +445,10 @@ namespace Symphony.Core
         /// <param name="device">Device to remove</param>
         public void RemoveDevice(ExternalDeviceBase device)
         {
-            if (Device == device)
-            {
-                Device.UnbindStream(Name);
-                Device = null;
-            }
+            if (device.Streams.ContainsKey(Name))
+                device.UnbindStream(Name);
+
+            Devices.Remove(device);
         }
 
         /// <summary>
@@ -461,34 +476,38 @@ namespace Symphony.Core
         public virtual string MeasurementConversionTarget { get; set; }
 
         /// <summary>
-        /// Pulls the next IOuputData from this stream's external device.
+        /// Pulls the next IOuputData from the devices associated with this DAQOutputStream. If
+        /// multiple devices are associated with this stream, the returned output data is the sum
+        /// of all device output data.
         /// <para>This method checks the pulled data to see if its IsLast flag is true.
         /// If so, this stream is marked as with LastDataPulled=true.</para>
         /// </summary>
         /// <remarks>Appends this stream's Configuration to the output data.</remarks>
         /// <returns>The output data to be sent down the output pipeline.</returns>
-        /// <exception cref="DAQException">If Device is null</exception>
+        /// <exception cref="DAQException">If Devices is empty</exception>
         /// <exception cref="DAQException">If the pulled data's SampleRate does match this stream's SampleRate</exception>
         public virtual IOutputData PullOutputData(TimeSpan duration)
         {
-            if (Device == null)
-            {
-                throw new DAQException("External Device is null (check configuration)");
-            }
+            if (!Devices.Any())
+                throw new DAQException("No bound external devices (check configuration)");
 
-            IOutputData outData = Device.PullOutputData(this, duration);
+            IOutputData outData = null;
+            foreach (var ed in Devices)
+            {
+                var pulled = ed.PullOutputData(this, duration).DataWithUnits(MeasurementConversionTarget);
+
+                outData = outData == null 
+                    ? pulled
+                    : outData.Zip(pulled, (m1, m2) => new Measurement(m1.QuantityInBaseUnit + m2.QuantityInBaseUnit, 0, m1.BaseUnit));
+            }
 
             if (!outData.SampleRate.Equals(this.SampleRate))
                 throw new DAQException("Sample rate mismatch.");
 
-
             if (outData.IsLast)
                 LastDataPulled = true;
 
-            var convertedData = outData.DataWithUnits(MeasurementConversionTarget)
-                .DataWithStreamConfiguration(this, this.Configuration);
-
-            return convertedData;
+            return outData.DataWithStreamConfiguration(this, this.Configuration);
         }
 
         private static readonly ILog log = LogManager.GetLogger(typeof(DAQOutputStream));
@@ -500,8 +519,8 @@ namespace Symphony.Core
         public virtual Maybe<string> Validate()
         {
             // We should always have some non-zero number of Devices configured
-            if (Device == null && this.Active)
-                return Maybe<string>.No("No device, and/or 'this' not Active");
+            if (Devices.Count == 0 && this.Active)
+                return Maybe<string>.No("Zero devices configured and/or 'this' not Active");
 
             if (Name == null)
                 return Maybe<string>.No("Name was null");

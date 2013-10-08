@@ -317,23 +317,40 @@ namespace Symphony.Core
     }
 
     [TestFixture]
-    class RepeatingRenderedStimulusTests
+    public class CombinedStimulusTests
     {
         [Test]
-        public void HoldsParameters()
+        public void CombinesParameters()
         {
-            var parameters = new Dictionary<string, object>();
-            parameters["key1"] = "value1";
-            parameters["key2"] = 2;
-
-            var measurements = new List<IMeasurement> {new Measurement(1, "V")};
+            var measurements = new List<IMeasurement> { new Measurement(1, "V") };
             var data = new OutputData(measurements, new Measurement(1, "Hz"), false);
-            var s = new RepeatingRenderedStimulus("RepeatingRenderedStimulus", 
-                parameters, 
-                data, 
-                Option<TimeSpan>.Some(TimeSpan.FromMilliseconds(0)));
 
-            Assert.That(s.Parameters, Is.EqualTo(parameters));
+            var s1 = new RenderedStimulus("stim1", new Dictionary<string, object>()
+                {
+                    {"key1", "value"},
+                    {"key2", 5}
+                }, data);
+
+            var s2 = new RenderedStimulus("stim2", new Dictionary<string, object>()
+                {
+                    {"key1", "value"},
+                    {"key2", 2},
+                    {"key3", 0}
+                }, data);
+
+            var combine = new CombinedStimulus("CombinedStimulus", new Dictionary<string, object>(),  new List<IStimulus>() {s1, s2}, CombinedStimulus.Add);
+
+            var expected = new Dictionary<string, object>();
+            expected["stim0_stimulusID"] = "stim1";
+            expected["stim0_key1"] = "value";
+            expected["stim0_key2"] = 5;
+
+            expected["stim1_stimulusID"] = "stim2";
+            expected["stim1_key1"] = "value";
+            expected["stim1_key2"] = 2;
+            expected["stim1_key3"] = 0;
+
+            Assert.That(combine.Parameters, Is.EqualTo(expected)); 
         }
 
         [Test]
@@ -342,43 +359,71 @@ namespace Symphony.Core
             var parameters = new Dictionary<string, object>();
             const string stimID = "my.ID";
 
-            var measurements = new List<IMeasurement> { new Measurement(1, "V") };
-            var data = new OutputData(measurements, new Measurement(1, "Hz"), false);
-            var s = new RepeatingRenderedStimulus(stimID, 
-                parameters, 
-                data,
-                Option<TimeSpan>.Some(TimeSpan.FromMilliseconds(0)));
+            var s = new CombinedStimulus(stimID, new Dictionary<string, object>(),  new List<IStimulus>(), CombinedStimulus.Add);
 
             Assert.That(s.StimulusID, Is.EqualTo(stimID));
         }
 
         [Test]
-        public void EnumeratesDataBlocks(
+        public void CombinesDataBlocks(
             [Values(100, 500, 1000, 5000)] double blockMilliseconds,
-            [Values(1000, 5000, 10000)] double sampleRateHz
+            [Values(5000, 10000)] double sampleRateHz,
+            [Values(1, 4)] int numStim
             )
         {
             var parameters = new Dictionary<string, object>();
             var sampleRate = new Measurement((decimal)sampleRateHz, "Hz");
 
-            IOutputData repeatingData = new OutputData(Enumerable.Range(0, (int)TimeSpan.FromSeconds(1).Samples(new Measurement((decimal)sampleRateHz, "Hz")))
+            var data = new List<IOutputData>();
+            var stimuli = new List<IStimulus>();
+            for (int i = 0; i < numStim; i++)
+            {
+                IOutputData d = new OutputData(Enumerable.Range(0, (int)TimeSpan.FromSeconds(3).Samples(new Measurement((decimal)sampleRateHz, "Hz")))
+                    .Select(j => new Measurement(j, "units")).ToList(),
+                    sampleRate,
+                    false);
+                data.Add(d);
+                stimuli.Add(new RenderedStimulus((string)"RenderedStimulus" + i, (IDictionary<string, object>)parameters, d));
+            }
+
+            var combined = new CombinedStimulus("CombinedStimulus", new Dictionary<string, object>(),  stimuli, CombinedStimulus.Add);
+
+            var blockSpan = TimeSpan.FromMilliseconds(blockMilliseconds);
+            IEnumerator<IOutputData> iter = combined.DataBlocks(blockSpan).GetEnumerator();
+            while (iter.MoveNext())
+            {
+                IOutputData expectedData = null;
+                foreach (var d in data.ToList())
+                {
+                    var cons = d.SplitData(blockSpan);
+                    data[data.IndexOf(d)] = cons.Rest;
+
+                    expectedData = expectedData == null
+                        ? cons.Head
+                        : expectedData.Zip(cons.Head, (m1, m2) => new Measurement(m1.QuantityInBaseUnit + m2.QuantityInBaseUnit, 0, m1.BaseUnit));
+                }
+
+                Assert.That(iter.Current.Duration, Is.EqualTo(expectedData.Duration));
+                Assert.That(iter.Current.Data, Is.EqualTo(expectedData.Data));
+            }
+        }
+
+        [Test]
+        public void ShouldThrowForDurationMismatch()
+        {
+            const double sampleRateHz = 100d;
+            var parameters = new Dictionary<string, object>();
+            var sampleRate = new Measurement((decimal)sampleRateHz, "Hz");
+
+            IOutputData data = new OutputData(Enumerable.Range(0, (int)TimeSpan.FromSeconds(3).Samples(new Measurement((decimal)sampleRateHz, "Hz")))
                 .Select(i => new Measurement(i, "units")).ToList(),
                 sampleRate,
                 false);
 
-            IOutputData outputData = repeatingData.Concat(repeatingData).Concat(repeatingData);
+            var s1 = new RenderedStimulus("stim1", new Dictionary<string, object>(), data);
+            var s2 = new RenderedStimulus("stim2", new Dictionary<string, object>(), data.SplitData(data.Duration - TimeSpan.FromSeconds(0.1)).Head);
 
-            var s = new RepeatingRenderedStimulus("RepeatingRenderedStimulus", parameters, repeatingData, Option<TimeSpan>.Some(outputData.Duration));
-
-            var blockSpan = TimeSpan.FromMilliseconds(blockMilliseconds);
-            IEnumerator<IOutputData> iter = s.DataBlocks(blockSpan).GetEnumerator();
-            while (iter.MoveNext())
-            {
-                var cons = outputData.SplitData(blockSpan);
-                outputData = cons.Rest;
-                Assert.That(iter.Current.Duration, Is.EqualTo(cons.Head.Duration));
-                Assert.That(iter.Current.Data, Is.EqualTo(cons.Head.Data));
-            }
+            Assert.That(() => new CombinedStimulus("CombinedStimulus", new Dictionary<string, object>(), new List<IStimulus>() { s1, s2 }, CombinedStimulus.Add), Throws.TypeOf(typeof(ArgumentException)));
         }
 
         [Test]
@@ -387,16 +432,17 @@ namespace Symphony.Core
             var parameters = new Dictionary<string, object>();
             var sampleRate = new Measurement(1000, "Hz");
 
-            IOutputData repeatingData = new OutputData(Enumerable.Range(0, 1000).Select(i => new Measurement(i, "units")).ToList(),
+            IOutputData data = new OutputData(Enumerable.Range(0, 1000).Select(i => new Measurement(i, "units")).ToList(),
                 sampleRate,
                 false);
 
-            IOutputData outputData = repeatingData.Concat(repeatingData).Concat(repeatingData);
+            var s1 = new RenderedStimulus("stim1", new Dictionary<string, object>(), data);
+            var s2 = new RenderedStimulus("stim2", new Dictionary<string, object>(), data);
 
-            var s = new RepeatingRenderedStimulus("RepeatingRenderedStimulus", parameters, repeatingData, Option<TimeSpan>.Some(outputData.Duration));
+            var combine = new CombinedStimulus("CombinedStimulus", new Dictionary<string, object>(),  new List<IStimulus>() { s1, s2 }, CombinedStimulus.Add);
 
             var block = TimeSpan.FromMilliseconds(100);
-            IEnumerator<IOutputData> iter = s.DataBlocks(block).GetEnumerator();
+            IEnumerator<IOutputData> iter = combine.DataBlocks(block).GetEnumerator();
             IOutputData current = null;
             while (iter.MoveNext())
             {
@@ -412,16 +458,17 @@ namespace Symphony.Core
             var parameters = new Dictionary<string, object>();
             var sampleRate = new Measurement(1000, "Hz");
 
-            IOutputData repeatingData = new OutputData(Enumerable.Range(0, 1000).Select(i => new Measurement(i, "units")).ToList(),
+            IOutputData data = new OutputData(Enumerable.Range(0, 1000).Select(i => new Measurement(i, "units")).ToList(),
                 sampleRate,
                 true);
 
-            IOutputData outputData = repeatingData.Concat(repeatingData).Concat(repeatingData);
+            var s1 = new RenderedStimulus("stim1", new Dictionary<string, object>(), data);
+            var s2 = new RenderedStimulus("stim2", new Dictionary<string, object>(), data);
 
-            var s = new RepeatingRenderedStimulus("RepeatingRenderedStimulus", parameters, repeatingData, Option<TimeSpan>.Some(outputData.Duration));
+            var combine = new CombinedStimulus("CombinedStimulus", new Dictionary<string, object>(), new List<IStimulus>() { s1, s2 }, CombinedStimulus.Add);
 
             var block = TimeSpan.FromMilliseconds(100);
-            IEnumerator<IOutputData> iter = s.DataBlocks(block).GetEnumerator();
+            IEnumerator<IOutputData> iter = combine.DataBlocks(block).GetEnumerator();
             Assert.True(iter.MoveNext());
             Assert.False(iter.Current.IsLast);
         }
