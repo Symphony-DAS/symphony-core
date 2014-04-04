@@ -332,7 +332,15 @@ namespace Heka
         internal static IHekaDevice OpenDevice(uint deviceType, uint deviceNumber, out ITCMM.GlobalDeviceInfo deviceInfo)
         {
             IntPtr dev;
-            uint err = ITCMM.ITC_OpenDevice(deviceType, deviceNumber, ITCMM.SMART_MODE, out dev);
+
+            uint numDevices = 0;
+            uint err = ITCMM.ITC_Devices(deviceType, ref numDevices);
+            if (err != ITCMM.ACQ_SUCCESS)
+            {
+                throw new HekaDAQException("Unable to find devices", err);
+            }
+
+            err = ITCMM.ITC_OpenDevice(deviceType, deviceNumber, ITCMM.SMART_MODE, out dev);
             if (err != ITCMM.ACQ_SUCCESS)
             {
                 log.Error("Unable to open ITC device");
