@@ -5,31 +5,31 @@
       <Component Id="C.hdf5_hl">
         <File Id="F.hdf5_hl"
               KeyPath="yes"
-              Source="$(var.SolutionDir)..\..\externals\HDF5DotNet\x86\hdf5_hldll.dll"/>
+              Source="$(var.SolutionDir)..\..\externals\HDF5DotNet\$(var.Platform)\hdf5_hldll.dll"/>
       </Component>
 
       <Component Id="C.hdf5">
         <File Id="F.hdf5"
               KeyPath="yes"
-              Source="$(var.SolutionDir)..\..\externals\HDF5DotNet\x86\hdf5dll.dll"/>
+              Source="$(var.SolutionDir)..\..\externals\HDF5DotNet\$(var.Platform)\hdf5dll.dll"/>
       </Component>
 
       <Component Id="C.hdf5dotnet">
         <File Id="F.hdf5dotnet"
               KeyPath="yes"
-              Source="$(var.SolutionDir)..\..\externals\HDF5DotNet\x86\HDF5DotNet.dll"/>
+              Source="$(var.SolutionDir)..\..\externals\HDF5DotNet\$(var.Platform)\HDF5DotNet.dll"/>
       </Component>
 
       <Component Id="C.szip">
         <File Id="F.szip"
               KeyPath="yes"
-              Source="$(var.SolutionDir)..\..\externals\HDF5DotNet\x86\szip.dll"/>
+              Source="$(var.SolutionDir)..\..\externals\HDF5DotNet\$(var.Platform)\szip.dll"/>
       </Component>
 
-      <Component Id="C.zlib1">
+      <Component Id="C.zlib">
         <File Id="F.zlib"
               KeyPath="yes"
-              Source="$(var.SolutionDir)..\..\externals\HDF5DotNet\x86\zlib.dll"/>
+              Source="$(var.SolutionDir)..\..\externals\HDF5DotNet\$(var.Platform)\zlib.dll"/>
       </Component>
       
     </DirectoryRef>
@@ -39,7 +39,7 @@
       <ComponentRef Id="C.hdf5"/>
       <ComponentRef Id="C.hdf5dotnet"/>
       <ComponentRef Id="C.szip"/>
-      <ComponentRef Id="C.zlib1"/>
+      <ComponentRef Id="C.zlib"/>
     </ComponentGroup>
 	</Fragment>
 </Wix>
