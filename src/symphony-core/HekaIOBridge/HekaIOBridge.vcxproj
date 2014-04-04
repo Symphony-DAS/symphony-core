@@ -73,8 +73,8 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>true</LinkIncremental>
-    <IncludePath>$(SolutionDir)\..\externals\Hekka\ITCMM-110410;$(IncludePath)</IncludePath>
-    <LibraryPath>$(SolutionDir)\..\externals\Hekka\ITCMM-110410\amd64;$(SolutionDir)\$(Configuration);$(LibraryPath)</LibraryPath>
+    <IncludePath>$(SolutionDir)..\..\externals\ITCMM;$(IncludePath)</IncludePath>
+    <LibraryPath>$(SolutionDir)..\..\externals\ITCMM\amd64;$(SolutionDir)\$(Configuration);$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>

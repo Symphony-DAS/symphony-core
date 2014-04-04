@@ -1,6 +1,6 @@
 ﻿
-Microsoft Visual Studio Solution File, Format Version 11.00
-# Visual Studio 2010
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2012
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Symphony.Core", "Symphony.Core\Symphony.Core.csproj", "{F67AD286-059F-4C8D-9D99-D92DB2DC887A}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Symphony.Core.Tests", "Symphony.Core.Tests\Symphony.Core.Tests.csproj", "{E88C7308-8CBC-4162-914C-6BC26478B329}"
@@ -211,6 +211,7 @@ Global
 		{686DAC15-41A1-4FF4-A839-3F64531702D5}.Debug|Mixed Platforms.Build.0 = Debug|x86
 		{686DAC15-41A1-4FF4-A839-3F64531702D5}.Debug|Win32.ActiveCfg = Debug|x86
 		{686DAC15-41A1-4FF4-A839-3F64531702D5}.Debug|x64.ActiveCfg = Debug|x64
+		{686DAC15-41A1-4FF4-A839-3F64531702D5}.Debug|x64.Build.0 = Debug|x64
 		{686DAC15-41A1-4FF4-A839-3F64531702D5}.Debug|x86.ActiveCfg = Debug|x86
 		{686DAC15-41A1-4FF4-A839-3F64531702D5}.Debug|x86.Build.0 = Debug|x86
 		{686DAC15-41A1-4FF4-A839-3F64531702D5}.Release|Any CPU.ActiveCfg = Release|x86

@@ -325,7 +325,7 @@ namespace Symphony.Core
 
             H5G.close(epochID);
 
-            H5F.flush(fileId);
+            H5F.flush(fileId, H5F.Scope.GLOBAL);
         }
 
         private static void WriteKeywords(H5ObjectWithAttributes objectID, ISet<string> keywords)
@@ -349,7 +349,7 @@ namespace Symphony.Core
             H5G.close(epochGroup.EpochsId);
             H5G.close(epochGroup.GroupId);
 
-            H5F.flush(fileId);
+            H5F.flush(fileId, H5F.Scope.GLOBAL);
 
         }
 
