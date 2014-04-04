@@ -65,6 +65,7 @@
     <ErrorReport>prompt</ErrorReport>
     <CodeAnalysisIgnoreBuiltInRuleSets>true</CodeAnalysisIgnoreBuiltInRuleSets>
     <CodeAnalysisIgnoreBuiltInRules>true</CodeAnalysisIgnoreBuiltInRules>
+    <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Release|x64'">
     <OutputPath>bin\x64\Release\</OutputPath>
@@ -74,6 +75,16 @@
     <PlatformTarget>x64</PlatformTarget>
     <ErrorReport>prompt</ErrorReport>
   </PropertyGroup>
+  <ItemGroup Condition=" '$(Platform)' == 'x86' ">
+    <Reference Include="HDF5DotNet, Version=1.8.9.0, Culture=neutral, processorArchitecture=x86">
+      <HintPath>..\..\..\externals\HDF5DotNet\x86\HDF5DotNet.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+  <ItemGroup Condition=" '$(Platform)' == 'x64' ">
+    <Reference Include="HDF5DotNet, Version=1.8.9.0, Culture=neutral, processorArchitecture=x64">
+      <HintPath>..\..\..\externals\HDF5DotNet\x64\HDF5DotNet.dll</HintPath>
+    </Reference>
+  </ItemGroup>
   <ItemGroup>
     <Reference Include="ApprovalTests, Version=1.21.4657.21485, Culture=neutral, PublicKeyToken=11bd7d124fc62e0f, processorArchitecture=MSIL">
       <HintPath>..\packages\ApprovalTests.2.1\lib\ApprovalTests.dll</HintPath>
@@ -81,9 +92,6 @@
     <Reference Include="ApprovalUtilities, Version=1.21.4657.21484, Culture=neutral, PublicKeyToken=11bd7d124fc62e0f, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\ApprovalTests.2.1\lib\ApprovalUtilities.dll</HintPath>
-    </Reference>
-    <Reference Include="HDF5DotNet, Version=1.8.7.0, Culture=neutral, processorArchitecture=x86">
-      <HintPath>..\..\..\externals\HDF5DotNet\HDF5DotNet.dll</HintPath>
     </Reference>
     <Reference Include="Moq">
       <HintPath>..\packages\Moq.4.0.10827\lib\NET40\Moq.dll</HintPath>
@@ -178,8 +186,7 @@
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
-    <PostBuildEvent>
-    </PostBuildEvent>
+    <PostBuildEvent>copy "$(SolutionDir)..\..\externals\HDF5DotNet\$(Platform)\*" "$(TargetDir)"</PostBuildEvent>
   </PropertyGroup>
   <Import Project="$(SolutionDir)\.nuget\nuget.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
