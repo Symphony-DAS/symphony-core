@@ -250,19 +250,21 @@ namespace Symphony.Core
             var srate = new Measurement(10000, "Hz");
             IList<IMeasurement> list = Enumerable.Range(0, (int)((double)srate.QuantityInBaseUnit * dur.TotalSeconds)).Select(i => new Measurement(i, "V") as IMeasurement).ToList();
 
+            var now = DateTime.Now;
+
             var dur1 = TimeSpan.FromTicks(dur.Ticks/4);
             var samples1 = (int) dur1.Samples(srate);
-            var push1 = new InputData(list.Take(samples1).ToList(), srate, DateTime.Now);
+            var push1 = new InputData(list.Take(samples1).ToList(), srate, now);
             stream.PushInputData(push1);
 
             var dur2 = TimeSpan.FromTicks(dur.Ticks/4);
             var samples2 = (int) dur2.Samples(srate);
-            var push2 = new InputData(list.Skip(samples1).Take(samples2).ToList(), srate, DateTime.Now);
+            var push2 = new InputData(list.Skip(samples1).Take(samples2).ToList(), srate, now.AddTicks(1));
             stream.PushInputData(push2);
 
             var dur3 = TimeSpan.FromTicks(dur.Ticks/2);
             var samples3 = (int) dur3.Samples(srate);
-            var push3 = new InputData(list.Skip(samples1 + samples2).Take(samples3).ToList(), srate, DateTime.Now);
+            var push3 = new InputData(list.Skip(samples1 + samples2).Take(samples3).ToList(), srate, now.AddTicks(2));
             stream.PushInputData(push3);
 
             Assert.AreEqual(list, response.Data.ToList());

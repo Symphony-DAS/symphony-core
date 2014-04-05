@@ -278,7 +278,6 @@ namespace Symphony.Core
 
             IMeasurement sampleRate = new Measurement(1000, "Hz");
             DateTimeOffset time = DateTimeOffset.Now;
-            IDictionary<string, object> config = null;
 
             IInputData inData = new InputData(data, sampleRate, time);
             s.PushInputData(inData);
