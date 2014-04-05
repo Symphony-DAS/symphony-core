@@ -472,16 +472,10 @@ namespace Symphony.Core
                 (IMeasurement m) => m);
 
             var c = new Controller();
-            bool evt = false;
 
             c.DAQController = new TestDAQController();
             c.Clock = c.DAQController as IClock;
             var persistor = new AggregateExceptionThrowingEpochPersistor();
-
-            c.SavedEpoch += (co, args) =>
-            {
-                evt = true;
-            };
 
             var srate = new Measurement(10, "Hz");
 
@@ -970,7 +964,6 @@ namespace Symphony.Core
         public void ShouldNotPersistEpochGivenNullPersistor()
         {
             var c = new Controller();
-            bool evt = false;
 
             c.DAQController = new TestDAQController();
             c.Clock = c.DAQController as IClock;

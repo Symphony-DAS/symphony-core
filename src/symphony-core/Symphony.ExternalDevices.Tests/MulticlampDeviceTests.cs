@@ -673,7 +673,6 @@ namespace Symphony.ExternalDevices
         {
             const string units = "V";
             const MultiClampInterop.OperatingMode vclampMode = MultiClampInterop.OperatingMode.VClamp;
-            const MultiClampInterop.OperatingMode iclampMode = MultiClampInterop.OperatingMode.IClamp;
 
 
             var c = new Controller();
@@ -714,7 +713,6 @@ namespace Symphony.ExternalDevices
         {
             const string units = "V";
             const MultiClampInterop.OperatingMode vclampMode = MultiClampInterop.OperatingMode.VClamp;
-            const MultiClampInterop.OperatingMode iclampMode = MultiClampInterop.OperatingMode.IClamp;
 
 
             var c = new Controller();

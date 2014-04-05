@@ -99,11 +99,6 @@ namespace Symphony.SimulationDAQController
             };
 
             c.ProcessIteration += (controller, evtArgs) => ((IDAQController)controller).Stop();
-            bool stopped = false;
-            c.Stopped += (controller, evtArgs) =>
-                             {
-                                 stopped = true;
-                             };
             c.Start(false);
             Thread.Sleep(500);
 
