@@ -88,7 +88,9 @@
     <CodeAnalysisIgnoreBuiltInRuleSets>false</CodeAnalysisIgnoreBuiltInRuleSets>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="log4net, Version=1.2.10.0, Culture=neutral, PublicKeyToken=1b44e1d426115821, processorArchitecture=MSIL" />
+    <Reference Include="log4net">
+      <HintPath>$(SolutionDir)packages\log4net.1.2.10\lib\2.0\log4net.dll</HintPath>
+    </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
     <Reference Include="System.Xml.Linq" />
@@ -107,7 +109,7 @@
   <ItemGroup>
     <ProjectReference Include="..\HekaIOBridge\HekaIOBridge.vcxproj">
       <Project>{1E6C7ABF-3546-428A-A61B-CFB83DB61317}</Project>
-      <Name>HekaIOBridge</Name>
+      <Name>HekaIOBridge %28Visual Studio 2010%29</Name>
     </ProjectReference>
     <ProjectReference Include="..\HekaNativeInterop\HekaNativeInterop.csproj">
       <Project>{7FAECDDE-827D-49D4-A4FE-55BF9C986FD6}</Project>

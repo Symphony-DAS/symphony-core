@@ -92,20 +92,20 @@
   </PropertyGroup>
   <ItemGroup Condition=" '$(Platform)' == 'x86' ">
     <Reference Include="HDF5DotNet, Version=1.8.9.0, Culture=neutral, processorArchitecture=x86">
-      <HintPath>..\..\..\externals\HDF5DotNet\x86\HDF5DotNet.dll</HintPath>
+      <HintPath>$(ProjectDir)..\..\..\externals\HDF5DotNet\x86\HDF5DotNet.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup Condition=" '$(Platform)' == 'x64' ">
     <Reference Include="HDF5DotNet, Version=1.8.9.0, Culture=neutral, processorArchitecture=x64">
-      <HintPath>..\..\..\externals\HDF5DotNet\x64\HDF5DotNet.dll</HintPath>
+      <HintPath>$(ProjectDir)..\..\..\externals\HDF5DotNet\x64\HDF5DotNet.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>
     <Reference Include="log4net">
-      <HintPath>..\packages\log4net.1.2.10\lib\2.0\log4net.dll</HintPath>
+      <HintPath>$(SolutionDir)packages\log4net.1.2.10\lib\2.0\log4net.dll</HintPath>
     </Reference>
     <Reference Include="Sprache, Version=1.9.1.31, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\Sprache.1.9.1.31\lib\NET40\Sprache.dll</HintPath>
+      <HintPath>$(SolutionDir)packages\Sprache.1.9.1.31\lib\NET40\Sprache.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.ComponentModel.Composition" />
