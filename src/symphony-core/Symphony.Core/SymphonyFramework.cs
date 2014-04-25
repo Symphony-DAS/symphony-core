@@ -23,7 +23,7 @@ namespace Symphony.Core
         /// </summary>
         public static Version Version
         {
-            get { return new Version("0.9.1"); }
+            get { return new Version("1.0.0"); }
         }
     }
 }
