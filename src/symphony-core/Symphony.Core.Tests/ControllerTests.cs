@@ -830,64 +830,6 @@ namespace Symphony.Core
         }
 
         [Test]
-        [Ignore("Allowing NextEpoch is sort of a mess. We may re-implement this later.")]
-        public void NexEpochShouldDequeueEpoch()
-        {
-            var c = new Controller();
-
-            var e = new Epoch(UNUSED_PROTOCOL);
-            var dev1 = new UnitConvertingExternalDevice("dev2", "co", c, new Measurement(0, "V"));
-
-            var sampleRate = new Measurement(1, "Hz");
-
-            var samples = new List<IMeasurement> { new Measurement(1, "V"), new Measurement(2, "V"), new Measurement(3, "V") };
-
-            var data = new OutputData(samples,
-                                      sampleRate, true);
-
-            e.Stimuli[dev1] = new RenderedStimulus((string) "ID1",
-                                                   (IDictionary<string, object>) new Dictionary<string, object>(),
-                                                   (IOutputData) data);
-            e.Responses[dev1] = new Response();
-
-            c.EnqueueEpoch(e);
-
-            //Assert.That(c.CurrentEpoch, Is.Null);
-
-            //c.NextEpoch();
-
-            //Assert.That(c.CurrentEpoch, Is.EqualTo(e));
-        }
-
-        [Test]
-        [Ignore("Allowing NextEpoch is sort of a mess. We may re-implement this later.")]
-        public void NextEpochThrowsIfCannotDequeue()
-        {
-            var c = new Controller();
-
-            var e = new Epoch(UNUSED_PROTOCOL);
-            var dev1 = new UnitConvertingExternalDevice("dev2", "co", c, new Measurement(0, "V"));
-
-            var sampleRate = new Measurement(1, "Hz");
-
-            var samples = new List<IMeasurement> { new Measurement(1, "V"), new Measurement(2, "V"), new Measurement(3, "V") };
-
-            var data = new OutputData(samples,
-                                      sampleRate, true);
-
-            e.Stimuli[dev1] = new RenderedStimulus((string) "ID1",
-                                                   (IDictionary<string, object>) new Dictionary<string, object>(),
-                                                   (IOutputData) data);
-            e.Responses[dev1] = new Response();
-
-            c.EnqueueEpoch(e);
-
-            //c.NextEpoch();
-
-            //Assert.Throws<SymphonyControllerException>(() => c.NextEpoch());
-        }
-
-        [Test]
         public void GetsStreamsByName()
         {
             string name1 = "IN1";
@@ -1016,38 +958,6 @@ namespace Symphony.Core
             c.RunEpoch(e, null);
             
             Assert.Pass();
-        }
-
-        [Test]
-        [Ignore("Allowing NextEpoch is sort of a mess. We may re-implement this later.")]
-        public void NextEpochShouldFireNextEpochEvent()
-        {
-            var c = new Controller();
-            c.Clock = new FakeClock();
-
-            var e = new Epoch(UNUSED_PROTOCOL);
-            var dev1 = new UnitConvertingExternalDevice("dev2", "co", c, new Measurement(0, "V"));
-
-            var sampleRate = new Measurement(1, "Hz");
-
-            var samples = new List<IMeasurement> { new Measurement(1, "V"), new Measurement(2, "V"), new Measurement(3, "V") };
-
-            var data = new OutputData(samples,
-                                      sampleRate, true);
-
-            e.Stimuli[dev1] = new RenderedStimulus((string) "ID1",
-                                                   (IDictionary<string, object>) new Dictionary<string, object>(),
-                                                   (IOutputData) data);
-            e.Responses[dev1] = new Response();
-
-            c.EnqueueEpoch(e);
-
-            bool evt = false;
-            //c.NextEpochRequested += (sender, args) => evt = true;
-
-            //c.NextEpoch();
-
-            Assert.True(evt);
         }
 
         [Test]
