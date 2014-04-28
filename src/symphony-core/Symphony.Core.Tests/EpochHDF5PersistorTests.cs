@@ -553,7 +553,7 @@ namespace Symphony.Core
             }
 
             H5.Close();
-            VerifyHDF5File(@"..\..\..\ShouldPersistToHDF5");
+            VerifyHDF5File(@"..\..\..\ShouldPersistToHDF5.h5");
         }
 
         [Test]
