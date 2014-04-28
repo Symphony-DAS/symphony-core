@@ -147,6 +147,11 @@ namespace Symphony.Core
             //no op
         }
 
+        protected override bool ShouldStop()
+        {
+            return IsStopRequested;
+        }
+
         public override void ApplyStreamBackgroundAsync(IDAQOutputStream s, IMeasurement background)
         {
             throw new NotImplementedException();

@@ -63,6 +63,7 @@ namespace Symphony.Core
 
 
         [Test]
+        [Timeout(5000)]
         public void FiresOnStoppedEvent()
         {
 
@@ -71,6 +72,7 @@ namespace Symphony.Core
 
             bool fired = false;
 
+            controller.Started += (c, args) => controller.Stop();
             controller.Stopped += (c, args) => fired = true;
             controller.ExceptionalStop += (c, ex) => Assert.Fail(ex.Exception.ToString());
 
