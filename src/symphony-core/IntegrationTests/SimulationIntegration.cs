@@ -318,6 +318,7 @@ namespace IntegrationTests
                                                  @" --xml " + file);
             startInfo.RedirectStandardOutput = true;
             startInfo.UseShellExecute = false;
+            startInfo.CreateNoWindow = true;
             Process proc = Process.Start(startInfo);
 
             Approvals.VerifyXml(proc.StandardOutput.ReadToEnd());
