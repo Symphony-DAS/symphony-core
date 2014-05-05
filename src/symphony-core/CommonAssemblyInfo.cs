@@ -6,7 +6,7 @@ using System.Runtime.InteropServices;
 // associated with an assembly.
 [assembly: AssemblyCompany("Symphony DAS")]
 [assembly: AssemblyProduct("Symphony")]
-[assembly: AssemblyCopyright("Copyright © 2014")]
+[assembly: AssemblyCopyright("Copyright 2014")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyTrademark("")]
 
