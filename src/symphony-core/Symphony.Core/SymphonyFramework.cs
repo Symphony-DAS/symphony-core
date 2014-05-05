@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 
 namespace Symphony.Core
@@ -23,7 +24,7 @@ namespace Symphony.Core
         /// </summary>
         public static Version Version
         {
-            get { return new Version("1.0.0"); }
+            get { return Assembly.GetExecutingAssembly().GetName().Version; }
         }
     }
 }

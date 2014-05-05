@@ -118,6 +118,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="..\CommonAssemblyInfo.cs">
+      <Link>Properties\CommonAssemblyInfo.cs</Link>
+    </Compile>
     <Compile Include="ControllerTests.cs" />
     <Compile Include="DAQControllerTests.cs" />
     <Compile Include="DAQStreamTests.cs" />
