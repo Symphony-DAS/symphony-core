@@ -516,6 +516,7 @@ namespace Symphony.Core
         }
 
         [Test]
+        [Ignore("Only a single persistence version at the moment")]
         public void ShouldNotAppendToFileWithDifferentPersistenceVersion()
         {
             Assert.Fail("needs test");
