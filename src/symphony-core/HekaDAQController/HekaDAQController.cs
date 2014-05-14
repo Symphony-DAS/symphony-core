@@ -101,7 +101,7 @@ namespace Heka
     /// </summary>
     public sealed class HekaDAQController : DAQControllerBase, IDisposable
     {
-        private const double DEFAULT_TRANSFER_BLOCK_SECONDS = 0.25;
+        private const double DEFAULT_TRANSFER_BLOCK_SECONDS = 0.5;
         private const double PRELOAD_DURATION_SECONDS = 2 * DEFAULT_TRANSFER_BLOCK_SECONDS;
 
         private IHekaDevice Device { get; set; }
@@ -468,7 +468,7 @@ namespace Heka
             }
             else
             {
-                nsamples = (int)TimeSpan.FromSeconds(DEFAULT_TRANSFER_BLOCK_SECONDS).Samples(SampleRate);
+                nsamples = (int)ProcessInterval.Samples(SampleRate);
             }
 
             IEnumerable<KeyValuePair<ChannelIdentifier, short[]>> input = Device.ReadWrite(output, inputChannels, nsamples, token);
