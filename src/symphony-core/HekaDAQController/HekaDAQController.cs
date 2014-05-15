@@ -341,7 +341,7 @@ namespace Heka
 
         private void ResetHardware()
         {
-            RequestStop();
+            Stop();
             CloseHardware();
             OpenDevice();
             SetStreamsBackground();
