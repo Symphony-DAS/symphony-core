@@ -101,7 +101,7 @@ namespace Heka
     /// </summary>
     public sealed class HekaDAQController : DAQControllerBase, IDisposable
     {
-        private const double DEFAULT_TRANSFER_BLOCK_SECONDS = 0.5;
+        private const double DEFAULT_TRANSFER_BLOCK_SECONDS = 0.25;
         private const double PRELOAD_DURATION_SECONDS = 2 * DEFAULT_TRANSFER_BLOCK_SECONDS;
 
         private IHekaDevice Device { get; set; }
