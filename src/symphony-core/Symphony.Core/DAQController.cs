@@ -333,7 +333,7 @@ namespace Symphony.Core
 
                         if (!task.Value.IsCompleted && !start && !warningShown)
                         {
-                            log.Debug("At least one DAQ output task has not completed. This may cause an output underrun.");
+                            log.Warn("At least one DAQ output task has not completed. This may cause an output underrun.");
                             warningShown = true;
                         }
 

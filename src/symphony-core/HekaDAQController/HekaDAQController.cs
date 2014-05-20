@@ -341,7 +341,7 @@ namespace Heka
 
         private void ResetHardware()
         {
-            RequestStop();
+            Stop();
             CloseHardware();
             OpenDevice();
             SetStreamsBackground();
@@ -468,7 +468,7 @@ namespace Heka
             }
             else
             {
-                nsamples = (int)TimeSpan.FromSeconds(DEFAULT_TRANSFER_BLOCK_SECONDS).Samples(SampleRate);
+                nsamples = (int)ProcessInterval.Samples(SampleRate);
             }
 
             IEnumerable<KeyValuePair<ChannelIdentifier, short[]>> input = Device.ReadWrite(output, inputChannels, nsamples, token);

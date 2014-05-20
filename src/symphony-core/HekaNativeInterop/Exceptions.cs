@@ -15,7 +15,7 @@ namespace Heka
             get
             {
                 if (HekaErrorCode == 0)
-                    return base.Message + " (" + HekaError + ")";
+                    return base.Message;
 
                 return base.Message + " (" + HekaError + "; 0x" + HekaErrorCode.ToString("X") + ")";
             }
