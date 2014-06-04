@@ -81,4 +81,38 @@ namespace Symphony.Core
             }
         }
     }
+
+    /// <summary>
+    /// A log4net FileAppender that fires an event after appending the file. This
+    /// appender is useful in watching for log file changes with a log viewer.
+    /// </summary>
+    public class FileAppenderWithEvents : FileAppender
+    {
+        public event EventHandler<LoggingDataEventArgs> AppendedFile;
+
+        protected override void Append(LoggingEvent loggingEvent)
+        {
+            base.Append(loggingEvent);
+
+            var handler = AppendedFile;
+            if (handler != null)
+            {
+                handler(this, new LoggingDataEventArgs(loggingEvent.GetLoggingEventData()));
+            }
+        }
+
+        /// <summary>
+        /// .Net event EventArgs subclass that has log4net LoggingEventData 
+        /// associated with the event.
+        /// </summary>
+        public class LoggingDataEventArgs : EventArgs
+        {
+            public LoggingDataEventArgs(LoggingEventData data)
+            {
+                Data = data;
+            }
+
+            public LoggingEventData Data { get; private set; }
+        }
+    }
 }
