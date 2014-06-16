@@ -498,7 +498,7 @@ namespace Symphony.Core
 
                 outData = outData == null 
                     ? pulled
-                    : outData.Zip(pulled, (m1, m2) => new Measurement(m1.QuantityInBaseUnit + m2.QuantityInBaseUnit, 0, m1.BaseUnit));
+                    : outData.Zip(pulled, (m1, m2) => MeasurementPool.GetMeasurement(m1.QuantityInBaseUnit + m2.QuantityInBaseUnit, 0, m1.BaseUnit));
             }
 
             if (!outData.SampleRate.Equals(this.SampleRate))

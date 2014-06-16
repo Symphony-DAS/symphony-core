@@ -350,7 +350,7 @@ namespace Symphony.ExternalDevices
             return ConvertInput(sample, DeviceParametersForInput(time.ToUniversalTime()).Data);
         }
 
-        public static Measurement ConvertInput(IMeasurement sample, MultiClampInterop.MulticlampData deviceParams)
+        public static IMeasurement ConvertInput(IMeasurement sample, MultiClampInterop.MulticlampData deviceParams)
         {
             switch (deviceParams.OperatingMode)
             {
@@ -364,7 +364,7 @@ namespace Symphony.ExternalDevices
             }
         }
 
-        private static Measurement ConvertIClampInput(IMeasurement sample, MultiClampInterop.MulticlampData deviceParams)
+        private static IMeasurement ConvertIClampInput(IMeasurement sample, MultiClampInterop.MulticlampData deviceParams)
         {
             //MultiClampInterop.SignalIdentifier.AXMCD_OUT_PRI_IC_GLDR_I_CMD_MEMB,
             //              MultiClampInterop.SignalIdentifier.AXMCD_OUT_PRI_IC_GLDR_I_CMD_SUMMED
@@ -406,7 +406,7 @@ namespace Symphony.ExternalDevices
             return ConvertInputMeasurement(sample, deviceParams);
         }
 
-        private static Measurement ConvertInputMeasurement(IMeasurement sample, MultiClampInterop.MulticlampData deviceParams)
+        private static IMeasurement ConvertInputMeasurement(IMeasurement sample, MultiClampInterop.MulticlampData deviceParams)
         {
             var desiredUnitsMultiplier = (decimal) Math.Pow(10,
                                                             (ExponentForScaleFactorUnits(deviceParams.ScaleFactorUnits) -
@@ -414,15 +414,14 @@ namespace Symphony.ExternalDevices
                                                                  deviceParams.ScaleFactorUnits))
                                                        );
 
-            return
-                new Measurement(
+            return MeasurementPool.GetMeasurement(
                     (sample.QuantityInBaseUnit/(decimal) deviceParams.ScaleFactor/(decimal) deviceParams.Alpha)*
                     desiredUnitsMultiplier,
                     DesiredUnitsExponentForScaleFactorUnits(deviceParams.ScaleFactorUnits),
                     UnitsForScaleFactorUnits(deviceParams.ScaleFactorUnits));
         }
 
-        private static Measurement ConvertVClampInput(IMeasurement sample, MultiClampInterop.MulticlampData deviceParams)
+        private static IMeasurement ConvertVClampInput(IMeasurement sample, MultiClampInterop.MulticlampData deviceParams)
         {
             switch (deviceParams.ScaledOutputSignal)
             {
@@ -466,7 +465,7 @@ namespace Symphony.ExternalDevices
             return ConvertOutput(sample, DeviceParametersForOutput(time.ToUniversalTime()).Data);
         }
 
-        public static Measurement ConvertOutput(IMeasurement sample, MultiClampInterop.MulticlampData deviceParams)
+        public static IMeasurement ConvertOutput(IMeasurement sample, MultiClampInterop.MulticlampData deviceParams)
         {
             switch (deviceParams.OperatingMode)
             {
@@ -520,17 +519,18 @@ namespace Symphony.ExternalDevices
 
             }
 
-            Measurement result;
+            IMeasurement result;
 
             if (deviceParams.OperatingMode == MultiClampInterop.OperatingMode.I0)
             {
-                result = new Measurement(0, 0, "V");
+                result = MeasurementPool.GetMeasurement(0, 0, "V");
             }
             else
             {
-                result = (decimal)deviceParams.ExternalCommandSensitivity == 0 ? 
-                    new Measurement(sample.Quantity, sample.Exponent, "V") : 
-                    new Measurement(sample.Quantity / (decimal)deviceParams.ExternalCommandSensitivity, sample.Exponent, "V");
+                result = (decimal) deviceParams.ExternalCommandSensitivity == 0
+                             ? MeasurementPool.GetMeasurement(sample.Quantity, sample.Exponent, "V")
+                             : MeasurementPool.GetMeasurement(sample.Quantity/(decimal) deviceParams.ExternalCommandSensitivity,
+                                                  sample.Exponent, "V");
             }
 
             return result;

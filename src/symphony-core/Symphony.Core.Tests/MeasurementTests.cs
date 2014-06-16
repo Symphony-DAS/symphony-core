@@ -394,4 +394,34 @@ namespace Symphony.Core
         }
 
     }
+    
+    [TestFixture]
+    public class MeasurementPoolTests
+    {
+        [Test]
+        public void ShouldGetMeasurement()
+        {
+            const decimal quantity = 1.1m;
+            const int exponent = 2;
+            const string unit = "V";
+
+            var actual = MeasurementPool.GetMeasurement(quantity, exponent, unit);
+
+            Assert.AreEqual(quantity, actual.Quantity);
+            Assert.AreEqual(exponent, actual.Exponent);
+            Assert.AreEqual(unit, actual.BaseUnit);
+        }
+
+        [Test]
+        public void ShouldGetSameMeasurementReferenceRepeatedly()
+        {
+            var expected = MeasurementPool.GetMeasurement(4.001m, 4, "V");
+
+            for (int i = 0; i < 10; i++)
+            {
+                var actual = MeasurementPool.GetMeasurement(4.001m, 4, "V");
+                Assert.IsTrue(ReferenceEquals(expected, actual));
+            }
+        }
+    }
 }

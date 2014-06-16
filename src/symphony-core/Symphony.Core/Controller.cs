@@ -239,11 +239,6 @@ namespace Symphony.Core
         public event EventHandler<TimeStampedEventArgs> Started;
 
         /// <summary>
-        /// This controller received input data.
-        /// </summary>
-        public event EventHandler<TimeStampedDeviceDataEventArgs> ReceivedInputData;
-
-        /// <summary>
         /// This controller persisted a completed Epoch.
         /// </summary>
         public event EventHandler<TimeStampedEpochEventArgs> SavedEpoch;
@@ -301,11 +296,6 @@ namespace Symphony.Core
         private void OnStopped()
         {
             FireEvent(Stopped, _eventLock);
-        }
-
-        private void OnReceivedInputData(IExternalDevice device, IIOData data)
-        {
-            FireEvent(ReceivedInputData, device, data, _pipelineEventLock);
         }
 
         private void OnSavedEpoch(Epoch epoch)
@@ -419,8 +409,6 @@ namespace Symphony.Core
         /// <param name="inData">Input data instance</param>
         public virtual void PushInputData(ExternalDeviceBase device, IInputData inData)
         {
-            OnReceivedInputData(device, inData);
-
             var inStream = InputDataStreams[device];
 
             var unpushedInData = inData;

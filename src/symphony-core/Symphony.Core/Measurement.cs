@@ -49,7 +49,7 @@ namespace Symphony.Core
     /// <para>Unit checks are performed at runtime.</para> 
     /// 
     /// </summary>
-    public class Measurement : IMeasurement
+    public sealed class Measurement : IMeasurement
     {
         /// <summary>
         /// Measurement quantity with double precision
@@ -138,8 +138,7 @@ namespace Symphony.Core
             var exponent = siUnits.Exponent(unit);
             var baseUnit = siUnits.BaseUnit(unit);
 
-            return quantities.AsEnumerable().Select(q => new Measurement(q, exponent, baseUnit) as IMeasurement)
-                .ToList();
+            return quantities.AsEnumerable().Select(q => MeasurementPool.GetMeasurement(q, exponent, baseUnit)).ToList();
         }
 
         public bool Equals(IMeasurement other)
@@ -203,7 +202,7 @@ namespace Symphony.Core
         /// <returns></returns>
         public static bool operator ==(Measurement lhs, IMeasurement rhs)
         {
-            return lhs.Equals(rhs);
+            return (object)lhs != null && lhs.Equals(rhs);
         }
 
         /// <summary>
@@ -215,7 +214,7 @@ namespace Symphony.Core
         /// <returns></returns>
         public static bool operator !=(Measurement lhs, IMeasurement rhs)
         {
-            return !(lhs.Equals(rhs));
+            return (object)lhs != null && lhs.Equals(rhs);
         }
 
         /// <summary>
@@ -273,7 +272,47 @@ namespace Symphony.Core
             return measurements.DisplayUnits();
         }
 
+    }
 
+    /// <summary>
+    /// A light weight pool of measurements using a simple array-based hash table.
+    /// </summary>
+    public static class MeasurementPool
+    {
+        private const int Size = 524309;
+        
+        private static readonly IMeasurement[] Measurements = new IMeasurement[Size];
+
+        /// <summary>
+        /// Gets a measurement from the pool.
+        /// </summary>
+        /// <param name="q">The (howevermany)s of (whatever)s we have</param>
+        /// <param name="e">The exponent of the measurement relative to base units (e.g. -3 for mV) </param>
+        /// <param name="u">The (whatever)s we have (howevermany)s of</param>
+        public static IMeasurement GetMeasurement(decimal q, int e, string u)
+        {
+            int hash = GetHash(q, e, u);
+            int index = (hash & 0x7FFFFFFF) % Size;
+
+            var m = Measurements[index];
+            if (m != null && m.Quantity == q && m.Exponent == e && m.BaseUnit == u)
+                return m;
+
+            return Measurements[index] = new Measurement(q, e, u);
+        }
+
+        // http://stackoverflow.com/questions/263400/what-is-the-best-algorithm-for-an-overridden-system-object-gethashcode
+        private static int GetHash(decimal q, int e, string u)
+        {
+            unchecked
+            {
+                int hash = 17;
+                hash = hash * 23 + q.GetHashCode();
+                hash = hash * 23 + e.GetHashCode();
+                hash = hash * 23 + u.GetHashCode();
+                return hash;
+            }
+        }
     }
 
     /// <summary>

@@ -669,7 +669,7 @@ namespace Symphony.Core
             data.Values.Aggregate<IOutputData, IOutputData>(null,
                                                             (current, d) => current == null
                                                                 ? d
-                                                                : current.Zip(d, (m1, m2) => new Measurement(m1.QuantityInBaseUnit + m2.QuantityInBaseUnit, 0, m1.BaseUnit)));
+                                                                : current.Zip(d, (m1, m2) => MeasurementPool.GetMeasurement(m1.QuantityInBaseUnit + m2.QuantityInBaseUnit, 0, m1.BaseUnit)));
 
         /// <summary>
         /// A simple CombineProc that combines data blocks by subtracting them, producing a stimulus equal to the
@@ -679,7 +679,7 @@ namespace Symphony.Core
             data.Values.Aggregate<IOutputData, IOutputData>(null,
                                                             (current, d) => current == null
                                                                 ? d
-                                                                : current.Zip(d, (m1, m2) => new Measurement(m1.QuantityInBaseUnit - m2.QuantityInBaseUnit, 0, m1.BaseUnit)));
+                                                                : current.Zip(d, (m1, m2) => MeasurementPool.GetMeasurement(m1.QuantityInBaseUnit - m2.QuantityInBaseUnit, 0, m1.BaseUnit)));
 
         private readonly IEnumerable<IStimulus> _stimuli;
 

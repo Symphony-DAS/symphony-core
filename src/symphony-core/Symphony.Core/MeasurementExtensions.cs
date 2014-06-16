@@ -103,7 +103,11 @@ namespace Symphony.Core
 
         public static IEnumerable<IMeasurement> ToMeasurements(this IEnumerable<decimal> quantities, string units)
         {
-            return quantities.Select(q => new Measurement(q, units));
+            var siUnits = InternationalSystem.Default;
+
+            var exponent = siUnits.Exponent(units);
+            var baseUnit = siUnits.BaseUnit(units);
+            return quantities.Select(q => MeasurementPool.GetMeasurement(q, exponent, baseUnit));
         }
     }
 }
