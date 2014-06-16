@@ -283,6 +283,12 @@ namespace Symphony.Core
         
         private static readonly IMeasurement[] Measurements = new IMeasurement[Size];
 
+        /// <summary>
+        /// Gets a measurement from the pool.
+        /// </summary>
+        /// <param name="q">The (howevermany)s of (whatever)s we have</param>
+        /// <param name="e">The exponent of the measurement relative to base units (e.g. -3 for mV) </param>
+        /// <param name="u">The (whatever)s we have (howevermany)s of</param>
         public static IMeasurement GetMeasurement(decimal q, int e, string u)
         {
             int hash = GetHash(q, e, u);
