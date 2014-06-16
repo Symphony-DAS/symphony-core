@@ -73,7 +73,7 @@ namespace Heka
         {
             Converters.Register(DAQCountUnits,
                                 "V",
-                                (m) => new Measurement(m.QuantityInBaseUnit / (decimal) ITCMM.ANALOGVOLT, 0, "V")
+                                (m) => MeasurementPool.GetMeasurement(m.QuantityInBaseUnit / (decimal)ITCMM.ANALOGVOLT, 0, "V")
                 );
 
             Converters.Register(DAQCountUnits,
@@ -119,8 +119,10 @@ namespace Heka
                 var data = inData.DataWithUnits(MeasurementConversionTarget);
 
                 ushort bitPosition = BitPositions[ed];
-                data = new InputData(data, data.Data.Select(m => new Measurement(((short)m.QuantityInBaseUnit >> bitPosition) & 1, 0, Measurement.UNITLESS)));
-                
+                data = new InputData(data,
+                                     data.Data.Select(
+                                         m =>
+                                         MeasurementPool.GetMeasurement(((short) m.QuantityInBaseUnit >> bitPosition) & 1, 0, Measurement.UNITLESS)));
                 ed.PushInputData(this, data.DataWithStreamConfiguration(this, this.Configuration));
             }
         }

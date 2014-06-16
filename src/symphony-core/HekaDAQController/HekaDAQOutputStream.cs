@@ -63,7 +63,7 @@ namespace Heka
         {
             Converters.Register("V",
                                 DAQCountUnits,
-                                (m) => new Measurement((decimal)Math.Round((double)m.QuantityInBaseUnit * ITCMM.ANALOGVOLT), 0, DAQCountUnits)
+                                (m) => MeasurementPool.GetMeasurement((decimal)Math.Round((double)m.QuantityInBaseUnit * ITCMM.ANALOGVOLT), 0, DAQCountUnits)
                 );
 
             Converters.Register(Measurement.UNITLESS,
@@ -150,12 +150,14 @@ namespace Heka
                     if (m.QuantityInBaseUnit != 0 && m.QuantityInBaseUnit != 1)
                         throw new DAQException(ed.Name + " output data must contain only values of 0 and 1");
 
-                    return new Measurement((short)((short)m.QuantityInBaseUnit << bitPosition), 0, m.BaseUnit);
+                    return MeasurementPool.GetMeasurement((short)((short)m.QuantityInBaseUnit << bitPosition), 0, m.BaseUnit);
                 }));
 
                 outData = outData == null
-                    ? pulled
-                    : outData.Zip(pulled, (m1, m2) => new Measurement((short)m1.QuantityInBaseUnit | (short)m2.QuantityInBaseUnit, 0, m1.BaseUnit));
+                              ? pulled
+                              : outData.Zip(pulled,
+                                            (m1, m2) =>
+                                            MeasurementPool.GetMeasurement((short) m1.QuantityInBaseUnit | (short) m2.QuantityInBaseUnit, 0, m1.BaseUnit));
             }
 
             if (!outData.SampleRate.Equals(this.SampleRate))

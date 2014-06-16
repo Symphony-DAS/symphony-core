@@ -304,7 +304,7 @@ namespace Symphony.Core
 
                 var toExp = _SIUnits.Exponent(to);
                 var expDiff = from.Exponent - toExp;
-                return new Measurement(from.Quantity * (decimal)Math.Pow(10, expDiff), toExp, _SIUnits.BaseUnit(to));
+                return MeasurementPool.GetMeasurement(from.Quantity * (decimal)Math.Pow(10, expDiff), toExp, _SIUnits.BaseUnit(to));
             }
 
             // Can we find a converter for these two units? Use TryGetValue()

@@ -239,6 +239,11 @@ namespace Symphony.Core
         public event EventHandler<TimeStampedEventArgs> Started;
 
         /// <summary>
+        /// This controller persisted a completed Epoch.
+        /// </summary>
+        public event EventHandler<TimeStampedEpochEventArgs> SavedEpoch;
+
+        /// <summary>
         /// This controller completed an Epoch.
         /// </summary>
         public event EventHandler<TimeStampedEpochEventArgs> CompletedEpoch;
@@ -291,6 +296,11 @@ namespace Symphony.Core
         private void OnStopped()
         {
             FireEvent(Stopped, _eventLock);
+        }
+
+        private void OnSavedEpoch(Epoch epoch)
+        {
+            FireEvent(SavedEpoch, epoch, _pipelineEventLock);
         }
 
         private void OnCompletedEpoch(Epoch epoch)
@@ -962,6 +972,7 @@ namespace Symphony.Core
         private void SaveEpoch(EpochPersistor persistor, Epoch e)
         {
             persistor.Serialize(e);
+            OnSavedEpoch(e);
         }
 
         /// <summary>
