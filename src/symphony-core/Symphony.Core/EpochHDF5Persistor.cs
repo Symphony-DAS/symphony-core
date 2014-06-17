@@ -651,13 +651,14 @@ namespace Symphony.Core
 
         private void Write(H5GroupId parent, string name, IEnumerable<IMeasurement> measurements)
         {
-            H5DataSpaceId spaceId = H5S.create_simple(1, new long[1] { (long)measurements.Count() });
+            var array = measurements as IMeasurement[] ?? measurements.ToArray();
+            H5DataSpaceId spaceId = H5S.create_simple(1, new long[1] { (long)array.Count() });
 
 
             // Set compression options for dataset
             H5PropertyListId dataSetPropertyList = H5P.create(H5P.PropertyListClass.DATASET_CREATE);
             H5P.setDeflate(dataSetPropertyList, NumericDataCompression);
-            H5P.setChunk(dataSetPropertyList, new long[] {(long)measurements.Count()});
+            H5P.setChunk(dataSetPropertyList, new long[] {(long)array.Count()});
 
             H5DataSetId dataSetId = H5D.create(parent, 
                 name, 
@@ -667,9 +668,9 @@ namespace Symphony.Core
                 dataSetPropertyList,
                 new H5PropertyListId(H5P.Template.DEFAULT));
 
-            MeasurementT[] ms = new MeasurementT[measurements.Count()];
+            MeasurementT[] ms = new MeasurementT[array.Count()];
             int ilmCount = 0;
-            foreach (IMeasurement m in measurements)
+            foreach (IMeasurement m in array)
             {
                 MeasurementT mt = Convert(m);
                 ms[ilmCount++] = mt;
