@@ -30,225 +30,89 @@
           <parameters />
           <nodeConfigurationSpans>
             <nodeConfigurationSpan startTimeSeconds="0" timeSpanSeconds="0.6">
-              <Device0>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </Device0>
-              <Out0>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </Out0>
-              <SimulationDAQController>
-                <Clock>Clock</Clock>
-              </SimulationDAQController>
+              <Device0 />
+              <Out0 />
+              <SimulationDAQController />
             </nodeConfigurationSpan>
             <nodeConfigurationSpan startTimeSeconds="0.6" timeSpanSeconds="0.6">
-              <Device0>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </Device0>
-              <Out0>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </Out0>
-              <SimulationDAQController>
-                <Clock>Clock</Clock>
-              </SimulationDAQController>
+              <Device0 />
+              <Out0 />
+              <SimulationDAQController />
             </nodeConfigurationSpan>
             <nodeConfigurationSpan startTimeSeconds="1.2" timeSpanSeconds="0.6">
-              <Device0>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </Device0>
-              <Out0>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </Out0>
-              <SimulationDAQController>
-                <Clock>Clock</Clock>
-              </SimulationDAQController>
+              <Device0 />
+              <Out0 />
+              <SimulationDAQController />
             </nodeConfigurationSpan>
             <nodeConfigurationSpan startTimeSeconds="1.8" timeSpanSeconds="0.6">
-              <Device0>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </Device0>
-              <Out0>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </Out0>
-              <SimulationDAQController>
-                <Clock>Clock</Clock>
-              </SimulationDAQController>
+              <Device0 />
+              <Out0 />
+              <SimulationDAQController />
             </nodeConfigurationSpan>
             <nodeConfigurationSpan startTimeSeconds="2.4" timeSpanSeconds="0.6">
-              <Device0>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </Device0>
-              <Out0>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </Out0>
-              <SimulationDAQController>
-                <Clock>Clock</Clock>
-              </SimulationDAQController>
+              <Device0 />
+              <Out0 />
+              <SimulationDAQController />
             </nodeConfigurationSpan>
             <nodeConfigurationSpan startTimeSeconds="3" timeSpanSeconds="0.6">
-              <Device0>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </Device0>
-              <Out0>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </Out0>
-              <SimulationDAQController>
-                <Clock>Clock</Clock>
-              </SimulationDAQController>
+              <Device0 />
+              <Out0 />
+              <SimulationDAQController />
             </nodeConfigurationSpan>
             <nodeConfigurationSpan startTimeSeconds="3.6" timeSpanSeconds="0.6">
-              <Device0>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </Device0>
-              <Out0>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </Out0>
-              <SimulationDAQController>
-                <Clock>Clock</Clock>
-              </SimulationDAQController>
+              <Device0 />
+              <Out0 />
+              <SimulationDAQController />
             </nodeConfigurationSpan>
             <nodeConfigurationSpan startTimeSeconds="4.2" timeSpanSeconds="0.6">
-              <Device0>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </Device0>
-              <Out0>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </Out0>
-              <SimulationDAQController>
-                <Clock>Clock</Clock>
-              </SimulationDAQController>
+              <Device0 />
+              <Out0 />
+              <SimulationDAQController />
             </nodeConfigurationSpan>
             <nodeConfigurationSpan startTimeSeconds="4.8" timeSpanSeconds="0.6">
-              <Device0>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </Device0>
-              <Out0>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </Out0>
-              <SimulationDAQController>
-                <Clock>Clock</Clock>
-              </SimulationDAQController>
+              <Device0 />
+              <Out0 />
+              <SimulationDAQController />
             </nodeConfigurationSpan>
             <nodeConfigurationSpan startTimeSeconds="5.4" timeSpanSeconds="0.6">
-              <Device0>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </Device0>
-              <Out0>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </Out0>
-              <SimulationDAQController>
-                <Clock>Clock</Clock>
-              </SimulationDAQController>
+              <Device0 />
+              <Out0 />
+              <SimulationDAQController />
             </nodeConfigurationSpan>
             <nodeConfigurationSpan startTimeSeconds="6" timeSpanSeconds="0.6">
-              <Device0>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </Device0>
-              <Out0>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </Out0>
-              <SimulationDAQController>
-                <Clock>Clock</Clock>
-              </SimulationDAQController>
+              <Device0 />
+              <Out0 />
+              <SimulationDAQController />
             </nodeConfigurationSpan>
             <nodeConfigurationSpan startTimeSeconds="6.6" timeSpanSeconds="0.6">
-              <Device0>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </Device0>
-              <Out0>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </Out0>
-              <SimulationDAQController>
-                <Clock>Clock</Clock>
-              </SimulationDAQController>
+              <Device0 />
+              <Out0 />
+              <SimulationDAQController />
             </nodeConfigurationSpan>
             <nodeConfigurationSpan startTimeSeconds="7.2" timeSpanSeconds="0.6">
-              <Device0>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </Device0>
-              <Out0>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </Out0>
-              <SimulationDAQController>
-                <Clock>Clock</Clock>
-              </SimulationDAQController>
+              <Device0 />
+              <Out0 />
+              <SimulationDAQController />
             </nodeConfigurationSpan>
             <nodeConfigurationSpan startTimeSeconds="7.8" timeSpanSeconds="0.6">
-              <Device0>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </Device0>
-              <Out0>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </Out0>
-              <SimulationDAQController>
-                <Clock>Clock</Clock>
-              </SimulationDAQController>
+              <Device0 />
+              <Out0 />
+              <SimulationDAQController />
             </nodeConfigurationSpan>
             <nodeConfigurationSpan startTimeSeconds="8.4" timeSpanSeconds="0.6">
-              <Device0>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </Device0>
-              <Out0>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </Out0>
-              <SimulationDAQController>
-                <Clock>Clock</Clock>
-              </SimulationDAQController>
+              <Device0 />
+              <Out0 />
+              <SimulationDAQController />
             </nodeConfigurationSpan>
             <nodeConfigurationSpan startTimeSeconds="9" timeSpanSeconds="0.6">
-              <Device0>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </Device0>
-              <Out0>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </Out0>
-              <SimulationDAQController>
-                <Clock>Clock</Clock>
-              </SimulationDAQController>
+              <Device0 />
+              <Out0 />
+              <SimulationDAQController />
             </nodeConfigurationSpan>
             <nodeConfigurationSpan startTimeSeconds="9.6" timeSpanSeconds="0.4">
-              <Device0>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </Device0>
-              <Out0>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </Out0>
-              <SimulationDAQController>
-                <Clock>Clock</Clock>
-              </SimulationDAQController>
+              <Device0 />
+              <Out0 />
+              <SimulationDAQController />
             </nodeConfigurationSpan>
           </nodeConfigurationSpans>
         </stimulus>
@@ -256,225 +120,89 @@
           <parameters />
           <nodeConfigurationSpans>
             <nodeConfigurationSpan startTimeSeconds="0" timeSpanSeconds="0.6">
-              <Device1>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </Device1>
-              <Out1>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </Out1>
-              <SimulationDAQController>
-                <Clock>Clock</Clock>
-              </SimulationDAQController>
+              <Device1 />
+              <Out1 />
+              <SimulationDAQController />
             </nodeConfigurationSpan>
             <nodeConfigurationSpan startTimeSeconds="0.6" timeSpanSeconds="0.6">
-              <Device1>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </Device1>
-              <Out1>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </Out1>
-              <SimulationDAQController>
-                <Clock>Clock</Clock>
-              </SimulationDAQController>
+              <Device1 />
+              <Out1 />
+              <SimulationDAQController />
             </nodeConfigurationSpan>
             <nodeConfigurationSpan startTimeSeconds="1.2" timeSpanSeconds="0.6">
-              <Device1>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </Device1>
-              <Out1>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </Out1>
-              <SimulationDAQController>
-                <Clock>Clock</Clock>
-              </SimulationDAQController>
+              <Device1 />
+              <Out1 />
+              <SimulationDAQController />
             </nodeConfigurationSpan>
             <nodeConfigurationSpan startTimeSeconds="1.8" timeSpanSeconds="0.6">
-              <Device1>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </Device1>
-              <Out1>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </Out1>
-              <SimulationDAQController>
-                <Clock>Clock</Clock>
-              </SimulationDAQController>
+              <Device1 />
+              <Out1 />
+              <SimulationDAQController />
             </nodeConfigurationSpan>
             <nodeConfigurationSpan startTimeSeconds="2.4" timeSpanSeconds="0.6">
-              <Device1>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </Device1>
-              <Out1>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </Out1>
-              <SimulationDAQController>
-                <Clock>Clock</Clock>
-              </SimulationDAQController>
+              <Device1 />
+              <Out1 />
+              <SimulationDAQController />
             </nodeConfigurationSpan>
             <nodeConfigurationSpan startTimeSeconds="3" timeSpanSeconds="0.6">
-              <Device1>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </Device1>
-              <Out1>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </Out1>
-              <SimulationDAQController>
-                <Clock>Clock</Clock>
-              </SimulationDAQController>
+              <Device1 />
+              <Out1 />
+              <SimulationDAQController />
             </nodeConfigurationSpan>
             <nodeConfigurationSpan startTimeSeconds="3.6" timeSpanSeconds="0.6">
-              <Device1>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </Device1>
-              <Out1>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </Out1>
-              <SimulationDAQController>
-                <Clock>Clock</Clock>
-              </SimulationDAQController>
+              <Device1 />
+              <Out1 />
+              <SimulationDAQController />
             </nodeConfigurationSpan>
             <nodeConfigurationSpan startTimeSeconds="4.2" timeSpanSeconds="0.6">
-              <Device1>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </Device1>
-              <Out1>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </Out1>
-              <SimulationDAQController>
-                <Clock>Clock</Clock>
-              </SimulationDAQController>
+              <Device1 />
+              <Out1 />
+              <SimulationDAQController />
             </nodeConfigurationSpan>
             <nodeConfigurationSpan startTimeSeconds="4.8" timeSpanSeconds="0.6">
-              <Device1>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </Device1>
-              <Out1>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </Out1>
-              <SimulationDAQController>
-                <Clock>Clock</Clock>
-              </SimulationDAQController>
+              <Device1 />
+              <Out1 />
+              <SimulationDAQController />
             </nodeConfigurationSpan>
             <nodeConfigurationSpan startTimeSeconds="5.4" timeSpanSeconds="0.6">
-              <Device1>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </Device1>
-              <Out1>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </Out1>
-              <SimulationDAQController>
-                <Clock>Clock</Clock>
-              </SimulationDAQController>
+              <Device1 />
+              <Out1 />
+              <SimulationDAQController />
             </nodeConfigurationSpan>
             <nodeConfigurationSpan startTimeSeconds="6" timeSpanSeconds="0.6">
-              <Device1>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </Device1>
-              <Out1>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </Out1>
-              <SimulationDAQController>
-                <Clock>Clock</Clock>
-              </SimulationDAQController>
+              <Device1 />
+              <Out1 />
+              <SimulationDAQController />
             </nodeConfigurationSpan>
             <nodeConfigurationSpan startTimeSeconds="6.6" timeSpanSeconds="0.6">
-              <Device1>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </Device1>
-              <Out1>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </Out1>
-              <SimulationDAQController>
-                <Clock>Clock</Clock>
-              </SimulationDAQController>
+              <Device1 />
+              <Out1 />
+              <SimulationDAQController />
             </nodeConfigurationSpan>
             <nodeConfigurationSpan startTimeSeconds="7.2" timeSpanSeconds="0.6">
-              <Device1>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </Device1>
-              <Out1>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </Out1>
-              <SimulationDAQController>
-                <Clock>Clock</Clock>
-              </SimulationDAQController>
+              <Device1 />
+              <Out1 />
+              <SimulationDAQController />
             </nodeConfigurationSpan>
             <nodeConfigurationSpan startTimeSeconds="7.8" timeSpanSeconds="0.6">
-              <Device1>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </Device1>
-              <Out1>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </Out1>
-              <SimulationDAQController>
-                <Clock>Clock</Clock>
-              </SimulationDAQController>
+              <Device1 />
+              <Out1 />
+              <SimulationDAQController />
             </nodeConfigurationSpan>
             <nodeConfigurationSpan startTimeSeconds="8.4" timeSpanSeconds="0.6">
-              <Device1>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </Device1>
-              <Out1>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </Out1>
-              <SimulationDAQController>
-                <Clock>Clock</Clock>
-              </SimulationDAQController>
+              <Device1 />
+              <Out1 />
+              <SimulationDAQController />
             </nodeConfigurationSpan>
             <nodeConfigurationSpan startTimeSeconds="9" timeSpanSeconds="0.6">
-              <Device1>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </Device1>
-              <Out1>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </Out1>
-              <SimulationDAQController>
-                <Clock>Clock</Clock>
-              </SimulationDAQController>
+              <Device1 />
+              <Out1 />
+              <SimulationDAQController />
             </nodeConfigurationSpan>
             <nodeConfigurationSpan startTimeSeconds="9.6" timeSpanSeconds="0.4">
-              <Device1>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </Device1>
-              <Out1>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </Out1>
-              <SimulationDAQController>
-                <Clock>Clock</Clock>
-              </SimulationDAQController>
+              <Device1 />
+              <Out1 />
+              <SimulationDAQController />
             </nodeConfigurationSpan>
           </nodeConfigurationSpans>
         </stimulus>
@@ -487,225 +215,89 @@
           </sampleRate>
           <nodeConfigurationSpans>
             <nodeConfigurationSpan startTimeSeconds="0" timeSpanSeconds="0.6">
-              <SimulationController>
-                <Clock>Clock</Clock>
-              </SimulationController>
-              <In0>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </In0>
-              <Device0>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </Device0>
+              <SimulationController />
+              <In0 />
+              <Device0 />
             </nodeConfigurationSpan>
             <nodeConfigurationSpan startTimeSeconds="0.6" timeSpanSeconds="0.6">
-              <SimulationController>
-                <Clock>Clock</Clock>
-              </SimulationController>
-              <In0>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </In0>
-              <Device0>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </Device0>
+              <SimulationController />
+              <In0 />
+              <Device0 />
             </nodeConfigurationSpan>
             <nodeConfigurationSpan startTimeSeconds="1.2" timeSpanSeconds="0.6">
-              <SimulationController>
-                <Clock>Clock</Clock>
-              </SimulationController>
-              <In0>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </In0>
-              <Device0>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </Device0>
+              <SimulationController />
+              <In0 />
+              <Device0 />
             </nodeConfigurationSpan>
             <nodeConfigurationSpan startTimeSeconds="1.8" timeSpanSeconds="0.6">
-              <SimulationController>
-                <Clock>Clock</Clock>
-              </SimulationController>
-              <In0>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </In0>
-              <Device0>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </Device0>
+              <SimulationController />
+              <In0 />
+              <Device0 />
             </nodeConfigurationSpan>
             <nodeConfigurationSpan startTimeSeconds="2.4" timeSpanSeconds="0.6">
-              <SimulationController>
-                <Clock>Clock</Clock>
-              </SimulationController>
-              <In0>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </In0>
-              <Device0>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </Device0>
+              <SimulationController />
+              <In0 />
+              <Device0 />
             </nodeConfigurationSpan>
             <nodeConfigurationSpan startTimeSeconds="3" timeSpanSeconds="0.6">
-              <SimulationController>
-                <Clock>Clock</Clock>
-              </SimulationController>
-              <In0>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </In0>
-              <Device0>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </Device0>
+              <SimulationController />
+              <In0 />
+              <Device0 />
             </nodeConfigurationSpan>
             <nodeConfigurationSpan startTimeSeconds="3.6" timeSpanSeconds="0.6">
-              <SimulationController>
-                <Clock>Clock</Clock>
-              </SimulationController>
-              <In0>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </In0>
-              <Device0>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </Device0>
+              <SimulationController />
+              <In0 />
+              <Device0 />
             </nodeConfigurationSpan>
             <nodeConfigurationSpan startTimeSeconds="4.2" timeSpanSeconds="0.6">
-              <SimulationController>
-                <Clock>Clock</Clock>
-              </SimulationController>
-              <In0>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </In0>
-              <Device0>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </Device0>
+              <SimulationController />
+              <In0 />
+              <Device0 />
             </nodeConfigurationSpan>
             <nodeConfigurationSpan startTimeSeconds="4.8" timeSpanSeconds="0.6">
-              <SimulationController>
-                <Clock>Clock</Clock>
-              </SimulationController>
-              <In0>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </In0>
-              <Device0>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </Device0>
+              <SimulationController />
+              <In0 />
+              <Device0 />
             </nodeConfigurationSpan>
             <nodeConfigurationSpan startTimeSeconds="5.4" timeSpanSeconds="0.6">
-              <SimulationController>
-                <Clock>Clock</Clock>
-              </SimulationController>
-              <In0>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </In0>
-              <Device0>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </Device0>
+              <SimulationController />
+              <In0 />
+              <Device0 />
             </nodeConfigurationSpan>
             <nodeConfigurationSpan startTimeSeconds="6" timeSpanSeconds="0.6">
-              <SimulationController>
-                <Clock>Clock</Clock>
-              </SimulationController>
-              <In0>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </In0>
-              <Device0>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </Device0>
+              <SimulationController />
+              <In0 />
+              <Device0 />
             </nodeConfigurationSpan>
             <nodeConfigurationSpan startTimeSeconds="6.6" timeSpanSeconds="0.6">
-              <SimulationController>
-                <Clock>Clock</Clock>
-              </SimulationController>
-              <In0>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </In0>
-              <Device0>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </Device0>
+              <SimulationController />
+              <In0 />
+              <Device0 />
             </nodeConfigurationSpan>
             <nodeConfigurationSpan startTimeSeconds="7.2" timeSpanSeconds="0.6">
-              <SimulationController>
-                <Clock>Clock</Clock>
-              </SimulationController>
-              <In0>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </In0>
-              <Device0>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </Device0>
+              <SimulationController />
+              <In0 />
+              <Device0 />
             </nodeConfigurationSpan>
             <nodeConfigurationSpan startTimeSeconds="7.8" timeSpanSeconds="0.6">
-              <SimulationController>
-                <Clock>Clock</Clock>
-              </SimulationController>
-              <In0>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </In0>
-              <Device0>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </Device0>
+              <SimulationController />
+              <In0 />
+              <Device0 />
             </nodeConfigurationSpan>
             <nodeConfigurationSpan startTimeSeconds="8.4" timeSpanSeconds="0.6">
-              <SimulationController>
-                <Clock>Clock</Clock>
-              </SimulationController>
-              <In0>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </In0>
-              <Device0>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </Device0>
+              <SimulationController />
+              <In0 />
+              <Device0 />
             </nodeConfigurationSpan>
             <nodeConfigurationSpan startTimeSeconds="9" timeSpanSeconds="0.6">
-              <SimulationController>
-                <Clock>Clock</Clock>
-              </SimulationController>
-              <In0>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </In0>
-              <Device0>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </Device0>
+              <SimulationController />
+              <In0 />
+              <Device0 />
             </nodeConfigurationSpan>
             <nodeConfigurationSpan startTimeSeconds="9.6" timeSpanSeconds="0.4">
-              <SimulationController>
-                <Clock>Clock</Clock>
-              </SimulationController>
-              <In0>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </In0>
-              <Device0>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </Device0>
+              <SimulationController />
+              <In0 />
+              <Device0 />
             </nodeConfigurationSpan>
           </nodeConfigurationSpans>
           <data>
@@ -768,225 +360,89 @@
           </sampleRate>
           <nodeConfigurationSpans>
             <nodeConfigurationSpan startTimeSeconds="0" timeSpanSeconds="0.6">
-              <SimulationController>
-                <Clock>Clock</Clock>
-              </SimulationController>
-              <In1>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </In1>
-              <Device1>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </Device1>
+              <SimulationController />
+              <In1 />
+              <Device1 />
             </nodeConfigurationSpan>
             <nodeConfigurationSpan startTimeSeconds="0.6" timeSpanSeconds="0.6">
-              <SimulationController>
-                <Clock>Clock</Clock>
-              </SimulationController>
-              <In1>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </In1>
-              <Device1>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </Device1>
+              <SimulationController />
+              <In1 />
+              <Device1 />
             </nodeConfigurationSpan>
             <nodeConfigurationSpan startTimeSeconds="1.2" timeSpanSeconds="0.6">
-              <SimulationController>
-                <Clock>Clock</Clock>
-              </SimulationController>
-              <In1>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </In1>
-              <Device1>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </Device1>
+              <SimulationController />
+              <In1 />
+              <Device1 />
             </nodeConfigurationSpan>
             <nodeConfigurationSpan startTimeSeconds="1.8" timeSpanSeconds="0.6">
-              <SimulationController>
-                <Clock>Clock</Clock>
-              </SimulationController>
-              <In1>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </In1>
-              <Device1>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </Device1>
+              <SimulationController />
+              <In1 />
+              <Device1 />
             </nodeConfigurationSpan>
             <nodeConfigurationSpan startTimeSeconds="2.4" timeSpanSeconds="0.6">
-              <SimulationController>
-                <Clock>Clock</Clock>
-              </SimulationController>
-              <In1>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </In1>
-              <Device1>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </Device1>
+              <SimulationController />
+              <In1 />
+              <Device1 />
             </nodeConfigurationSpan>
             <nodeConfigurationSpan startTimeSeconds="3" timeSpanSeconds="0.6">
-              <SimulationController>
-                <Clock>Clock</Clock>
-              </SimulationController>
-              <In1>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </In1>
-              <Device1>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </Device1>
+              <SimulationController />
+              <In1 />
+              <Device1 />
             </nodeConfigurationSpan>
             <nodeConfigurationSpan startTimeSeconds="3.6" timeSpanSeconds="0.6">
-              <SimulationController>
-                <Clock>Clock</Clock>
-              </SimulationController>
-              <In1>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </In1>
-              <Device1>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </Device1>
+              <SimulationController />
+              <In1 />
+              <Device1 />
             </nodeConfigurationSpan>
             <nodeConfigurationSpan startTimeSeconds="4.2" timeSpanSeconds="0.6">
-              <SimulationController>
-                <Clock>Clock</Clock>
-              </SimulationController>
-              <In1>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </In1>
-              <Device1>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </Device1>
+              <SimulationController />
+              <In1 />
+              <Device1 />
             </nodeConfigurationSpan>
             <nodeConfigurationSpan startTimeSeconds="4.8" timeSpanSeconds="0.6">
-              <SimulationController>
-                <Clock>Clock</Clock>
-              </SimulationController>
-              <In1>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </In1>
-              <Device1>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </Device1>
+              <SimulationController />
+              <In1 />
+              <Device1 />
             </nodeConfigurationSpan>
             <nodeConfigurationSpan startTimeSeconds="5.4" timeSpanSeconds="0.6">
-              <SimulationController>
-                <Clock>Clock</Clock>
-              </SimulationController>
-              <In1>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </In1>
-              <Device1>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </Device1>
+              <SimulationController />
+              <In1 />
+              <Device1 />
             </nodeConfigurationSpan>
             <nodeConfigurationSpan startTimeSeconds="6" timeSpanSeconds="0.6">
-              <SimulationController>
-                <Clock>Clock</Clock>
-              </SimulationController>
-              <In1>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </In1>
-              <Device1>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </Device1>
+              <SimulationController />
+              <In1 />
+              <Device1 />
             </nodeConfigurationSpan>
             <nodeConfigurationSpan startTimeSeconds="6.6" timeSpanSeconds="0.6">
-              <SimulationController>
-                <Clock>Clock</Clock>
-              </SimulationController>
-              <In1>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </In1>
-              <Device1>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </Device1>
+              <SimulationController />
+              <In1 />
+              <Device1 />
             </nodeConfigurationSpan>
             <nodeConfigurationSpan startTimeSeconds="7.2" timeSpanSeconds="0.6">
-              <SimulationController>
-                <Clock>Clock</Clock>
-              </SimulationController>
-              <In1>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </In1>
-              <Device1>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </Device1>
+              <SimulationController />
+              <In1 />
+              <Device1 />
             </nodeConfigurationSpan>
             <nodeConfigurationSpan startTimeSeconds="7.8" timeSpanSeconds="0.6">
-              <SimulationController>
-                <Clock>Clock</Clock>
-              </SimulationController>
-              <In1>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </In1>
-              <Device1>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </Device1>
+              <SimulationController />
+              <In1 />
+              <Device1 />
             </nodeConfigurationSpan>
             <nodeConfigurationSpan startTimeSeconds="8.4" timeSpanSeconds="0.6">
-              <SimulationController>
-                <Clock>Clock</Clock>
-              </SimulationController>
-              <In1>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </In1>
-              <Device1>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </Device1>
+              <SimulationController />
+              <In1 />
+              <Device1 />
             </nodeConfigurationSpan>
             <nodeConfigurationSpan startTimeSeconds="9" timeSpanSeconds="0.6">
-              <SimulationController>
-                <Clock>Clock</Clock>
-              </SimulationController>
-              <In1>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </In1>
-              <Device1>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </Device1>
+              <SimulationController />
+              <In1 />
+              <Device1 />
             </nodeConfigurationSpan>
             <nodeConfigurationSpan startTimeSeconds="9.6" timeSpanSeconds="0.4">
-              <SimulationController>
-                <Clock>Clock</Clock>
-              </SimulationController>
-              <In1>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </In1>
-              <Device1>
-                <MeasurementConversionTarget>V</MeasurementConversionTarget>
-                <Clock>Clock</Clock>
-              </Device1>
+              <SimulationController />
+              <In1 />
+              <Device1 />
             </nodeConfigurationSpan>
           </nodeConfigurationSpans>
           <data>

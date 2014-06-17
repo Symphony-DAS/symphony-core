@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Threading;
@@ -34,17 +33,6 @@ namespace Symphony.Core
     /// </summary>
     public class Controller : ITimelineProducer
     {
-        /// <summary>
-        /// Construct a Controller object and input/ouput pipeline from the configuration file at
-        /// the given path.
-        /// </summary>
-        /// <param name="configurationPath">Configuration file path</param>
-        /// <returns>Configured Controller and input/output pipelines</returns>
-        public static Controller FromConfiguration(string configurationPath)
-        {
-            return new Parser().ParseConfiguration(configurationPath);
-        }
-
         /// <summary>
         /// Construct a new Controller with no DAQ bridge and using the system (CPU) clock.
         /// </summary>
