@@ -110,6 +110,13 @@ namespace Symphony.Core
         /// </summary>
         /// <param name="s">Output stream</param>
         void ApplyStreamBackground(IDAQOutputStream s);
+
+        /// <summary>
+        /// Reads a single sample for the given stream.
+        /// </summary>
+        /// <param name="s"></param>
+        /// <returns></returns>
+        IInputData ReadStream(IDAQInputStream s);
     }
 
     public interface IMutableDAQController : IDAQController
@@ -424,6 +431,23 @@ namespace Symphony.Core
         {
             Task.WaitAll(InputTasks.ToArray());
         }
+
+        public IInputData ReadStream(IDAQInputStream s)
+        {
+            if (s.DAQ != this)
+            {
+                throw new DAQException("Input stream does not use this DAQ controller.");
+            }
+
+            if (IsRunning && !IsStopRequested)
+            {
+                throw new DAQException("Attempted to read sample on running stream");
+            }
+
+            return ReadStreamAsync(s);
+        }
+
+        public abstract IInputData ReadStreamAsync(IDAQInputStream s);
 
         public void ApplyStreamBackground(IDAQOutputStream s)
         {

@@ -491,7 +491,7 @@ namespace IntegrationTests
                     Thread.Sleep(TimeSpan.FromMilliseconds(100)); //allow DAC to settle
 
 
-                    var actual = ((HekaDAQController)controller.DAQController).ReadStreamAsyncIO(
+                    var actual = ((HekaDAQController)controller.DAQController).ReadStreamAsync(
                         daq.GetStreams("ANALOG_IN.0").First() as IDAQInputStream);
 
                     //Should be within +/- 0.025 volts
