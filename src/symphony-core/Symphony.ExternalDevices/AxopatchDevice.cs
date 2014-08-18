@@ -34,6 +34,35 @@ namespace Symphony.ExternalDevices
             Backgrounds = background;
         }
 
+        public AxopatchDevice(
+            IAxopatch p,
+            Controller c,
+            IEnumerable<AxopatchInterop.OperatingMode> backgroundModes,
+            IEnumerable<IMeasurement> backgroundMeasurements)
+            : this(p, c,
+                   backgroundModes.Zip(backgroundMeasurements,
+                                       (k, v) => new {Key = k, Value = v})
+                                  .ToDictionary(x => x.Key, x => x.Value))
+        {
+            
+        }
+
+        public AxopatchDevice(
+            IAxopatch p,
+            Controller c,
+            IEnumerable<string> backgroundModes,
+            IEnumerable<IMeasurement> backgroundMeasurements)
+            : this(p, c,
+                   backgroundModes.Select(k =>
+                       {
+                           AxopatchInterop.OperatingMode mode;
+                           Enum.TryParse(k, false, out mode);
+                           return mode;
+                       }),
+                   backgroundMeasurements)
+        {
+        }
+
         private readonly IDictionary<IDAQInputStream, IList<IInputData>> _queues = new Dictionary<IDAQInputStream, IList<IInputData>>();
 
         public override ExternalDeviceBase BindStream(string name, IDAQInputStream inputStream)
@@ -73,10 +102,18 @@ namespace Symphony.ExternalDevices
 
         public AxopatchInterop.AxopatchData CurrentDeviceParameters
         {
-            get 
-            { 
-                var devParams = ReadDeviceParameters();
-                DeviceParameters = devParams;
+            get
+            {
+                AxopatchInterop.AxopatchData devParams;
+                if (Controller.IsRunning)
+                {
+                    devParams = DeviceParameters;
+                }
+                else
+                {
+                    devParams = ReadDeviceParameters();
+                    DeviceParameters = devParams;
+                }
                 return devParams;
             }
         }
@@ -207,7 +244,7 @@ namespace Symphony.ExternalDevices
         {
             try
             {
-                var deviceParameters = DeviceParameters;
+                var deviceParameters = CurrentDeviceParameters;
 
                 var config = MergeDeviceParametersIntoConfiguration(Configuration, deviceParameters);
 
@@ -226,11 +263,12 @@ namespace Symphony.ExternalDevices
 
         public override void PushInputData(IDAQInputStream stream, IInputData inData)
         {
+            if (inData.Data.Count == 0)
+                return;
+
             _queues[stream].Add(inData);
             if (_queues.Values.Any(dataList => dataList.Count == 0))
-            {
                 return;
-            }
 
             try
             {
