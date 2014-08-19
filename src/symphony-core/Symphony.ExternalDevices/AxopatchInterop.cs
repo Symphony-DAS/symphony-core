@@ -6,8 +6,6 @@ namespace Symphony.ExternalDevices
     {
         public class AxopatchData
         {
-            public double Capacitance { get; set; }
-            public double Frequency { get; set; }
             public double Gain { get; set; }
             public OperatingMode OperatingMode { get; set; }
             public double ExternalCommandSensitivity { get; set; }

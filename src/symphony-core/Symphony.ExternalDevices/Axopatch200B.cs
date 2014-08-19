@@ -19,22 +19,30 @@ namespace Symphony.ExternalDevices
         {
             var telegraph = new AxopatchInterop.AxopatchData();
 
-            if (data.ContainsKey(AxopatchDevice.FREQUENCY_TELEGRAPH_STREAM_NAME))
-            {
-                var voltage = ReadVoltage(data[AxopatchDevice.FREQUENCY_TELEGRAPH_STREAM_NAME]);
-                telegraph.Frequency = _voltageToFrequency[Math.Round(voltage * 2) / 2];
-            }
-
             if (data.ContainsKey(AxopatchDevice.GAIN_TELEGRAPH_STREAM_NAME))
             {
                 var voltage = ReadVoltage(data[AxopatchDevice.GAIN_TELEGRAPH_STREAM_NAME]);
-                telegraph.Gain = _voltageToGain[Math.Round(voltage * 2) / 2];
+                try
+                {
+                    telegraph.Gain = _voltageToGain[Math.Round(voltage * 2) / 2];
+                }
+                catch (KeyNotFoundException)
+                {
+                    throw new ArgumentException("Unknown gain telegraph");
+                }
             }
 
             if (data.ContainsKey(AxopatchDevice.MODE_TELEGRAPH_STREAM_NAME))
             {
                 var voltage = ReadVoltage(data[AxopatchDevice.MODE_TELEGRAPH_STREAM_NAME]);
-                telegraph.OperatingMode = _voltageToMode[Math.Round(voltage * 2) / 2];
+                try
+                {
+                    telegraph.OperatingMode = _voltageToMode[Math.Round(voltage * 2) / 2];
+                }
+                catch (KeyNotFoundException)
+                {
+                    throw new ArgumentException("Unknown mode telegraph");
+                }
             }
 
             switch (telegraph.OperatingMode)
@@ -62,15 +70,6 @@ namespace Symphony.ExternalDevices
             var measurements = data.DataWithUnits("V").Data;
             return measurements.First().Quantity;
         }
-
-        private readonly IDictionary<decimal, double> _voltageToFrequency = new Dictionary<decimal, double>
-        {
-            {2, 1},
-            {4, 2},
-            {6, 5},
-            {8, 10},
-            {10, 100}
-        };
 
         private readonly IDictionary<decimal, double> _voltageToGain = new Dictionary<decimal, double>
         {

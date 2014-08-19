@@ -6,7 +6,9 @@ using log4net;
 
 namespace Symphony.ExternalDevices
 {
-
+    /// <summary>
+    /// ExternalDevice implementation for Axopatch 200B device.
+    /// </summary>
     public sealed class AxopatchDevice : ExternalDeviceBase
     {
         private static readonly ILog log = LogManager.GetLogger(typeof (AxopatchDevice));
@@ -16,8 +18,6 @@ namespace Symphony.ExternalDevices
         private IAxopatch Axopatch { get; set; }
 
         public const string SCALED_OUTPUT_STREAM_NAME = "SCALED_OUTPUT";
-        public const string CAPACITANCE_TELEGRAPH_STREAM_NAME = "CAPACITANCE_TELEGRAPH";
-        public const string FREQUENCY_TELEGRAPH_STREAM_NAME = "FREQUENCY_TELEGRAPH";
         public const string GAIN_TELEGRAPH_STREAM_NAME = "GAIN_TELEGRAPH";
         public const string MODE_TELEGRAPH_STREAM_NAME = "MODE_TELEGRAPH";
 
@@ -88,10 +88,8 @@ namespace Symphony.ExternalDevices
                              ? new Dictionary<string, object>()
                              : new Dictionary<string, object>(config);
 
-            result["Capacitance"] = deviceParameters.Capacitance;
             result["ExternalCommandSensitivity"] = deviceParameters.ExternalCommandSensitivity;
             result["ExternalCommandSensitivityUnits"] = deviceParameters.ExternalCommandSensitivityUnits.ToString();
-            result["Frequency"] = deviceParameters.Frequency;
             result["Gain"] = deviceParameters.Gain;
             result["OperatingMode"] = deviceParameters.OperatingMode.ToString();
 
@@ -245,7 +243,6 @@ namespace Symphony.ExternalDevices
             try
             {
                 var deviceParameters = CurrentDeviceParameters;
-
                 var config = MergeDeviceParametersIntoConfiguration(Configuration, deviceParameters);
 
                 IOutputData data = this.Controller.PullOutputData(this, duration);
