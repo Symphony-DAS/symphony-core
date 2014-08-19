@@ -26,7 +26,6 @@ namespace Symphony.ExternalDevices
             Assert.That(telegraph.ExternalCommandSensitivity, Is.EqualTo(0.02));
             Assert.That(telegraph.ExternalCommandSensitivityUnits, Is.EqualTo(AxopatchInterop.ExternalCommandSensitivityUnits.V_V));
         }
-
     }
 
     [TestFixture]

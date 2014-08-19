@@ -17,32 +17,32 @@ namespace Symphony.ExternalDevices
 
         public AxopatchInterop.AxopatchData ReadTelegraphData(IDictionary<string, IInputData> data)
         {
+            if (!data.ContainsKey(AxopatchDevice.GAIN_TELEGRAPH_STREAM_NAME))
+                throw new ArgumentException("Data does not contain gain telegraph");
+
+            if (!data.ContainsKey(AxopatchDevice.MODE_TELEGRAPH_STREAM_NAME))
+                throw new ArgumentException("Data does not contain mode telegraph");
+
             var telegraph = new AxopatchInterop.AxopatchData();
 
-            if (data.ContainsKey(AxopatchDevice.GAIN_TELEGRAPH_STREAM_NAME))
+            var gain = ReadVoltage(data[AxopatchDevice.GAIN_TELEGRAPH_STREAM_NAME]);
+            try
             {
-                var voltage = ReadVoltage(data[AxopatchDevice.GAIN_TELEGRAPH_STREAM_NAME]);
-                try
-                {
-                    telegraph.Gain = _voltageToGain[Math.Round(voltage * 2) / 2];
-                }
-                catch (KeyNotFoundException)
-                {
-                    throw new ArgumentException("Unknown gain telegraph");
-                }
+                telegraph.Gain = _voltageToGain[Math.Round(gain * 2) / 2];
+            }
+            catch (KeyNotFoundException)
+            {
+                throw new ArgumentException("Unknown gain telegraph");
             }
 
-            if (data.ContainsKey(AxopatchDevice.MODE_TELEGRAPH_STREAM_NAME))
+            var mode = ReadVoltage(data[AxopatchDevice.MODE_TELEGRAPH_STREAM_NAME]);
+            try
             {
-                var voltage = ReadVoltage(data[AxopatchDevice.MODE_TELEGRAPH_STREAM_NAME]);
-                try
-                {
-                    telegraph.OperatingMode = _voltageToMode[Math.Round(voltage * 2) / 2];
-                }
-                catch (KeyNotFoundException)
-                {
-                    throw new ArgumentException("Unknown mode telegraph");
-                }
+                telegraph.OperatingMode = _voltageToMode[Math.Round(mode * 2) / 2];
+            }
+            catch (KeyNotFoundException)
+            {
+                throw new ArgumentException("Unknown mode telegraph");
             }
 
             switch (telegraph.OperatingMode)
@@ -68,7 +68,11 @@ namespace Symphony.ExternalDevices
         private static decimal ReadVoltage(IInputData data)
         {
             var measurements = data.DataWithUnits("V").Data;
-            return measurements.First().Quantity;
+            if (Math.Abs(measurements.Max(m => m.Quantity)- measurements.Min(m => m.Quantity)) >= 0.5m)
+            {
+                throw new ArgumentException("Telegraph reading is unstable");
+            }
+            return measurements.Average(m => m.Quantity);
         }
 
         private readonly IDictionary<decimal, double> _voltageToGain = new Dictionary<decimal, double>
