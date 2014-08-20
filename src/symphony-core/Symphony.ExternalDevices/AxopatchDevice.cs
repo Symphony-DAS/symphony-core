@@ -21,6 +21,12 @@ namespace Symphony.ExternalDevices
         public const string GAIN_TELEGRAPH_STREAM_NAME = "GAIN_TELEGRAPH";
         public const string MODE_TELEGRAPH_STREAM_NAME = "MODE_TELEGRAPH";
 
+        /// <summary>
+        /// Constructs a new AxopatchDevice
+        /// </summary>
+        /// <param name="axopatch">Axopatch instance</param>
+        /// <param name="c">Symphony Controller instance</param>
+        /// <param name="background">Dictionary of background Measurements for each Axopatch operating mode</param>
         public AxopatchDevice(IAxopatch axopatch, Controller c, IDictionary<AxopatchInterop.OperatingMode, IMeasurement> background)
             : base("Axopatch", "Molecular Devices", c)
         {
@@ -34,6 +40,13 @@ namespace Symphony.ExternalDevices
             Backgrounds = background;
         }
 
+        /// <summary>
+        /// Constructs a new AxopatchDevice
+        /// </summary>
+        /// <param name="p">Axopatch instance</param>
+        /// <param name="c">Symphony Controller instance</param>
+        /// <param name="backgroundModes">Enumerable of operating modes</param>
+        /// <param name="backgroundMeasurements">Corresponding background Measurement for each operating mode</param>
         public AxopatchDevice(
             IAxopatch p,
             Controller c,
@@ -46,6 +59,15 @@ namespace Symphony.ExternalDevices
         {
         }
 
+        /// <summary>
+        /// Constructs a new AxopatchDevice.
+        /// 
+        /// This constructor is provided as a convenience for Matlab clients. .Net clients should use the typed version.
+        /// </summary>
+        /// <param name="p">Axopatch instance</param>
+        /// <param name="c">Controller instance for this device</param>
+        /// <param name="backgroundModes">Enumerable of operating mode names. Allowed values are "Track", "VClamp", "I0", "IClampNormal", "IClampFast".</param>
+        /// <param name="backgroundMeasurements">Corresponding background Measurement for each operating mode in backgroundModes</param>
         public AxopatchDevice(
             IAxopatch p,
             Controller c,
@@ -115,6 +137,10 @@ namespace Symphony.ExternalDevices
             }
         }
 
+        /// <summary>
+        /// Reads the device parameters from voltages applied to the input streams.
+        /// </summary>
+        /// <returns></returns>
         private AxopatchInterop.AxopatchData ReadDeviceParameters()
         {
             IDictionary<string, IInputData> data = new Dictionary<string, IInputData>();
@@ -129,6 +155,9 @@ namespace Symphony.ExternalDevices
             return Axopatch.ReadTelegraphData(data);
         }
 
+        /// <summary>
+        /// Overrides Background to use current device parameters for conversion.
+        /// </summary>
         public override IMeasurement Background
         {
             get
@@ -144,10 +173,8 @@ namespace Symphony.ExternalDevices
 
         public static IMeasurement ConvertInput(IMeasurement sample, AxopatchInterop.AxopatchData deviceParams)
         {
-            const decimal desiredUnitsMultiplier = 1000m; //mV
-
             return MeasurementPool.GetMeasurement(
-                (sample.QuantityInBaseUnit/(decimal) deviceParams.Gain) * desiredUnitsMultiplier,
+                (sample.QuantityInBaseUnit/(decimal) deviceParams.Gain) * 1000m,
                 InputUnitsExponentForMode(deviceParams.OperatingMode),
                 InputUnitsForMode(deviceParams.OperatingMode));
         }

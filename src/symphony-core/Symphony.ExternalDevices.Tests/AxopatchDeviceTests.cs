@@ -102,7 +102,7 @@ namespace Symphony.ExternalDevices
 
             var cmd = new Measurement(20, -3, "V");
 
-            var expected = new Measurement(cmd.QuantityInBaseUnit/(decimal) gain, -12, "A");
+            var expected = new Measurement(1000 * cmd.QuantityInBaseUnit/(decimal) gain, -12, "A");
 
             var actual = AxopatchDevice.ConvertInput(cmd, data);
 
@@ -125,7 +125,7 @@ namespace Symphony.ExternalDevices
 
             var cmd = new Measurement(20, -3, "V");
 
-            var expected = new Measurement(cmd.QuantityInBaseUnit/(decimal) gain, -3, "V");
+            var expected = new Measurement(1000 * cmd.QuantityInBaseUnit/(decimal) gain, -3, "V");
 
             var actual = AxopatchDevice.ConvertInput(cmd, data);
 
