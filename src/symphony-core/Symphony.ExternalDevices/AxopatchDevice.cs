@@ -144,8 +144,10 @@ namespace Symphony.ExternalDevices
 
         public static IMeasurement ConvertInput(IMeasurement sample, AxopatchInterop.AxopatchData deviceParams)
         {
+            const decimal desiredUnitsMultiplier = 1000m; //mV
+
             return MeasurementPool.GetMeasurement(
-                sample.QuantityInBaseUnit/(decimal) deviceParams.Gain,
+                (sample.QuantityInBaseUnit/(decimal) deviceParams.Gain) * desiredUnitsMultiplier,
                 InputUnitsExponentForMode(deviceParams.OperatingMode),
                 InputUnitsForMode(deviceParams.OperatingMode));
         }
