@@ -6,6 +6,10 @@ using Symphony.Core;
 
 namespace Symphony.ExternalDevices
 {
+
+    /// <summary>
+    /// Implementation of the IAxoPatch interface for the Axopatch200B.
+    /// </summary>
     public class Axopatch200B : IAxopatch
     {
         public double Beta { get; private set; }

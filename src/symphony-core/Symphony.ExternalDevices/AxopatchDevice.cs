@@ -7,7 +7,7 @@ using log4net;
 namespace Symphony.ExternalDevices
 {
     /// <summary>
-    /// ExternalDevice implementation for Axopatch 200B device.
+    /// ExternalDevice implementation for Axopatch devices.
     /// </summary>
     public sealed class AxopatchDevice : ExternalDeviceBase
     {
@@ -44,7 +44,6 @@ namespace Symphony.ExternalDevices
                                        (k, v) => new {Key = k, Value = v})
                                   .ToDictionary(x => x.Key, x => x.Value))
         {
-            
         }
 
         public AxopatchDevice(
