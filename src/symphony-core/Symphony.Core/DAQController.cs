@@ -400,7 +400,10 @@ namespace Symphony.Core
             // Throw if any previous tasks faulted
             if (InputTasks.Any(t => t.IsFaulted))
             {
-                throw new AggregateException(InputTasks.Where(t => t.IsFaulted).Select(t => t.Exception));
+                var lookup = InputTasks.ToLookup(t => t.IsFaulted);
+                var faultedTasks = lookup[true];
+                InputTasks = lookup[false].ToList();
+                throw new AggregateException(faultedTasks.Select(t => t.Exception));
             }
 
 
