@@ -52,6 +52,23 @@ namespace Symphony.Core
             s.SampleRate = new Measurement(10, "A");
         }
 
+        [Test]
+        public void InputStreamShouldReadValue()
+        {
+            var controller = new DynamicMock(typeof(IDAQController));
+            var s = new DAQInputStream("test", controller.MockInstance as IDAQController)
+                {
+                    MeasurementConversionTarget = "V"
+                };
+
+            var expected = new InputData(Enumerable.Repeat(new Measurement(1, "V"), 1), null, DateTimeOffset.Now);
+
+            controller.ExpectAndReturn("ReadStream", expected, s);
+
+            var actual = s.Read();
+
+            controller.Verify();
+        }
 
         [Test]
         public void StreamSetSampleRate()

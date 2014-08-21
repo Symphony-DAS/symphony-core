@@ -1080,6 +1080,11 @@ namespace Symphony.Core
 
         public IMeasurement AsyncBackground { get; set; }
 
+        public override IInputData ReadStreamAsync(IDAQInputStream s)
+        {
+            throw new NotImplementedException();
+        }
+
         public override void ApplyStreamBackgroundAsync(IDAQOutputStream s, IMeasurement background)
         {
             AsyncBackground = background;

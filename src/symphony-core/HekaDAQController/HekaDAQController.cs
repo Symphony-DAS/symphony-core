@@ -619,7 +619,7 @@ namespace Heka
         /// <param name="daqInputStream">IDAQInputStream to read</param>
         /// <returns>IInputData with a single read sample</returns>
         /// <exception cref="ArgumentException">If the given stream is not an input stream belonging to this HekaDAQController</exception>"
-        public IInputData ReadStreamAsyncIO(IDAQInputStream daqInputStream)
+        public override IInputData ReadStreamAsync(IDAQInputStream daqInputStream)
         {
             if (!InputStreams.Contains(daqInputStream))
                 throw new ArgumentException("Input stream is not present on this device.", "daqInputStream");
