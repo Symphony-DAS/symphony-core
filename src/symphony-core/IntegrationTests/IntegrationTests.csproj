@@ -110,6 +110,11 @@
     </Compile>
     <Compile Include="HekaIntegration.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Properties\Resources.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>Resources.resx</DependentUpon>
+    </Compile>
     <Compile Include="SimulationIntegration.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -133,6 +138,13 @@
       <Project>{8A9AF9F2-7ADF-48AA-8C34-0ED8BFB5D1D5}</Project>
       <Name>Symphony.ExternalDevices</Name>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Properties\Resources.resx">
+      <Generator>ResXFileCodeGenerator</Generator>
+      <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+      <SubType>Designer</SubType>
+    </EmbeddedResource>
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

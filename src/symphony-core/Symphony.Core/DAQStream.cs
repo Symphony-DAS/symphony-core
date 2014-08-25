@@ -91,6 +91,12 @@ namespace Symphony.Core
         /// The ExternalDevice instances to which we push IInputData
         /// </summary>
         IList<IExternalDevice> Devices { get; }
+
+        /// <summary>
+        /// Reads a single sample from this stream.
+        /// </summary>
+        /// <returns></returns>
+        IInputData Read();
     }
 
     /// <summary>
@@ -310,6 +316,11 @@ namespace Symphony.Core
                 return Maybe<string>.No("Clock must not be null.");
 
             return Maybe<string>.Yes();
+        }
+
+        public IInputData Read()
+        {
+            return DAQ.ReadStream(this).DataWithUnits(MeasurementConversionTarget);
         }
     }
 

@@ -83,6 +83,11 @@ namespace Symphony.SimulationDAQController
             IsRunning = true;
         }
 
+        public override IInputData ReadStreamAsync(IDAQInputStream s)
+        {
+            throw new NotImplementedException();
+        }
+
         public override void ApplyStreamBackgroundAsync(IDAQOutputStream s, IMeasurement background)
         {
             
