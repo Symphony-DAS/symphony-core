@@ -12,7 +12,6 @@ using HDF5DotNet;
 using Symphony.Core;
 using Symphony.SimulationDAQController;
 using NUnit.Framework;
-using IntegrationTests.Properties;
 
 namespace IntegrationTests
 {
@@ -218,19 +217,51 @@ namespace IntegrationTests
                 // just an identity conversion for now, to pass Validate()
                                 (IMeasurement m) => m);
 
+            // use an incrementing clock so timestamps are predictable
+            var incrementingClock = new IncrementingClock();
+
+            var daq = new SimulationDAQController { Clock = incrementingClock };
+
+            var out0 = new DAQOutputStream("Out0")
+            {
+                MeasurementConversionTarget = "V",
+                Clock = daq.Clock,
+                SampleRate = new Measurement((decimal)sampleRate, "Hz")
+            };
+
+            var out1 = new DAQOutputStream("Out1")
+            {
+                MeasurementConversionTarget = "V",
+                Clock = daq.Clock,
+                SampleRate = new Measurement((decimal)sampleRate, "Hz")
+            };
+
+            var in0 = new DAQInputStream("In0")
+                {
+                    MeasurementConversionTarget = "V",
+                    Clock = daq.Clock,
+                    SampleRate = new Measurement((decimal) sampleRate, "Hz")
+                };
+
+            var in1 = new DAQInputStream("In1")
+            {
+                MeasurementConversionTarget = "V",
+                Clock = daq.Clock,
+                SampleRate = new Measurement((decimal)sampleRate, "Hz")
+            };
+
+            daq.AddStream(out0);
+            daq.AddStream(out1);
+            daq.AddStream(in0);
+            daq.AddStream(in1);
+
+            var controller = new Controller(daq, daq.Clock);
+
             var streamNameMap = new Dictionary<string, string>();
             streamNameMap["Out0"] = "In0";
             if (nChannels > 1)
                 streamNameMap["Out1"] = "In1";
 
-            Controller controller = new Parser().ParseConfiguration(Resources.LowGainConfig);
-
-            // use an incrementing clock so timestamps are predictable
-            var incrementingClock = new IncrementingClock();
-            controller.Clock = incrementingClock;
-
-            var daq = (SimulationDAQController)controller.DAQController;
-            daq.Clock = incrementingClock;
             foreach (var stream in daq.Streams)
             {
                 stream.SampleRate = new Measurement((decimal) sampleRate, "Hz");
@@ -265,14 +296,26 @@ namespace IntegrationTests
             protocolParams["key1"] = "value1";
 
             e = new Epoch("LowGainSimulation", protocolParams);
-            dev0 = controller.GetDevice("Device0");
-            dev1 = controller.GetDevice("Device1");
 
-            dev0.InputSampleRate = new Measurement((decimal)sampleRate, "Hz");
-            dev0.OutputSampleRate = new Measurement((decimal)sampleRate, "Hz");
+            dev0 = new UnitConvertingExternalDevice("Device0", "Manufacturer", controller, new Measurement(0, "V"))
+                {
+                    MeasurementConversionTarget = "V",
+                    Clock = daq.Clock,
+                    InputSampleRate = new Measurement((decimal)sampleRate, "Hz"),
+                    OutputSampleRate = new Measurement((decimal)sampleRate, "Hz")
+                };
+            dev0.BindStream(out0);
+            dev0.BindStream(in0);
 
-            dev1.InputSampleRate = new Measurement((decimal)sampleRate, "Hz");
-            dev1.OutputSampleRate = new Measurement((decimal)sampleRate, "Hz");
+            dev1 = new UnitConvertingExternalDevice("Device1", "Manufacturer", controller, new Measurement(0, "V"))
+                {
+                    MeasurementConversionTarget = "V",
+                    Clock = daq.Clock,
+                    InputSampleRate = new Measurement((decimal)sampleRate, "Hz"),
+                    OutputSampleRate = new Measurement((decimal)sampleRate, "Hz")
+                };
+            dev1.BindStream(out1);
+            dev1.BindStream(in1);
 
             if (nChannels == 1)
             {

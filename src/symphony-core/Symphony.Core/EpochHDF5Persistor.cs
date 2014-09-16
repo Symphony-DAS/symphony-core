@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
@@ -440,6 +441,11 @@ namespace Symphony.Core
             H5S.close(spaceId);
         }
 
+        private static void WriteAttribute(H5ObjectWithAttributes target, string name, char value)
+        {
+            WriteAttribute(target, name, value.ToString());
+        }
+
         private static void WriteAttribute(H5ObjectWithAttributes target, string name, bool value)
         {
             H5DataTypeId dtype = H5T.copy(H5T.H5Type.NATIVE_HBOOL);
@@ -571,6 +577,10 @@ namespace Symphony.Core
                     else if (value is bool)
                     {
                         WriteAttribute(dictId, key, (bool)value);
+                    }
+                    else if (value is char)
+                    {
+                        WriteAttribute(dictId, key, (char)value);
                     }
                     else if (value is string)
                     {
