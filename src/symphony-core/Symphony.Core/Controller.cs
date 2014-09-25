@@ -61,10 +61,8 @@ namespace Symphony.Core
             InputDataStreams = new ConcurrentDictionary<IExternalDevice, SequenceInputDataStream>();
             BackgroundDataStreams = new Dictionary<IExternalDevice, IOutputDataStream>();
             CompletedEpochTasks = new List<Task>();
-            PersistEpochTasks = new List<Task>();
             Configuration = new Dictionary<string, object>();
             CompletedEpochTaskScheduler = new LimitedConcurrencyLevelTaskScheduler(1);
-            PersistEpochTaskScheduler = new LimitedConcurrencyLevelTaskScheduler(1);
         }
 
         /// <summary>
@@ -84,11 +82,6 @@ namespace Symphony.Core
         {
             Task.WaitAll(CompletedEpochTasks.ToArray());
         }
-
-        /// <summary>
-        /// A task scheduler for tasks persisting completed Epochs.
-        /// </summary>
-        private LimitedConcurrencyLevelTaskScheduler PersistEpochTaskScheduler { get; set; }
 
         /// <summary>
         /// A list of incomplete tasks persisting completed Epochs. 
@@ -704,12 +697,12 @@ namespace Symphony.Core
         {
             try
             {
-                Task.WaitAll(PersistEpochTasks.ToArray());
+                Task.WaitAll(CompletedEpochTasks.ToArray());
             }
             catch (Exception ex)
             {
-                log.ErrorFormat("An error occurred while saving Epochs: {0}", ex);
-                throw new SymphonyControllerException("Unable to write Epoch data to persistor.", ex);
+                log.ErrorFormat("An error occurred while completing Epochs: {0}", ex);
+                throw new SymphonyControllerException("An error occurred while completing Epochs", ex);
             }
             finally
             {
@@ -719,10 +712,7 @@ namespace Symphony.Core
         }
 
         private void ProcessLoop(ConcurrentQueue<Epoch> epochQueue, EpochPersistor persistor)
-        {           
-            var cts = new CancellationTokenSource();
-            var cancellationToken = cts.Token;
-
+        {
             var incompleteEpochs = new ConcurrentQueue<Epoch>();
             
             EventHandler<TimeStampedEventArgs> stopRequested = (c, args) =>
@@ -768,6 +758,12 @@ namespace Symphony.Core
 
             EventHandler<TimeStampedDeviceDataStreamEventArgs> inputPushed = (c, args) =>
                 {
+                    // Throw if any previous completed epoch tasks faulted
+                    if (CompletedEpochTasks.Any(t => t.IsFaulted))
+                    {
+                        throw new AggregateException(CompletedEpochTasks.Select(t => t.Exception));
+                    }
+
                     Epoch currentEpoch;
                     if (!incompleteEpochs.TryPeek(out currentEpoch))
                         return;
@@ -780,39 +776,22 @@ namespace Symphony.Core
                         if (!incompleteEpochs.TryDequeue(out completedEpoch) || completedEpoch != currentEpoch)
                             throw new SymphonyControllerException("Failed to dequeue completed epoch");
 
-                        var completeTask = Task.Factory.StartNew(() => OnCompletedEpoch(completedEpoch),
-                                                                 CancellationToken.None,
-                                                                 TaskCreationOptions.None,
-                                                                 CompletedEpochTaskScheduler);
+                        var completeTask = Task.Factory.StartNew(() =>
+                            {
+                                OnCompletedEpoch(completedEpoch);
 
-                        CompletedEpochTasks = CompletedEpochTasks.Where(t => !t.IsCompleted).ToList();
-                        CompletedEpochTasks.Add(completeTask);
-
-                        if (persistor != null && completedEpoch.ShouldBePersisted)
-                        {
-                            var persistTask = Task.Factory.StartNew(() =>
+                                if (persistor != null && completedEpoch.ShouldBePersisted)
                                 {
                                     log.DebugFormat("Saving completed Epoch ({0})...", completedEpoch.StartTime);
                                     SaveEpoch(persistor, completedEpoch);
-                                },
-                                cancellationToken,
-                                TaskCreationOptions.PreferFairness,
-                                PersistEpochTaskScheduler)
-                                .ContinueWith((t) =>
-                                    {
-                                        cancellationToken.ThrowIfCancellationRequested();
+                                }
+                            },
+                            CancellationToken.None,
+                            TaskCreationOptions.PreferFairness,
+                            CompletedEpochTaskScheduler);
 
-                                        if (t.IsFaulted &&
-                                            t.Exception != null)
-                                        {
-                                            throw t.Exception;
-                                        }
-                                    },
-                                    cancellationToken);
-
-                            PersistEpochTasks = PersistEpochTasks.Where(t => !t.IsCompleted).ToList();
-                            PersistEpochTasks.Add(persistTask);
-                        }
+                        CompletedEpochTasks = CompletedEpochTasks.Where(t => !t.IsCompleted).ToList();
+                        CompletedEpochTasks.Add(completeTask);
 
                         if (incompleteEpochs.IsEmpty)
                         {
