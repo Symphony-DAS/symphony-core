@@ -981,6 +981,9 @@ namespace Heka.NativeInterop
         /// POSITIVEVOLT -> 10.2396875
         public const float POSITIVEVOLT = 10.23969F;
 
+        /// NEGATIVEVOLT -> -10.24
+        public const float NEGATIVEVOLT = -10.24F;
+
         /// SLOWPOSITIVEVOLT -> 10.
         public const float SLOWPOSITIVEVOLT = 10F;
 

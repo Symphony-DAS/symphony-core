@@ -79,6 +79,13 @@ namespace Heka
             Converters.Register(DAQCountUnits,
                 Measurement.UNITLESS,
                 (m) => m);
+
+            Converters.Register(DAQCountUnits,
+                Measurement.NORMALIZED,
+                (m) => MeasurementPool.GetMeasurement(m.QuantityInBaseUnit < 0 ?
+                    m.QuantityInBaseUnit / (decimal)ITCMM.NEGATIVEVOLT / -(decimal)ITCMM.ANALOGVOLT :
+                    m.QuantityInBaseUnit / (decimal)ITCMM.POSITIVEVOLT / +(decimal)ITCMM.ANALOGVOLT,
+                    0, DAQCountUnits));
         }
     }
 
