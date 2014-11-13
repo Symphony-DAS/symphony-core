@@ -176,9 +176,9 @@ namespace Symphony.Core
             }
         }
 
-        public const string UNITLESS = "unitless";
+        public const string UNITLESS = "_unitless_";
 
-        public const string NORMALIZED = "normalized";
+        public const string NORMALIZED = "_normalized_";
 
         /// <summary>
         /// Return true if these two Measurements are equivalent
