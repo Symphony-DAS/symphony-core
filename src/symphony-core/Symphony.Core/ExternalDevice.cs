@@ -664,33 +664,46 @@ namespace Symphony.Core
             LookupTable = lookupTable;
         }
 
-        public static SortedList<decimal, decimal> LookupTable { get; set; }
+        public SortedList<decimal, decimal> LookupTable
+        {
+            get
+            {
+                return new SortedList<decimal, decimal>(_lookupKeys.ToDictionary(k => k, k => _lookupValues[_lookupKeys.IndexOf(k)]));
+            }
+            set
+            {
+                // This is a more efficient way of storing the table for interpolation.
+                _lookupKeys = value.Keys.ToList();
+                _lookupValues = value.Values.ToList();
+            }
+        }
+
+        private List<decimal> _lookupKeys;
+        private List<decimal> _lookupValues; 
 
         // Transforms the given sample's quantity using the given lookup table. Linear 
         // interpolation is used to calculate values that sit between keys of the LUT.
-        public static IMeasurement ConvertOutput(IMeasurement sample, SortedList<decimal, decimal> lookupTable)
+        public static IMeasurement ConvertOutput(IMeasurement sample, List<decimal> lookupKeys, List<decimal> lookupValues)
         {
-            var keys = lookupTable.Keys.ToList();
-
             decimal quantity;
-            var index = keys.BinarySearch(sample.Quantity);
+            var index = lookupKeys.BinarySearch(sample.Quantity);
             if (index >= 0)
             {
-                quantity = lookupTable[keys[index]];
+                quantity = lookupValues[index];
             }
             else
             {
                 index = ~index;
-                if (index <= 0 || index >= keys.Count)
+                if (index <= 0 || index >= lookupKeys.Count)
                 {
                     throw new ExternalDeviceException(sample.Quantity + " is outside the range of the lookup table");
                 }
 
-                var x0 = keys[index - 1];
-                var x1 = keys[index];
+                var x0 = lookupKeys[index - 1];
+                var x1 = lookupKeys[index];
 
-                var y0 = lookupTable[keys[index - 1]];
-                var y1 = lookupTable[keys[index]];
+                var y0 = lookupValues[index - 1];
+                var y1 = lookupValues[index];
 
                 quantity = y0 * (sample.Quantity - x1) / (x0 - x1) + y1 * (sample.Quantity - x0) / (x1 - x0);
             }
@@ -701,13 +714,13 @@ namespace Symphony.Core
         public override IOutputData PullOutputData(IDAQOutputStream stream, TimeSpan duration)
         {
             var data = base.PullOutputData(stream, duration);
-            return data.DataWithConversion(m => ConvertOutput(m, LookupTable));
+            return data.DataWithConversion(m => ConvertOutput(m, _lookupKeys, _lookupValues));
         }
 
         protected override IMeasurement ConvertOutput(IMeasurement deviceOutput)
         {
             var m = base.ConvertOutput(deviceOutput);
-            return ConvertOutput(m, LookupTable);
+            return ConvertOutput(m, _lookupKeys, _lookupValues);
         }
     }
 

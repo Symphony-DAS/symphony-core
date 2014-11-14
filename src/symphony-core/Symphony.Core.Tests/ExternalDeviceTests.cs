@@ -145,7 +145,7 @@ namespace Symphony.Core
             var sample = new Measurement(-0.75, "units");
 
             var expected = new Measurement(-75, "units");
-            Assert.That(CalibratedDevice.ConvertOutput(sample, LUT), Is.EqualTo(expected));
+            Assert.That(CalibratedDevice.ConvertOutput(sample, LUT.Keys.ToList(), LUT.Values.ToList()), Is.EqualTo(expected));
         }
 
         [Test]
@@ -154,21 +154,41 @@ namespace Symphony.Core
             var sample = new Measurement(10, "units");
 
             var expected = new Measurement(200, "units");
-            Assert.That(CalibratedDevice.ConvertOutput(sample, LUT), Is.EqualTo(expected));
+            Assert.That(CalibratedDevice.ConvertOutput(sample, LUT.Keys.ToList(), LUT.Values.ToList()), Is.EqualTo(expected));
+        }
+
+        [Test]
+        public void ShouldSetLookupTable()
+        {
+            var LUT2 = new SortedList<decimal, decimal>()
+                {
+                    {2.02m, 5},
+                    {-3.2m, 12},
+                    {1.99m, 16},
+                    {-3.5m, 18}
+                };
+
+            var d = new CalibratedDevice(UNUSED_NAME, null, null, LUT)
+            {
+                MeasurementConversionTarget = "units"
+            };
+
+            d.LookupTable = LUT2;
+            Assert.That(d.LookupTable, Is.EqualTo(LUT2));
         }
 
         [Test]
         public void ShouldRaiseExceptionIfValueIsGreaterThanLUT()
         {
             var sample = new Measurement(11, "units");
-            Assert.Throws<ExternalDeviceException>(() => CalibratedDevice.ConvertOutput(sample, LUT));
+            Assert.Throws<ExternalDeviceException>(() => CalibratedDevice.ConvertOutput(sample, LUT.Keys.ToList(), LUT.Values.ToList()));
         }
 
         [Test]
         public void ShouldRaiseExceptionIfValueIsLessThanLUT()
         {
             var sample = new Measurement(-2, "units");
-            Assert.Throws<ExternalDeviceException>(() => CalibratedDevice.ConvertOutput(sample, LUT));
+            Assert.Throws<ExternalDeviceException>(() => CalibratedDevice.ConvertOutput(sample, LUT.Keys.ToList(), LUT.Values.ToList()));
         }
     }
 
