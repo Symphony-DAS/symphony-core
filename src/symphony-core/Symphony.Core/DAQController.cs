@@ -334,6 +334,7 @@ namespace Symphony.Core
                             if (task.Value.Exception != null)
                             {
                                 log.ErrorFormat("An error occurred pulling output data: {0}", task.Value.Exception);
+                                OutputTasks.Remove(task.Value);
                                 throw task.Value.Exception;
                             }
                         }
@@ -619,7 +620,15 @@ namespace Symphony.Core
             RequestStop();
 
             //OutputTaskCTS.Cancel();
-            Task.WaitAll(OutputTasks.ToArray());
+            try
+            {
+                Task.WaitAll(OutputTasks.ToArray());
+            }
+            catch (Exception ex)
+            {
+                log.WarnFormat("An output task failed while stopping: {0}", ex);
+            }
+            OutputTasks.Clear();
 
             SetStreamsBackground();
         }
