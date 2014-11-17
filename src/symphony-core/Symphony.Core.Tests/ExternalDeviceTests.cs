@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text;
 using Moq;
 using NUnit.Framework;
+using NUnit.Mocks;
 using Symphony.ExternalDevices;
 
 namespace Symphony.Core
@@ -104,6 +105,90 @@ namespace Symphony.Core
 
             Assert.That(device.Background, Is.EqualTo(expected));
             Assert.That(device.OutputBackground, Is.EqualTo(expected));
+        }
+    }
+
+    [TestFixture]
+    internal class CalibratedDeviceTests
+    {
+        private const string UNUSED_NAME = "UNUSED";
+
+        private static readonly SortedList<decimal, decimal> LUT = new SortedList<decimal, decimal>()
+            {
+                {-1,    -100},
+                {0,     0},
+                {5,     100},
+                {10,    200}
+            };
+
+        [Test]
+        public void ShouldConvertBackgroundValue()
+        {
+            var bg = new Measurement(7.5, "units");
+
+            var d = new CalibratedDevice(UNUSED_NAME, null, bg, LUT)
+                {
+                    MeasurementConversionTarget = "units"
+                };
+
+            var stream = new DAQOutputStream(UNUSED_NAME);
+            d.BindStream(stream);
+
+            var expected = new Measurement(150, bg.Exponent, bg.BaseUnit);
+
+            Assert.That(d.OutputBackground, Is.EqualTo(expected));
+        }
+
+        [Test]
+        public void ShouldConvertNegativeValues()
+        {
+            var sample = new Measurement(-0.75, "units");
+
+            var expected = new Measurement(-75, "units");
+            Assert.That(CalibratedDevice.ConvertOutput(sample, LUT.Keys.ToList(), LUT.Values.ToList()), Is.EqualTo(expected));
+        }
+
+        [Test]
+        public void ShouldConvertKeyDirectlyToValue()
+        {
+            var sample = new Measurement(10, "units");
+
+            var expected = new Measurement(200, "units");
+            Assert.That(CalibratedDevice.ConvertOutput(sample, LUT.Keys.ToList(), LUT.Values.ToList()), Is.EqualTo(expected));
+        }
+
+        [Test]
+        public void ShouldSetLookupTable()
+        {
+            var LUT2 = new SortedList<decimal, decimal>()
+                {
+                    {2.02m, 5},
+                    {-3.2m, 12},
+                    {1.99m, 16},
+                    {-3.5m, 18}
+                };
+
+            var d = new CalibratedDevice(UNUSED_NAME, null, null, LUT)
+            {
+                MeasurementConversionTarget = "units"
+            };
+
+            d.LookupTable = LUT2;
+            Assert.That(d.LookupTable, Is.EqualTo(LUT2));
+        }
+
+        [Test]
+        public void ShouldRaiseExceptionIfValueIsGreaterThanLUT()
+        {
+            var sample = new Measurement(11, "units");
+            Assert.Throws<ExternalDeviceException>(() => CalibratedDevice.ConvertOutput(sample, LUT.Keys.ToList(), LUT.Values.ToList()));
+        }
+
+        [Test]
+        public void ShouldRaiseExceptionIfValueIsLessThanLUT()
+        {
+            var sample = new Measurement(-2, "units");
+            Assert.Throws<ExternalDeviceException>(() => CalibratedDevice.ConvertOutput(sample, LUT.Keys.ToList(), LUT.Values.ToList()));
         }
     }
 

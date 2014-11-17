@@ -629,6 +629,102 @@ namespace Symphony.Core
     }
 
     /// <summary>
+    /// A CalibratedDevice is a UnitConvertingExternalDevice with an associated
+    /// lookup table (LUT) that transforms output values. Output values are 
+    /// converted to the MeasurementConversionTarget before being transformed 
+    /// by the LUT. Linear interpolation is used to calculate values that sit 
+    /// between keys of the LUT. 
+    /// </summary>
+    public class CalibratedDevice : UnitConvertingExternalDevice
+    {
+        /// <summary>
+        /// Constructs a new CalibratedDevice
+        /// </summary>
+        /// <param name="name">Device name</param>
+        /// <param name="manufacturer">Device manufacturer</param>
+        /// <param name="background">Device's default output (background) value</param>
+        /// <param name="lookupTable">Lookup table used to transform the device output</param>
+        public CalibratedDevice(string name, string manufacturer, Measurement background, SortedList<decimal, decimal> lookupTable) 
+            : base(name, manufacturer, background)
+        {
+            LookupTable = lookupTable;
+        }
+
+        /// <summary>
+        /// Constructs a new CalibratedDevice referencing a Controller
+        /// </summary>
+        /// <param name="name">Device name</param>
+        /// <param name="manufacturer">Device manufacturer</param>
+        /// <param name="c">Controller to connect with this Device</param>
+        /// <param name="background">Device's default output (background) value</param>
+        /// <param name="lookupTable">Lookup table used to transform thus Device output</param>
+        public CalibratedDevice(string name, string manufacturer, Controller c, Measurement background, SortedList<decimal, decimal> lookupTable)
+            : base(name, manufacturer, c, background)
+        {
+            LookupTable = lookupTable;
+        }
+
+        public SortedList<decimal, decimal> LookupTable
+        {
+            get
+            {
+                return new SortedList<decimal, decimal>(_lookupKeys.ToDictionary(k => k, k => _lookupValues[_lookupKeys.IndexOf(k)]));
+            }
+            set
+            {
+                // This is a more efficient way of storing the table for interpolation.
+                _lookupKeys = value.Keys.ToList();
+                _lookupValues = value.Values.ToList();
+            }
+        }
+
+        private List<decimal> _lookupKeys;
+        private List<decimal> _lookupValues; 
+
+        // Transforms the given sample's quantity using the given lookup table. Linear 
+        // interpolation is used to calculate values that sit between keys of the LUT.
+        public static IMeasurement ConvertOutput(IMeasurement sample, List<decimal> lookupKeys, List<decimal> lookupValues)
+        {
+            decimal quantity;
+            var index = lookupKeys.BinarySearch(sample.Quantity);
+            if (index >= 0)
+            {
+                quantity = lookupValues[index];
+            }
+            else
+            {
+                index = ~index;
+                if (index <= 0 || index >= lookupKeys.Count)
+                {
+                    throw new ExternalDeviceException(sample.Quantity + " is outside the range of the lookup table");
+                }
+
+                var x0 = lookupKeys[index - 1];
+                var x1 = lookupKeys[index];
+
+                var y0 = lookupValues[index - 1];
+                var y1 = lookupValues[index];
+
+                quantity = y0 * (sample.Quantity - x1) / (x0 - x1) + y1 * (sample.Quantity - x0) / (x1 - x0);
+            }
+
+            return MeasurementPool.GetMeasurement(quantity, sample.Exponent, sample.BaseUnit);
+        }
+
+        public override IOutputData PullOutputData(IDAQOutputStream stream, TimeSpan duration)
+        {
+            var data = base.PullOutputData(stream, duration);
+            return data.DataWithConversion(m => ConvertOutput(m, _lookupKeys, _lookupValues));
+        }
+
+        protected override IMeasurement ConvertOutput(IMeasurement deviceOutput)
+        {
+            var m = base.ConvertOutput(deviceOutput);
+            return ConvertOutput(m, _lookupKeys, _lookupValues);
+        }
+    }
+
+    /// <summary>
     /// The CoalescingDevice is a special kind of ExternalDevice that needs
     /// to coalesce (combine) multiple InputData instances into a single
     /// InputData for processing further up the pipeline.
