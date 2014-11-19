@@ -173,7 +173,7 @@ namespace Symphony.Core
                 throw new ArgumentException(String.Format("Sample Rate has unexpected units: {0}", sampleRate.BaseUnit));
             }
 
-            double seconds = sampleCount / (double)sampleRate.QuantityInBaseUnit;
+            var seconds = sampleCount / sampleRate.QuantityInBaseUnit;
             return new TimeSpan((long)Math.Ceiling(seconds * TimeSpan.TicksPerSecond));
         }
 
