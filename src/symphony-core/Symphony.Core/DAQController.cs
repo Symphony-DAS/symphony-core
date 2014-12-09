@@ -271,6 +271,9 @@ namespace Symphony.Core
             // pushing the results back through the input pipeline
             try
             {
+                OutputTasks.Clear();
+                InputTasks.Clear();
+
                 WillBeginProcessLoop();
                 ProcessLoop(waitForTrigger);
             }
@@ -401,12 +404,8 @@ namespace Symphony.Core
             // Throw if any previous tasks faulted
             if (InputTasks.Any(t => t.IsFaulted))
             {
-                var lookup = InputTasks.ToLookup(t => t.IsFaulted);
-                var faultedTasks = lookup[true];
-                InputTasks = lookup[false].ToList();
-                throw new AggregateException(faultedTasks.Select(t => t.Exception));
+                throw new AggregateException(InputTasks.Where(t => t.IsFaulted).Select(t => t.Exception));
             }
-
 
             var newTask = InputTasks.Any()
                               ? Task.Factory.ContinueWhenAll(InputTasks.ToArray(),
@@ -424,8 +423,6 @@ namespace Symphony.Core
                                               kvp.Key.PushInputData(kvp.Value);
                                           }
                                       });
-
-
 
             InputTasks = InputTasks.Where(t => !t.IsCompleted).ToList();
             InputTasks.Add(newTask);
@@ -626,9 +623,8 @@ namespace Symphony.Core
             }
             catch (Exception ex)
             {
-                log.WarnFormat("An output task failed while stopping: {0}", ex);
+                log.ErrorFormat("An output task failed while stopping: {0}", ex);
             }
-            OutputTasks.Clear();
 
             SetStreamsBackground();
         }

@@ -682,6 +682,8 @@ namespace Symphony.Core
         {
             try
             {
+                CompletedEpochTasks.Clear();
+
                 ProcessLoop(epochQueue, persistor);
             }
             finally
@@ -761,7 +763,7 @@ namespace Symphony.Core
                     // Throw if any previous completed epoch tasks faulted
                     if (CompletedEpochTasks.Any(t => t.IsFaulted))
                     {
-                        throw new AggregateException(CompletedEpochTasks.Select(t => t.Exception));
+                        throw new AggregateException(CompletedEpochTasks.Where(t => t.IsFaulted).Select(t => t.Exception));
                     }
 
                     Epoch currentEpoch;
