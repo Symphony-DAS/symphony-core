@@ -110,6 +110,7 @@
     <Reference Include="System" />
     <Reference Include="System.ComponentModel.Composition" />
     <Reference Include="System.Core" />
+    <Reference Include="System.Windows.Forms" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
@@ -124,6 +125,8 @@
     <Compile Include="Controller.cs" />
     <Compile Include="DAQController.cs" />
     <Compile Include="DAQStream.cs" />
+    <Compile Include="Document.cs" />
+    <Compile Include="H5Document.cs" />
     <Compile Include="IODataStream.cs" />
     <Compile Include="Epoch.cs" />
     <Compile Include="EpochHDF5Persistor.cs" />

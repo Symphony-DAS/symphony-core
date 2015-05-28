@@ -128,6 +128,7 @@
     <Compile Include="EpochPersistorTests.cs" />
     <Compile Include="EpochTests.cs" />
     <Compile Include="ExternalDeviceTests.cs" />
+    <Compile Include="H5DocumentTests.cs" />
     <Compile Include="HDF5Tests.cs" />
     <Compile Include="IODataTests.cs" />
     <Compile Include="IODataStreamTests.cs" />
@@ -188,10 +189,8 @@
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
-    <PostBuildEvent>copy "$(ProjectDir)..\..\..\externals\HDF5DotNet\$(Platform)\hdf5dll.dll" "$(TargetDir)"
-copy "$(ProjectDir)..\..\..\externals\HDF5DotNet\$(Platform)\hdf5_hldll.dll" "$(TargetDir)"
-copy "$(ProjectDir)..\..\..\externals\HDF5DotNet\$(Platform)\szip.dll" "$(TargetDir)"
-copy "$(ProjectDir)..\..\..\externals\HDF5DotNet\$(Platform)\zlib.dll" "$(TargetDir)"</PostBuildEvent>
+    <PostBuildEvent>
+    </PostBuildEvent>
   </PropertyGroup>
   <Import Project="$(SolutionDir)\.nuget\nuget.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
