@@ -14,7 +14,9 @@ namespace Symphony.Core
     {
         IDictionary<String, Object> Properties { get; } 
 
-        void AddProperty(String key, Object value); 
+        void AddProperty(String key, Object value);
+
+        IEnumerable<Note> Notes { get; } 
 
         void AddNote(String text);
     }
@@ -24,5 +26,18 @@ namespace Symphony.Core
         String Purpose { get; }
 
         DateTimeOffset StartTime { get; }
+    }
+
+    public class Note
+    {
+        public String Text { get; private set; }
+
+        public DateTimeOffset Time { get; private set; }
+
+        public Note(DateTimeOffset time, String text)
+        {
+            Time = time;
+            Text = text;
+        }
     }
 }
