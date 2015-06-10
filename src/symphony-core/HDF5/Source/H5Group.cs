@@ -4,12 +4,15 @@ using HDF5DotNet;
 
 namespace HDF5
 {
-    public class H5Group : H5ObjectWithMetadata
+    public class H5Group : H5Object
     {
         internal H5Group(H5File file, string path)
             : base(file, path)
         {
+            Attributes = new H5AttributeManager(file, path);
         }
+
+        public H5AttributeManager Attributes { get; private set; }
 
         public IEnumerable<H5Group> Groups { get { return GetObjects<H5Group>(); } }
 

@@ -67,7 +67,7 @@ namespace HDF5
             return new H5Group(this, path);
         }
 
-        public H5Datatype CreateDatatype(string path, H5T.H5TClass typeClass, int typeSize)
+        public H5Datatype CreateDatatype(string name, H5T.H5TClass typeClass, int typeSize)
         {
             H5DataTypeId tid = null;
             try
@@ -81,17 +81,17 @@ namespace HDF5
                     default:
                         throw new NotImplementedException();
                 }
-                H5T.commit(Fid, path, tid);
+                H5T.commit(Fid, name, tid);
             }
             finally
             {
                 if (tid != null && tid.Id > 0)
                     H5T.close(tid);
             }
-            return new H5Datatype(this, path);
+            return new H5Datatype(this, name);
         }
 
-        public H5Datatype CreateDatatype(string path, string[] memberNames, H5Datatype[] memberTypes)
+        public H5Datatype CreateDatatype(string name, string[] memberNames, H5Datatype[] memberTypes)
         {
             int nMembers = memberNames.Length;
             var mTypes = new H5DataTypeId[nMembers];
@@ -113,7 +113,7 @@ namespace HDF5
                     H5T.insert(tid, memberNames[i], offset, mTypes[i]);
                     offset += H5T.getSize(mTypes[i]);
                 }
-                H5T.commit(Fid, path, tid);
+                H5T.commit(Fid, name, tid);
             }
             finally
             {
@@ -125,7 +125,7 @@ namespace HDF5
                 if (tid != null && tid.Id > 0)
                     H5T.close(tid);
             }
-            return new H5Datatype(this, path);
+            return new H5Datatype(this, name);
         }
 
         public H5Dataset CreateDataset(string path, H5Datatype type, long[] dims, long[] maxDims, long[] chunks)

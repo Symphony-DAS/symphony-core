@@ -11,9 +11,30 @@ namespace HDF5
 
         public override string Name { get { return name; } }
 
+        internal object Value { get; private set; }
+
         internal H5Attribute(H5File file, string path, string name) : base(file, path)
         {
             this.name = name;
+        }
+
+        public H5Attribute(string name, object value) : this(null, null, name)
+        {
+            Value = value;
+        }
+
+        public H5Attribute(object value) : this(null, value)
+        {
+        }
+
+        public static implicit operator H5Attribute(string value)
+        {
+            return new H5Attribute(null, value);
+        }
+
+        public static implicit operator H5Attribute(double value)
+        {
+            return new H5Attribute(null, value);
         }
 
         public object GetValue()

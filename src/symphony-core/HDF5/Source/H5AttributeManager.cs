@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -6,50 +7,66 @@ using HDF5DotNet;
 
 namespace HDF5
 {
-    public abstract class H5ObjectWithMetadata : H5Object
+    public class H5AttributeManager : H5Object, IEnumerable<H5Attribute>
     {
-        protected H5ObjectWithMetadata(H5File file, string path) : base(file, path)
+        internal H5AttributeManager(H5File file, string path) : base(file, path)
         {
         }
 
-        public IEnumerable<H5Attribute> Attributes
+        public H5Attribute this[string key]
         {
             get
             {
-                 H5ObjectWithAttributes oid = null;
-                 try
-                 {
-                     oid = H5Ox.open(File.Fid, Path);
-                     H5ObjectInfo oinfo = H5O.getInfoByName(File.Fid, Path);
-                     int n = (int)oinfo.nAttributes;
-                     for (int i = 0; i < n; i++)
-                     {
-                         string name = H5A.getNameByIndex(File.Fid, Path, H5IndexType.NAME, H5IterationOrder.INCREASING, i);
-                         yield return new H5Attribute(File, Path, name);
-                     }
-                 }
-                 finally
-                 {
-                     if (oid != null && oid.Id > 0)
-                         H5Ox.close(oid);
-                 }
+                if (!ContainsKey(key))
+                    throw new KeyNotFoundException();
+                return GetAttributes().First(a => a.Name == key);
+            }
+            set
+            {
+                if (ContainsKey(key))
+                    Remove(key);
+                CreateAttribute(key, value.Value);
             }
         }
 
-        public void AddAttribute(string name, object value)
+        public void Add(H5Attribute item)
         {
-            if (Attributes.Any(a => a.Name == name))
-                RemoveAttribute(name);
-            CreateAttribute(name, value);
+            CreateAttribute(item.Name, item.Value);
         }
 
-        public void RemoveAttribute(string name)
+        public void Remove(string key)
         {
             H5ObjectWithAttributes oid = null;
             try
             {
                 oid = H5Ox.open(File.Fid, Path);
-                H5A.Delete(oid, name);
+                H5A.Delete(oid, key);
+            }
+            finally
+            {
+                if (oid != null && oid.Id > 0)
+                    H5Ox.close(oid);
+            }
+        }
+
+        public bool ContainsKey(string key)
+        {
+            return GetAttributes().Any(a => a.Name == key);
+        }
+
+        private IEnumerable<H5Attribute> GetAttributes()
+        {
+            H5ObjectWithAttributes oid = null;
+            try
+            {
+                oid = H5Ox.open(File.Fid, Path);
+                H5ObjectInfo oinfo = H5O.getInfoByName(File.Fid, Path);
+                int n = (int)oinfo.nAttributes;
+                for (int i = 0; i < n; i++)
+                {
+                    string name = H5A.getNameByIndex(File.Fid, Path, H5IndexType.NAME, H5IterationOrder.INCREASING, i);
+                    yield return new H5Attribute(File, Path, name);
+                }
             }
             finally
             {
@@ -125,6 +142,16 @@ namespace HDF5
                 if (oid != null && oid.Id > 0)
                     H5Ox.close(oid);
             }
+        }
+
+        public IEnumerator<H5Attribute> GetEnumerator()
+        {
+            return GetAttributes().GetEnumerator();
+        }
+
+        IEnumerator IEnumerable.GetEnumerator()
+        {
+            return GetEnumerator();
         }
     }
 }

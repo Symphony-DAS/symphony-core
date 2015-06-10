@@ -102,7 +102,7 @@ namespace HDF5.Tests
 
                 foreach (var kv in attributes)
                 {
-                    group.AddAttribute(kv.Key, kv.Value);
+                    group.Attributes[kv.Key] = new H5Attribute(kv.Value);
                 }
             }
 
@@ -123,8 +123,8 @@ namespace HDF5.Tests
             using (var file = new H5File(TEST_FILE))
             {
                 var group = file.Root;
-                group.AddAttribute("attr", "banana");
-                group.AddAttribute("attr", 123);
+                group.Attributes["attr"] = "banana";
+                group.Attributes["attr"] = 123;
 
                 var attr = group.Attributes.First();
                 Assert.AreEqual("attr", attr.Name);
@@ -138,8 +138,8 @@ namespace HDF5.Tests
             using (var file = new H5File(TEST_FILE))
             {
                 var group = file.Root;
-                group.AddAttribute("attr", "wowow");
-                group.RemoveAttribute("attr");
+                group.Attributes["attr"] = "wowow";
+                group.Attributes.Remove("attr");
 
                 Assert.AreEqual(0, group.Attributes.Count());
             }

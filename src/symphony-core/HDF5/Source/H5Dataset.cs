@@ -6,12 +6,15 @@ using HDF5DotNet;
 
 namespace HDF5
 {
-    public class H5Dataset : H5ObjectWithMetadata
+    public class H5Dataset : H5Object
     {
         internal H5Dataset(H5File file, string path)
             : base(file, path)
         {
+            Attributes = new H5AttributeManager(file, path);
         }
+
+        public H5AttributeManager Attributes { get; private set; }
 
         public int NumberOfElements
         {
