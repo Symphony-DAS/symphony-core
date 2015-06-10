@@ -54,7 +54,7 @@ namespace HDF5
             }
         }
 
-        public void SetData<T>(T[] data, Tuple<long, long> range)
+        public void SetData<T>(T[] data, long[] start, long[] count)
         {
             H5DataSetId did = null;
             H5DataSpaceId sid = null;
@@ -65,9 +65,7 @@ namespace HDF5
                 did = H5D.open(File.Fid, Path);
                 tid = H5D.getType(did);
                 sid = H5D.getSpace(did);
-                var offset = new[] { range.Item1 };
-                var count = new[] { range.Item2 - range.Item1 };
-                H5S.selectHyperslab(sid, H5S.SelectOperator.SET, offset, count);
+                H5S.selectHyperslab(sid, H5S.SelectOperator.SET, start, count);
                 mid = H5S.create_simple(1, count);
                 H5D.write(did, tid, mid, sid, new H5PropertyListId(H5P.Template.DEFAULT), new H5Array<T>(data));
             }
@@ -96,7 +94,10 @@ namespace HDF5
                 sid = H5D.getSpace(did);
                 int npoints = H5S.getSimpleExtentNPoints(sid);
                 var data = new T[npoints];
-                H5D.read(did, tid, new H5Array<T>(data));
+                if (npoints > 0)
+                {
+                    H5D.read(did, tid, new H5Array<T>(data));
+                }
                 return data;
             }
             finally
@@ -105,6 +106,21 @@ namespace HDF5
                     H5S.close(sid);
                 if (tid != null && tid.Id > 0)
                     H5T.close(tid);
+                if (did != null && did.Id > 0)
+                    H5D.close(did);
+            }
+        }
+
+        public void Extend(long[] newDims)
+        {
+            H5DataSetId did = null;
+            try
+            {
+                did = H5D.open(File.Fid, Path);
+                H5D.setExtent(did, newDims);
+            }
+            finally
+            {
                 if (did != null && did.Id > 0)
                     H5D.close(did);
             }

@@ -217,15 +217,8 @@ namespace HDF5.Tests
         }
 
         [Test]
-        public void ShouldWriteToDatasetRange()
+        public void ShouldExtendChunkDataset()
         {
-            var points = new Point[10];
-            for (int i = 0; i < points.Length; i++)
-            {
-                points[i].x = i;
-                points[i].y = i * 3;
-            }
-
             using (var file = new H5File(TEST_FILE))
             {
                 var type = file.CreateDatatype("POINT",
@@ -236,9 +229,18 @@ namespace HDF5.Tests
                                                        new H5Datatype(H5T.H5Type.NATIVE_DOUBLE)
                                                    });
 
-                var dataset = file.Root.AddDataset("points", type, new long[] {10});
+                var dataset = file.Root.AddDataset("points", type, new long[] {0}, new long[] {-1}, new long[] {64});
+
+                var points = new[] {new Point {x = 1, y = 2}};
+
+                // Dataset not yet extended
                 dataset.SetData(points);
-                dataset.SetData(points, new Tuple<long, long>(4, 9));
+                Assert.AreEqual(0, dataset.GetData<Point>().Count());
+
+                dataset.Extend(new long[] {1});
+                dataset.SetData(points);
+                Assert.AreEqual(1, dataset.GetData<Point>().Count());
+                Assert.AreEqual(points, dataset.GetData<Point>());
             }
         }
     }
