@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using HDF5DotNet;
 
 namespace HDF5
@@ -15,8 +16,15 @@ namespace HDF5
         public H5Group AddGroup(string name)
         {
             string path = string.Format("{0}/{1}", Path.TrimEnd('/'), name);
-            File.CreateGroup(path);
-            return new H5Group(File, path);
+            return File.CreateGroup(path);
+        }
+
+        public IEnumerable<H5Dataset> Datasets { get { return GetObjects<H5Dataset>(); } } 
+
+        public H5Dataset AddDataset(string name, H5Datatype type, long[] dims, long[] maxDims = null, long[] chunks = null)
+        {
+            string path = string.Format("{0}/{1}", Path.TrimEnd('/'), name);
+            return File.CreateDataset(path, type, dims, maxDims, chunks);
         }
 
         private IEnumerable<T> GetObjects<T>() where T : H5Object
@@ -38,7 +46,7 @@ namespace HDF5
                         obj = new H5Group(File, fullPath);
                         break;
                     case H5ObjectType.NAMED_DATATYPE:
-                        obj = new H5Dataset(File, fullPath);
+                        obj = new H5Datatype(File, fullPath);
                         break;
                 }
                 if (obj is T)
