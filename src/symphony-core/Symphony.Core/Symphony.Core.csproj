@@ -125,8 +125,6 @@
     <Compile Include="Controller.cs" />
     <Compile Include="DAQController.cs" />
     <Compile Include="DAQStream.cs" />
-    <Compile Include="Document.cs" />
-    <Compile Include="H5Document.cs" />
     <Compile Include="H5EpochPersistor.cs" />
     <Compile Include="IEpochPersistor.cs" />
     <Compile Include="IODataStream.cs" />

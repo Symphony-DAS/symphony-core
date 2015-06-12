@@ -41,15 +41,16 @@ namespace Symphony.Core
 
             s2.AddNote(DateTimeOffset.Now, "And this is another one on second");
 
-            var x = persistor.Experiment;
-            Assert.AreEqual(2, x.Sources.Count());
+            Assert.AreEqual(2, persistor.Sources.Count());
 
+            persistor.BeginExperiment("my purpose here", DateTimeOffset.Now);
             persistor.BeginEpochGroup("one", s, DateTimeOffset.Now);
-            var g = persistor.BeginEpochGroup("two", s, DateTimeOffset.Now);
+            persistor.BeginEpochGroup("two", s, DateTimeOffset.Now);
             persistor.EndEpochGroup(DateTimeOffset.Now);
 
             persistor.Delete(s2);
-            persistor.Delete(g);
+
+            persistor.Close();
             //persistor.BeginEpochGroup("three", s2, DateTimeOffset.Now);
 
             //persistor.Delete(s);

@@ -6,15 +6,21 @@ namespace Symphony.Core
     public interface IEpochPersistor
     {
         void Close();
-        IExperiment Experiment { get; }
+        IEnumerable<ISource> Sources { get; }
         ISource AddSource(string label, ISource parent);
-        IEpochGroup BeginEpochGroup(string label, ISource source, DateTimeOffset startTime);
-        IEpochGroup EndEpochGroup(DateTimeOffset endTime);
+        IEnumerable<IExperiment> Experiments { get; }
+        IExperiment CurrentExperiment { get; }
+        void BeginExperiment(string purpose, DateTimeOffset startTime);
+        void EndExperiment(DateTimeOffset endTime);
+        IEpochGroup CurrentEpochGroup { get; }
+        void BeginEpochGroup(string label, ISource source, DateTimeOffset startTime);
+        void EndEpochGroup(DateTimeOffset endTime);
         void Delete(IEntity entity);
     }
 
     public interface IEntity
     {
+        Guid Uuid { get; }
         IEnumerable<KeyValuePair<string, object>> Properties { get; } 
         void AddProperty(string key, object value);
         void RemoveProperty(string key);
@@ -25,25 +31,28 @@ namespace Symphony.Core
         INote AddNote(DateTimeOffset time, string text);
     }
 
-    public interface IExperiment : IEntity
-    {
-        string Purpose { get; set; }
-        IEnumerable<ISource> Sources { get; }
-        IEnumerable<IEpochGroup> EpochGroups { get; } 
-    }
-
     public interface ISource : IEntity
     {
         string Label { get; set; }
         IEnumerable<ISource> Sources { get; }
+        IEnumerable<IEpochGroup> EpochGroups { get; }
+    }
+
+    public interface ITimelineEntity : IEntity
+    {
+        DateTimeOffset StartTime { get; }
+        DateTimeOffset? EndTime { get; }
+    }
+
+    public interface IExperiment : ITimelineEntity
+    {
+        string Purpose { get; set; }
         IEnumerable<IEpochGroup> EpochGroups { get; } 
     }
 
-    public interface IEpochGroup : IEntity
+    public interface IEpochGroup : ITimelineEntity
     {
         string Label { get; set; }
-        DateTimeOffset StartTime { get; }
-        DateTimeOffset? EndTime { get; }
         ISource Source { get; }
     }
 

@@ -129,7 +129,6 @@
     <Compile Include="EpochTests.cs" />
     <Compile Include="ExternalDeviceTests.cs" />
     <Compile Include="H5EpochPersistorTests.cs" />
-    <Compile Include="HDF5Tests.cs" />
     <Compile Include="IODataTests.cs" />
     <Compile Include="IODataStreamTests.cs" />
     <Compile Include="MeasurementTests.cs" />
