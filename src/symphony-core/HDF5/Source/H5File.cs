@@ -1,18 +1,15 @@
 ﻿using System;
-using System.IO;
 using HDF5DotNet;
 
 namespace HDF5
 {
-    public class H5File : IDisposable
+    public class H5File : H5Group, IDisposable
     {
-        public H5FileId Fid;
+        public H5FileId Fid { get; private set; }
 
-        public H5Group Root { get; private set; }
-
-        public H5File(string filename)
+        public H5File(string filename) : base(null, "/")
         {
-            if (File.Exists(filename))
+            if (System.IO.File.Exists(filename))
             {
                 Fid = H5F.open(filename, H5F.OpenMode.ACC_RDWR);
             }
@@ -20,7 +17,7 @@ namespace HDF5
             {
                 Fid = H5F.create(filename, H5F.CreateMode.ACC_EXCL);
             }
-            Root = new H5Group(this, "/");
+            File = this;
         }
 
         ~H5File()
@@ -50,6 +47,11 @@ namespace HDF5
                 return;
             H5F.close(Fid);
             Fid = null;
+        }
+
+        public void Delete(string path)
+        {
+            H5L.Delete(Fid, path);
         }
 
         public H5Group CreateGroup(string path)
@@ -181,6 +183,12 @@ namespace HDF5
                     H5T.close(tid);
             }
             return new H5Dataset(this, path);
+        }
+
+        public H5Link CreateHardLink(string path, H5Object obj)
+        {
+            H5L.createHardLink(obj.File.Fid, obj.Path, Fid, path);
+            return new H5Link(this, path);
         }
     }
 }

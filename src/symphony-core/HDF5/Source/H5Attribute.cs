@@ -18,23 +18,9 @@ namespace HDF5
             this.name = name;
         }
 
-        public H5Attribute(string name, object value) : this(null, null, name)
+        public H5Attribute(object value) : this(null, null, null)
         {
             Value = value;
-        }
-
-        public H5Attribute(object value) : this(null, value)
-        {
-        }
-
-        public static implicit operator H5Attribute(string value)
-        {
-            return new H5Attribute(null, value);
-        }
-
-        public static implicit operator H5Attribute(double value)
-        {
-            return new H5Attribute(null, value);
         }
 
         public object GetValue()

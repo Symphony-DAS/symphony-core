@@ -53,14 +53,14 @@ namespace HDF5.Tests
         {
             using (var file = new H5File(TEST_FILE))
             {
-                file.Root.AddGroup("simple");
+                file.AddGroup("simple");
             }
 
             using (var file = new H5File(TEST_FILE))
             {
-                Assert.AreEqual(1, file.Root.Groups.Count());
+                Assert.AreEqual(1, file.Groups.Count());
 
-                var group = file.Root.Groups.First();
+                var group = file.Groups.First();
                 Assert.AreEqual("simple", group.Name);
                 Assert.AreEqual(0, group.Groups.Count());
             }
@@ -71,10 +71,10 @@ namespace HDF5.Tests
         {
             using (var file = new H5File(TEST_FILE))
             {
-                file.Root.AddGroup("out").AddGroup("mid").AddGroup("in");
+                file.AddGroup("out").AddGroup("mid").AddGroup("in");
 
-                Assert.AreEqual(1, file.Root.Groups.Count());
-                var o = file.Root.Groups.First();
+                Assert.AreEqual(1, file.Groups.Count());
+                var o = file.Groups.First();
                 Assert.AreEqual("out", o.Name);
                 Assert.AreEqual(1, o.Groups.Count());
                 var m = o.Groups.First();
@@ -98,7 +98,7 @@ namespace HDF5.Tests
 
             using (var file = new H5File(TEST_FILE))
             {
-                var group = file.Root.AddGroup("simple");
+                var group = file.AddGroup("simple");
 
                 foreach (var kv in attributes)
                 {
@@ -108,9 +108,9 @@ namespace HDF5.Tests
 
             using (var file = new H5File(TEST_FILE))
             {
-                Assert.AreEqual(1, file.Root.Groups.Count());
+                Assert.AreEqual(1, file.Groups.Count());
 
-                var group = file.Root.Groups.First();
+                var group = file.Groups.First();
                 var actual = group.Attributes.ToDictionary(a => a.Name, a => a.GetValue());
 
                 Assert.AreEqual(attributes, actual);
@@ -122,11 +122,10 @@ namespace HDF5.Tests
         {
             using (var file = new H5File(TEST_FILE))
             {
-                var group = file.Root;
-                group.Attributes["attr"] = "banana";
-                group.Attributes["attr"] = 123;
+                file.Attributes["attr"] = new H5Attribute("banana");
+                file.Attributes["attr"] = new H5Attribute(123);
 
-                var attr = group.Attributes.First();
+                var attr = file.Attributes.First();
                 Assert.AreEqual("attr", attr.Name);
                 Assert.AreEqual(123, attr.GetValue());
             }
@@ -137,11 +136,10 @@ namespace HDF5.Tests
         {
             using (var file = new H5File(TEST_FILE))
             {
-                var group = file.Root;
-                group.Attributes["attr"] = "wowow";
-                group.Attributes.Remove("attr");
+                file.Attributes["attr"] = new H5Attribute("wowow");
+                file.Attributes.Remove("attr");
 
-                Assert.AreEqual(0, group.Attributes.Count());
+                Assert.AreEqual(0, file.Attributes.Count());
             }
         }
 
@@ -165,15 +163,15 @@ namespace HDF5.Tests
                                                        new H5Datatype(H5T.H5Type.NATIVE_DOUBLE)
                                                    });
 
-                var dataset = file.Root.AddDataset("points", type, new long[] {10});
+                var dataset = file.AddDataset("points", type, new long[] {10});
                 dataset.SetData(points);
             }
 
             using (var file = new H5File(TEST_FILE))
             {
-                Assert.AreEqual(1, file.Root.Datasets.Count());
+                Assert.AreEqual(1, file.Datasets.Count());
                 
-                var dataset = file.Root.Datasets.First();
+                var dataset = file.Datasets.First();
                 var actual = dataset.GetData<Point>();
                 Assert.AreEqual(points, actual);
             }
@@ -210,7 +208,7 @@ namespace HDF5.Tests
                                                 new[] {stringType, pointType});
 
 
-                var dataset = file.Root.AddDataset("points", type, new long[] { 10 });
+                var dataset = file.AddDataset("points", type, new long[] { 10 });
                 dataset.SetData(points);
                 Assert.AreEqual(points, dataset.GetData<NamedPoint>());
             }
@@ -229,7 +227,7 @@ namespace HDF5.Tests
                                                        new H5Datatype(H5T.H5Type.NATIVE_DOUBLE)
                                                    });
 
-                var dataset = file.Root.AddDataset("points", type, new long[] {0}, new long[] {-1}, new long[] {64});
+                var dataset = file.AddDataset("points", type, new long[] {0}, new long[] {-1}, new long[] {64});
 
                 var points = new[] {new Point {x = 1, y = 2}};
 
@@ -241,6 +239,32 @@ namespace HDF5.Tests
                 dataset.SetData(points);
                 Assert.AreEqual(1, dataset.GetData<Point>().Count());
                 Assert.AreEqual(points, dataset.GetData<Point>());
+            }
+        }
+
+        [Test]
+        public void ShouldDeleteGroup()
+        {
+            using (var file = new H5File(TEST_FILE))
+            {
+                var group = file.AddGroup("group");
+                group.Delete();
+                Assert.AreEqual(0, file.Groups.Count());
+            }
+
+            using (var file = new H5File(TEST_FILE))
+            {
+                Assert.AreEqual(0, file.Groups.Count());
+            }
+        }
+
+        [Test]
+        public void ObjectsWithSamePathShouldBeEqual()
+        {
+            using (var file = new H5File(TEST_FILE))
+            {
+                var group = file.AddGroup("group");
+                Assert.AreEqual(group, file.Groups.First());
             }
         }
     }

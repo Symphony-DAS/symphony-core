@@ -11,10 +11,14 @@ namespace HDF5
         internal H5Dataset(H5File file, string path)
             : base(file, path)
         {
-            Attributes = new H5AttributeManager(file, path);
         }
 
-        public H5AttributeManager Attributes { get; private set; }
+        private H5AttributeManager attributes;
+
+        public H5AttributeManager Attributes 
+        { 
+            get { return attributes ?? (attributes = new H5AttributeManager(File, Path)); }
+        }
 
         public int NumberOfElements
         {

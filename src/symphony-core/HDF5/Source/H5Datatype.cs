@@ -10,7 +10,6 @@ namespace HDF5
     {
         internal H5Datatype(H5File file, string path) : base(file, path)
         {
-            Attributes = new H5AttributeManager(file, path);
         }
 
         public H5Datatype(H5T.H5Type nativeTypeId) : base(null, null)
@@ -25,6 +24,11 @@ namespace HDF5
             return File != null ? H5T.open(File.Fid, Path) : H5T.copy(nativeTypeId);
         }
 
-        public H5AttributeManager Attributes { get; private set; }
+        private H5AttributeManager attributes;
+
+        public H5AttributeManager Attributes
+        {
+            get { return attributes ?? (attributes = new H5AttributeManager(File, Path)); }
+        }
     }
 }

@@ -9,25 +9,42 @@ namespace HDF5
         internal H5Group(H5File file, string path)
             : base(file, path)
         {
-            Attributes = new H5AttributeManager(file, path);
         }
 
-        public H5AttributeManager Attributes { get; private set; }
+        private H5AttributeManager attributes;
+
+        public H5AttributeManager Attributes
+        {
+            get { return attributes ?? (attributes = new H5AttributeManager(File, Path)); }
+        }
 
         public IEnumerable<H5Group> Groups { get { return GetObjects<H5Group>(); } }
 
         public H5Group AddGroup(string name)
         {
-            string path = string.Format("{0}/{1}", Path.TrimEnd('/'), name);
+            string path = Combine(Path, name);
             return File.CreateGroup(path);
         }
+
+        public IEnumerable<H5Datatype> Datatypes { get { return GetObjects<H5Datatype>(); } } 
 
         public IEnumerable<H5Dataset> Datasets { get { return GetObjects<H5Dataset>(); } } 
 
         public H5Dataset AddDataset(string name, H5Datatype type, long[] dims, long[] maxDims = null, long[] chunks = null)
         {
-            string path = string.Format("{0}/{1}", Path.TrimEnd('/'), name);
+            string path = Combine(Path, name);
             return File.CreateDataset(path, type, dims, maxDims, chunks);
+        }
+
+        public H5Link AddHardLink(string name, H5Object obj)
+        {
+            string path = Combine(Path, name);
+            return File.CreateHardLink(path, obj);
+        }
+
+        public void Delete()
+        {
+            File.Delete(Path);
         }
 
         private IEnumerable<T> GetObjects<T>() where T : H5Object
@@ -37,7 +54,7 @@ namespace HDF5
             for (int i = 0; i < n; i++)
             {
                 string name = H5L.getNameByIndex(File.Fid, Path, H5IndexType.NAME, H5IterationOrder.INCREASING, i);
-                string fullPath = Path + "/" + name;
+                string fullPath = Combine(Path, name);
                 H5ObjectInfo oinfo = H5O.getInfoByIndex(File.Fid, Path, H5IndexType.NAME, H5IterationOrder.INCREASING, i);
                 H5Object obj = null;
                 switch (oinfo.objectType)
@@ -57,6 +74,15 @@ namespace HDF5
                     yield return obj as T;
                 }
             }
+        }
+
+        private static string Combine(string p1, string p2)
+        {
+            if (p1.StartsWith("/"))
+                return p2.Trim();
+            p1 = p1.TrimEnd('/');
+            p2 = p2.TrimStart('/');
+            return string.Format("{0}/{1}", p1, p2);
         }
     }
 }

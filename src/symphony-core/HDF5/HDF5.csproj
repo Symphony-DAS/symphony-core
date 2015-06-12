@@ -97,6 +97,7 @@
     <Compile Include="Source\H5Datatype.cs" />
     <Compile Include="Source\H5File.cs" />
     <Compile Include="Source\H5Group.cs" />
+    <Compile Include="Source\H5Link.cs" />
     <Compile Include="Source\H5Object.cs" />
     <Compile Include="Source\Misc.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
