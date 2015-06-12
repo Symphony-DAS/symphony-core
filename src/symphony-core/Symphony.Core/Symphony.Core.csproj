@@ -127,6 +127,8 @@
     <Compile Include="DAQStream.cs" />
     <Compile Include="Document.cs" />
     <Compile Include="H5Document.cs" />
+    <Compile Include="H5EpochPersistor.cs" />
+    <Compile Include="IEpochPersistor.cs" />
     <Compile Include="IODataStream.cs" />
     <Compile Include="Epoch.cs" />
     <Compile Include="EpochHDF5Persistor.cs" />
@@ -155,6 +157,12 @@
     <None Include="Symphony.Core.cd">
       <SubType>Designer</SubType>
     </None>
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\HDF5\HDF5.csproj">
+      <Project>{52BF0608-F91F-4AFD-A620-02A112E6A06D}</Project>
+      <Name>HDF5</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
