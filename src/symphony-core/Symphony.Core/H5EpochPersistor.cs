@@ -10,94 +10,98 @@ namespace Symphony.Core
 {
     public class H5EpochPersistor : IEpochPersistor
     {
-        private readonly H5File file;
-
-        private readonly H5Group sourcesGroup;
-        private readonly H5Group experimentsGroup;
-
-        private readonly Func<Guid> guidGenerator;
-
         private const string VersionKey = "version";
+        private const string SourcesGroupName = "sources";
+        private const string ExperimentsGroupName = "experiments";
 
-        private const string SourcesName = "sources";
-        private const string ExperimentsName = "experiments";
-
-        public H5EpochPersistor(string filename) : this(filename, Guid.NewGuid)
+        public H5EpochPersistor(string filename)
         {
-        }
-
-        public H5EpochPersistor(string filename, Func<Guid> guidGenerator)
-        {
-            this.guidGenerator = guidGenerator;
             file = new H5File(filename);
 
-            file.Attributes[VersionKey] = new H5Attribute(2);
+            file.AddGroup(SourcesGroupName);
+            file.AddGroup(ExperimentsGroupName);
 
-            file.AddGroup(SourcesName);
-            file.AddGroup(ExperimentsName);
-
-            sourcesGroup = file.Groups.First(g => g.Name == SourcesName);
-            experimentsGroup = file.Groups.First(g => g.Name == ExperimentsName);
-
-            openEpochGroups = new Stack<H5EpochGroup>();
+            openEpochGroups = new Stack<H5PersistedEpochGroup>();
         }
 
         public void Close()
         {
+            while (CurrentEpochGroup != null)
+            {
+                EndEpochGroup(DateTimeOffset.Now);
+            }
+            if (CurrentExperiment != null)
+            {
+                EndExperiment(DateTimeOffset.Now);
+            }
             file.Close();
         }
 
-        private readonly Stack<H5EpochGroup> openEpochGroups;
+        private readonly H5File file;
+        private readonly Stack<H5PersistedEpochGroup> openEpochGroups;
 
-        public IEpochGroup CurrentEpochGroup
+        public string Version
         {
-            get { return openEpochGroups.Count == 0 ? null : openEpochGroups.Peek(); }
+            get { return (string) file.Attributes[VersionKey].GetValue(); }
+            private set { file.Attributes[VersionKey] = new H5Attribute(value); }
         }
 
-        public IEnumerable<ISource> Sources
+        private H5Group SourcesGroup
         {
-            get { return sourcesGroup.Groups.Select(g => new H5Source(g)); }
+            get { return file.Groups.First(g => g.Name == SourcesGroupName); }
         }
 
-        public ISource AddSource(string label, ISource parent = null)
+        public IEnumerable<IPeristedSource> Sources
         {
-            Guid uuid = guidGenerator();
+            get { return SourcesGroup.Groups.Select(g => new H5PersistedSource(g)); }
+        }
+
+        public IPeristedSource AddSource(string label, IPeristedSource parent)
+        {
             return parent == null
-                       ? H5Source.CreateSource(sourcesGroup, uuid, label)
-                       : ((H5Source) parent).AddSource(uuid, label);
+                       ? H5PersistedSource.CreateSource(SourcesGroup, label)
+                       : ((H5PersistedSource) parent).AddSource(label);
         }
 
-        public IEnumerable<IExperiment> Experiments
+        private H5Group ExperimentsGroup
         {
-            get { return experimentsGroup.Groups.Select(g => new H5Experiment(g)); }
+            get { return file.Groups.First(g => g.Name == ExperimentsGroupName); }
         }
 
-        public IExperiment CurrentExperiment { get; private set; }
+        public IEnumerable<IPersistedExperiment> Experiments
+        {
+            get { return ExperimentsGroup.Groups.Select(g => new H5PersistedExperiment(g)); }
+        }
+
+        public IPersistedExperiment CurrentExperiment { get; private set; }
 
         public void BeginExperiment(string purpose, DateTimeOffset startTime)
         {
             if (CurrentExperiment != null)
                 throw new InvalidOperationException("There is an open experiment");
-            Guid uuid = guidGenerator();
-            CurrentExperiment = H5Experiment.CreateExperiment(experimentsGroup, uuid, purpose, startTime);
+            CurrentExperiment = H5PersistedExperiment.CreateExperiment(ExperimentsGroup, purpose, startTime);
         }
 
         public void EndExperiment(DateTimeOffset endTime)
         {
             if (CurrentExperiment == null)
                 throw new InvalidOperationException("There is no open experiment");
-            ((H5Experiment) CurrentExperiment).EndTime = endTime;
+            ((H5PersistedExperiment) CurrentExperiment).EndTime = endTime;
             CurrentExperiment = null;
         }
 
-        public void BeginEpochGroup(string label, ISource source, DateTimeOffset startTime)
+        public IPersistedEpochGroup CurrentEpochGroup
+        {
+            get { return openEpochGroups.Count == 0 ? null : openEpochGroups.Peek(); }
+        }
+
+        public void BeginEpochGroup(string label, IPeristedSource source, DateTimeOffset startTime)
         {
             if (CurrentExperiment == null)
                 throw new InvalidOperationException("There is no open experiment");
-            Guid uuid = guidGenerator();
             var epochGroup = CurrentEpochGroup == null
-                       ? ((H5Experiment) CurrentExperiment).AddEpochGroup(uuid, label, (H5Source) source, startTime)
-                       : ((H5EpochGroup) CurrentEpochGroup).AddEpochGroup(uuid, label, (H5Source) source, startTime);
+                       ? ((H5PersistedExperiment) CurrentExperiment).AddEpochGroup(label, (H5PersistedSource) source, startTime)
+                       : ((H5PersistedEpochGroup) CurrentEpochGroup).AddEpochGroup(label, (H5PersistedSource) source, startTime);
             openEpochGroups.Push(epochGroup);
         }
 
@@ -105,19 +109,21 @@ namespace Symphony.Core
         {
             if (CurrentEpochGroup == null)
                 throw new InvalidOperationException("There is no open epoch group");
-            ((H5EpochGroup) CurrentEpochGroup).EndTime = endTime;
+            ((H5PersistedEpochGroup) CurrentEpochGroup).EndTime = endTime;
             openEpochGroups.Pop();
         }
 
-        public void Delete(IEntity entity)
+        public void Delete(IPersistedEntity entity)
         {
+            if (entity.Equals(CurrentExperiment))
+                throw new InvalidOperationException("Cannot delete an open experiment");
             if (openEpochGroups.Contains(entity))
                 throw new InvalidOperationException("Cannot delete an open epoch group");
-            ((H5Entity) entity).Delete();
+            ((H5PersistedEntity) entity).Delete();
         }
     }
 
-    class H5Entity : IEntity
+    class H5PersistedEntity : IPersistedEntity
     {
         [StructLayout(LayoutKind.Explicit)]
         unsafe struct DateTimeOffsetT
@@ -137,26 +143,19 @@ namespace Symphony.Core
             public fixed byte text[40];
         }
 
-        private readonly H5Group objectGroup;
-        private readonly H5Group propertiesGroup;
-        private readonly H5Dataset notesDataset;
-
         private const string UuidKey = "uuid";
         private const string KeywordsKey = "keywords";
+        private const string NotesDatasetName = "notes";
+        private const string PropertiesGroupName = "properties";
 
-        private const string PropertiesName = "properties";
-        private const string NotesName = "notes";
-
-        protected static H5Entity CreateEntity(H5Group parent, Guid uuid)
+        protected H5PersistedEntity(H5Group parent)
         {
-            H5Group group = parent.AddGroup(uuid.ToString());
+            var uuid = Guid.NewGuid();
+            ObjectGroup = parent.AddGroup(uuid.ToString());
+            Uuid = uuid;
 
-            group.Attributes[UuidKey] = new H5Attribute(uuid.ToString());
-            group.Attributes[KeywordsKey] = new H5Attribute(" ");
-            group.AddGroup(PropertiesName);
-
+            H5File file = ObjectGroup.File;
             H5Datatype noteType;
-            H5File file = group.File;
             if (file.Datatypes.Any(d => d.Name == "NOTE"))
             {
                 noteType = file.Datatypes.First(d => d.Name == "NOTE");
@@ -165,55 +164,75 @@ namespace Symphony.Core
             {
                 H5Datatype stringType = file.CreateDatatype("STRING40", H5T.H5TClass.STRING, 40);
                 H5Datatype dateTimeOffsetType = file.CreateDatatype("DATETIMEOFFSET",
-                                                                    new[] {"utcTicks", "offsetHours"},
+                                                                    new[] { "utcTicks", "offsetHours" },
                                                                     new[]
                                                                         {
                                                                             new H5Datatype(H5T.H5Type.NATIVE_LLONG),
                                                                             new H5Datatype(H5T.H5Type.NATIVE_DOUBLE)
                                                                         });
                 noteType = file.CreateDatatype("NOTE",
-                                               new[] {"time", "text"},
-                                               new[] {dateTimeOffsetType, stringType});
+                                                new[] { "time", "text" },
+                                                new[] { dateTimeOffsetType, stringType });
             }
-            group.AddDataset(NotesName, noteType, new[] {0L}, new[] {-1L}, new[] {10L});
-
-            return new H5Entity(group);
+            ObjectGroup.AddDataset(NotesDatasetName, noteType, new[] { 0L }, new[] { -1L }, new[] { 10L });
+            ObjectGroup.AddGroup(PropertiesGroupName);
         }
 
-        protected H5Entity(H5Group group)
+        protected H5PersistedEntity()
         {
-            objectGroup = group;
-            propertiesGroup = group.Groups.First(g => g.Name == PropertiesName);
-            notesDataset = group.Datasets.First(g => g.Name == NotesName);
         }
-
-        internal H5Group ObjectGroup { get { return objectGroup; } }
 
         internal virtual void Delete()
         {
-            objectGroup.Delete();
+            ObjectGroup.Delete();
         }
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj)) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            if (obj.GetType() != this.GetType()) return false;
+            return Equals((H5PersistedEntity)obj);
+        }
+
+        protected bool Equals(H5PersistedEntity other)
+        {
+            return ObjectGroup.Equals(other.ObjectGroup);
+        }
+
+        public override int GetHashCode()
+        {
+            return ObjectGroup.GetHashCode();
+        }
+
+        public H5Group ObjectGroup { get; protected set; }
 
         public Guid Uuid
         {
-            get { return new Guid((string) objectGroup.Attributes[UuidKey].GetValue()); }
+            get { return new Guid((string) ObjectGroup.Attributes[UuidKey].GetValue()); }
+            private set { ObjectGroup.Attributes[UuidKey] = new H5Attribute(value.ToString()); }
+        }
+
+        private H5Group PropertiesGroup
+        {
+            get { return ObjectGroup.Groups.First(g => g.Name == PropertiesGroupName); }
         }
 
         public IEnumerable<KeyValuePair<string, object>> Properties
         {
-            get { return propertiesGroup.Attributes.ToDictionary(p => p.Name, p => p.GetValue()); }
+            get { return PropertiesGroup.Attributes.ToDictionary(p => p.Name, p => p.GetValue()); }
         }
 
         public void AddProperty(string key, object value)
         {
-            propertiesGroup.Attributes[key] = new H5Attribute(value);
+            PropertiesGroup.Attributes[key] = new H5Attribute(value);
         }
 
         public void RemoveProperty(string key)
         {
-            if (!propertiesGroup.Attributes.ContainsKey(key))
-                throw new KeyNotFoundException();
-            propertiesGroup.Attributes.Remove(key);
+            if (!PropertiesGroup.Attributes.ContainsKey(key))
+                throw new KeyNotFoundException("There is no property named " + key);
+            PropertiesGroup.Attributes.Remove(key);
         }
 
         public IEnumerable<string> Keywords
@@ -239,25 +258,30 @@ namespace Symphony.Core
             ObjectGroup.Attributes[KeywordsKey] = new H5Attribute(string.Join(",", keywords));
         }
 
-        public IEnumerable<INote> Notes
+        private H5Dataset NotesDataset
         {
-            get { return notesDataset.GetData<NoteT>().Select(Convert); }
+            get { return ObjectGroup.Datasets.First(g => g.Name == NotesDatasetName); }
         }
 
-        public INote AddNote(DateTimeOffset time, string text)
+        public IEnumerable<IPersistedNote> Notes
         {
-            return AddNote(new H5Note(time, text));
+            get { return NotesDataset.GetData<NoteT>().Select(Convert); }
         }
 
-        public INote AddNote(INote note)
+        public IPersistedNote AddNote(DateTimeOffset time, string text)
         {
-            long nNotes = notesDataset.NumberOfElements;
-            notesDataset.Extend(new[] {nNotes + 1});
-            notesDataset.SetData(new[] {Convert(note)}, new[] {nNotes}, new[] {1L});
+            return AddNote(new H5PersistedNote(time, text));
+        }
+
+        public IPersistedNote AddNote(IPersistedNote note)
+        {
+            long n = NotesDataset.NumberOfElements;
+            NotesDataset.Extend(new[] {n + 1});
+            NotesDataset.SetData(new[] {Convert(note)}, new[] {n}, new[] {1L});
             return note;
         }
 
-        private NoteT Convert(INote n)
+        private NoteT Convert(IPersistedNote n)
         {
             var nt = new NoteT
             {
@@ -275,7 +299,7 @@ namespace Symphony.Core
             return nt;
         }
 
-        private INote Convert(NoteT nt)
+        private IPersistedNote Convert(NoteT nt)
         {
             long ticks = nt.time.ticks;
             double offset = nt.time.offset;
@@ -285,36 +309,31 @@ namespace Symphony.Core
             {
                 text = Marshal.PtrToStringAnsi((IntPtr)nt.text);
             }
-            return new H5Note(time, text);
+            return new H5PersistedNote(time, text);
         }
     }
 
-    class H5Source : H5Entity, ISource
+    class H5PersistedSource : H5PersistedEntity, IPeristedSource
     {
-        private readonly H5Group sourcesGroup;
-        private readonly H5Group epochGroupsGroup;
-
         private const string LabelKey = "label";
+        private const string SourcesGroupName = "sources";
+        private const string EpochGroupsGroupName = "epochGroups";
 
-        private const string SourcesName = "sources";
-        private const string EpochGroupsName = "epochGroups";
-
-        internal static H5Source CreateSource(H5Group parent, Guid uuid, string label)
+        internal static H5PersistedSource CreateSource(H5Group parent, string label)
         {
-            var group = CreateEntity(parent, uuid).ObjectGroup;
-
-            group.Attributes[LabelKey] = new H5Attribute(label);
-            group.AddGroup(SourcesName);
-            group.AddGroup(EpochGroupsName);
-
-            return new H5Source(group);
+            return new H5PersistedSource(parent, label);
         }
 
-        internal H5Source(H5Group group)
-            : base(group)
+        private H5PersistedSource(H5Group parent, string label) : base(parent)
         {
-            sourcesGroup = ObjectGroup.Groups.First(g => g.Name == SourcesName);
-            epochGroupsGroup = ObjectGroup.Groups.First(g => g.Name == EpochGroupsName);
+            Label = label;
+            ObjectGroup.AddGroup(SourcesGroupName);
+            ObjectGroup.AddGroup(EpochGroupsGroupName);
+        }
+
+        internal H5PersistedSource(H5Group group)
+        {
+            ObjectGroup = group;
         }
 
         internal override void Delete()
@@ -330,51 +349,56 @@ namespace Symphony.Core
             set { ObjectGroup.Attributes[LabelKey] = new H5Attribute(value); }
         }
 
-        public IEnumerable<ISource> Sources
+        private H5Group SourcesGroup
         {
-            get { return sourcesGroup.Groups.Select(g => new H5Source(g)); }
+            get { return ObjectGroup.Groups.First(g => g.Name == SourcesGroupName); }
+        } 
+
+        public IEnumerable<IPeristedSource> Sources
+        {
+            get { return SourcesGroup.Groups.Select(g => new H5PersistedSource(g)); }
         }
 
-        internal H5Source AddSource(Guid uuid, string label)
+        internal H5PersistedSource AddSource(string label)
         {
-            return CreateSource(sourcesGroup, uuid, label);
+            return CreateSource(SourcesGroup, label);
         }
 
-        public IEnumerable<IEpochGroup> EpochGroups
+        private H5Group EpochGroupsGroup
         {
-            get { return epochGroupsGroup.Groups.Select(g => new H5EpochGroup(g)); }
+            get { return ObjectGroup.Groups.First(g => g.Name == EpochGroupsGroupName); }
         }
 
-        internal void AddEpochGroup(H5EpochGroup epochGroup)
+        public IEnumerable<IPersistedEpochGroup> EpochGroups
         {
-            epochGroupsGroup.AddHardLink(epochGroup.Uuid.ToString(), epochGroup.ObjectGroup);
+            get { return EpochGroupsGroup.Groups.Select(g => new H5PersistedEpochGroup(g)); }
         }
 
-        internal void RemoveEpochGroup(Guid uuid)
+        internal void AddEpochGroup(H5PersistedEpochGroup epochGroup)
         {
-            var group = epochGroupsGroup.Groups.First(g => g.Name == uuid.ToString());
+            EpochGroupsGroup.AddHardLink(epochGroup.Uuid.ToString(), epochGroup.ObjectGroup);
+        }
+
+        internal void RemoveEpochGroup(H5PersistedEpochGroup epochGroup)
+        {
+            var group = EpochGroupsGroup.Groups.First(g => g.Name == epochGroup.Uuid.ToString());
             group.Delete();
         }
     }
 
-    class H5TimelineEntity : H5Entity, ITimelineEntity
+    class H5TimelinePersistedEntity : H5PersistedEntity, ITimelinePersistedEntity
     {
         private const string StartTimeUtcTicksKey = "startTimeDotNetDateTimeOffsetUTCTicks";
         private const string StartTimeOffsetHoursKey = "startTimeUTCOffsetHours";
         private const string EndTimeUtcTicksKey = "endTimeDotNetDateTimeOffsetUTCTicks";
         private const string EndTimeOffsetHoursKey = "endTimeUTCOffsetHours";
 
-        protected static H5TimelineEntity CreateTimelineEntity(H5Group parent, Guid uuid, DateTimeOffset startTime)
+        protected H5TimelinePersistedEntity(H5Group parent, DateTimeOffset startTime) : base(parent)
         {
-            var group = CreateEntity(parent, uuid).ObjectGroup;
-
-            group.Attributes[StartTimeUtcTicksKey] = new H5Attribute(startTime.UtcTicks);
-            group.Attributes[StartTimeOffsetHoursKey] = new H5Attribute(startTime.Offset.TotalHours);
-
-            return new H5TimelineEntity(group);
+            StartTime = startTime;
         }
 
-        protected H5TimelineEntity(H5Group group) : base(group)
+        protected H5TimelinePersistedEntity()
         {
         }
 
@@ -382,9 +406,14 @@ namespace Symphony.Core
         {
             get
             {
-                var ticks = (long)ObjectGroup.Attributes[StartTimeUtcTicksKey].GetValue();
-                var offset = (double)ObjectGroup.Attributes[StartTimeOffsetHoursKey].GetValue();
+                var ticks = (long) ObjectGroup.Attributes[StartTimeUtcTicksKey].GetValue();
+                var offset = (double) ObjectGroup.Attributes[StartTimeOffsetHoursKey].GetValue();
                 return new DateTimeOffset(ticks, TimeSpan.FromHours(offset));
+            }
+            set 
+            { 
+                ObjectGroup.Attributes[StartTimeUtcTicksKey] = new H5Attribute(value.UtcTicks);
+                ObjectGroup.Attributes[StartTimeOffsetHoursKey] = new H5Attribute(value.Offset.TotalHours);
             }
         }
 
@@ -401,92 +430,87 @@ namespace Symphony.Core
             internal set
             {
                 if (value == null)
+                {
+                    ObjectGroup.Attributes.Remove(EndTimeUtcTicksKey);
+                    ObjectGroup.Attributes.Remove(EndTimeOffsetHoursKey);
                     return;
+                }
                 ObjectGroup.Attributes[EndTimeUtcTicksKey] = new H5Attribute(value.Value.UtcTicks);
                 ObjectGroup.Attributes[EndTimeOffsetHoursKey] = new H5Attribute(value.Value.Offset.TotalHours);
             }
         }
     }
 
-    class H5Experiment : H5TimelineEntity, IExperiment
+    class H5PersistedExperiment : H5TimelinePersistedEntity, IPersistedExperiment
     {
-        private readonly H5Group epochGroupsGroup;
-
         private const string PurposeKey = "purpose";
+        private const string EpochGroupsGroupName = "epochGroups";
 
-        private const string EpochGroupsName = "epochGroups";
-
-        internal static H5Experiment CreateExperiment(H5Group parent, Guid uuid, string purpose, DateTimeOffset startTime)
+        internal static H5PersistedExperiment CreateExperiment(H5Group parent, string purpose, DateTimeOffset startTime)
         {
-            var group = CreateTimelineEntity(parent, uuid, startTime).ObjectGroup;
-
-            group.Attributes[PurposeKey] = new H5Attribute(purpose);
-            group.AddGroup(EpochGroupsName);
-            
-            return new H5Experiment(group);
+            return new H5PersistedExperiment(parent, purpose, startTime);
         }
 
-        internal H5Experiment(H5Group group) : base(group)
+        private H5PersistedExperiment(H5Group parent, string purpose, DateTimeOffset startTime) : base(parent, startTime)
         {
-            epochGroupsGroup = ObjectGroup.Groups.First(g => g.Name == EpochGroupsName);
+            Purpose = purpose;
+            ObjectGroup.AddGroup(EpochGroupsGroupName);
+        }
+
+        internal H5PersistedExperiment(H5Group group)
+        {
+            ObjectGroup = group;
         }
 
         public string Purpose
         {
             get { return (string) ObjectGroup.Attributes[PurposeKey].GetValue(); } 
-            set { ObjectGroup.Attributes[PurposeKey] = new H5Attribute(value);}
+            set { ObjectGroup.Attributes[PurposeKey] = new H5Attribute(value); }
         }
 
-        public IEnumerable<IEpochGroup> EpochGroups
+        private H5Group EpochGroupsGroup
         {
-            get { return epochGroupsGroup.Groups.Select(g => new H5EpochGroup(g)); }
+            get { return ObjectGroup.Groups.First(g => g.Name == EpochGroupsGroupName); }
         }
 
-        internal H5EpochGroup AddEpochGroup(Guid uuid, string label, H5Source source, DateTimeOffset startTime)
+        public IEnumerable<IPersistedEpochGroup> EpochGroups
         {
-            return H5EpochGroup.CreateEpochGroup(epochGroupsGroup, uuid, label, source, startTime);
+            get { return EpochGroupsGroup.Groups.Select(g => new H5PersistedEpochGroup(g)); }
+        }
+
+        internal H5PersistedEpochGroup AddEpochGroup(string label, H5PersistedSource source, DateTimeOffset startTime)
+        {
+            return H5PersistedEpochGroup.CreateEpochGroup(EpochGroupsGroup, label, source, startTime);
         }
     }
 
-    class H5EpochGroup : H5TimelineEntity, IEpochGroup
+    class H5PersistedEpochGroup : H5TimelinePersistedEntity, IPersistedEpochGroup
     {
-        private readonly H5Group sourceGroup;
-        private readonly H5Group epochGroupsGroup;
-
         private const string LabelKey = "label";
+        private const string SourceGroupName = "source";
+        private const string EpochGroupsGroupName = "epochGroups";
 
-        private const string SourceName = "source";
-        private const string EpochGroupsName = "epochGroups";
-
-        internal static H5EpochGroup CreateEpochGroup(H5Group parent, Guid uuid, string label, H5Source source, DateTimeOffset startTime)
+        internal static H5PersistedEpochGroup CreateEpochGroup(H5Group parent, string label, H5PersistedSource source, DateTimeOffset startTime)
         {
-            var group = CreateEntity(parent, uuid).ObjectGroup;
-
-            group.Attributes[LabelKey] = new H5Attribute(label);
-            group.AddHardLink(SourceName, source.ObjectGroup);
-            group.AddGroup(EpochGroupsName);
-
-            var epochGroup = new H5EpochGroup(group);
-            source.AddEpochGroup(epochGroup);
-
-            return epochGroup;
+            return new H5PersistedEpochGroup(parent, label, source, startTime);
         }
 
-        internal H5EpochGroup(H5Group group) : base(group)
+        private H5PersistedEpochGroup(H5Group parent, string label, H5PersistedSource source, DateTimeOffset startTime) : base(parent, startTime)
         {
-            sourceGroup = ObjectGroup.Groups.First(g => g.Name == SourceName);
-            epochGroupsGroup = ObjectGroup.Groups.First(g => g.Name == EpochGroupsName);
+            Label = label;
+            ObjectGroup.AddHardLink(SourceGroupName, source.ObjectGroup);
+            ObjectGroup.AddGroup(EpochGroupsGroupName);
+        }
+
+        internal H5PersistedEpochGroup(H5Group group)
+        {
+            ObjectGroup = group;
         }
 
         internal override void Delete()
         {
-            ((H5Source) Source).RemoveEpochGroup(Uuid);
+            ((H5PersistedSource) Source).RemoveEpochGroup(this);
             base.Delete();
-        }
-
-        internal H5EpochGroup AddEpochGroup(Guid uuid, string label, H5Source source, DateTimeOffset startTime)
-        {
-            return CreateEpochGroup(epochGroupsGroup, uuid, label, source, startTime);
         }
         
         public string Label
@@ -495,15 +519,40 @@ namespace Symphony.Core
             set { ObjectGroup.Attributes[LabelKey] = new H5Attribute(value); }
         }
 
-        public ISource Source { get { return new H5Source(sourceGroup); } }
+        private H5Group SourceGroup
+        {
+            get { return ObjectGroup.Groups.First(g => g.Name == SourceGroupName); }
+        }
+
+        public IPeristedSource Source
+        {
+            get { return new H5PersistedSource(SourceGroup); }
+        }
+
+        private H5Group EpochGroupsGroup
+        {
+            get { return ObjectGroup.Groups.First(g => g.Name == EpochGroupsGroupName); }
+        }
+
+        public IEnumerable<IPersistedEpochGroup> EpochGroups
+        {
+            get { return EpochGroupsGroup.Groups.Select(g => new H5PersistedEpochGroup(g)); }
+        }
+
+        internal H5PersistedEpochGroup AddEpochGroup(string label, H5PersistedSource source, DateTimeOffset startTime)
+        {
+            return CreateEpochGroup(EpochGroupsGroup, label, source, startTime);
+        }
+
+        public IEnumerable<IPersistedEpoch> Epochs { get; private set; }
     }
 
-    class H5Note : INote
+    class H5PersistedNote : IPersistedNote
     {
         public DateTimeOffset Time { get; private set; }
         public string Text { get; private set; }
 
-        internal H5Note(DateTimeOffset time, string text)
+        internal H5PersistedNote(DateTimeOffset time, string text)
         {
             Time = time;
             Text = text;

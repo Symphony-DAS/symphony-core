@@ -32,9 +32,9 @@ namespace Symphony.Core
         [Test]
         public void Test()
         {
-            var s = persistor.AddSource("first");
+            var s = persistor.AddSource("first", null);
             var s2 = persistor.AddSource("second", s);
-            persistor.AddSource("top");
+            persistor.AddSource("top", null);
 
             s.AddNote(DateTimeOffset.Now, "hello world!");
             s.AddNote(DateTimeOffset.Now, "what do you think of this?");
@@ -46,7 +46,6 @@ namespace Symphony.Core
             persistor.BeginExperiment("my purpose here", DateTimeOffset.Now);
             persistor.BeginEpochGroup("one", s, DateTimeOffset.Now);
             persistor.BeginEpochGroup("two", s, DateTimeOffset.Now);
-            persistor.EndEpochGroup(DateTimeOffset.Now);
 
             persistor.Delete(s2);
 

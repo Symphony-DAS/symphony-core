@@ -6,57 +6,63 @@ namespace Symphony.Core
     public interface IEpochPersistor
     {
         void Close();
-        IEnumerable<ISource> Sources { get; }
-        ISource AddSource(string label, ISource parent);
-        IEnumerable<IExperiment> Experiments { get; }
-        IExperiment CurrentExperiment { get; }
+        IEnumerable<IPeristedSource> Sources { get; }
+        IPeristedSource AddSource(string label, IPeristedSource parent);
+        IEnumerable<IPersistedExperiment> Experiments { get; }
+        IPersistedExperiment CurrentExperiment { get; }
         void BeginExperiment(string purpose, DateTimeOffset startTime);
         void EndExperiment(DateTimeOffset endTime);
-        IEpochGroup CurrentEpochGroup { get; }
-        void BeginEpochGroup(string label, ISource source, DateTimeOffset startTime);
+        IPersistedEpochGroup CurrentEpochGroup { get; }
+        void BeginEpochGroup(string label, IPeristedSource source, DateTimeOffset startTime);
         void EndEpochGroup(DateTimeOffset endTime);
-        void Delete(IEntity entity);
+        void Delete(IPersistedEntity entity);
     }
 
-    public interface IEntity
+    public interface IPersistedEntity
     {
-        Guid Uuid { get; }
-        IEnumerable<KeyValuePair<string, object>> Properties { get; } 
+        IEnumerable<KeyValuePair<string, object>> Properties { get; }
         void AddProperty(string key, object value);
         void RemoveProperty(string key);
         IEnumerable<string> Keywords { get; }
         void AddKeyword(string keyword);
         void RemoveKeyword(string keyword);
-        IEnumerable<INote> Notes { get; } 
-        INote AddNote(DateTimeOffset time, string text);
+        IEnumerable<IPersistedNote> Notes { get; }
+        IPersistedNote AddNote(DateTimeOffset time, string text);
     }
 
-    public interface ISource : IEntity
+    public interface IPeristedSource : IPersistedEntity
     {
         string Label { get; set; }
-        IEnumerable<ISource> Sources { get; }
-        IEnumerable<IEpochGroup> EpochGroups { get; }
+        IEnumerable<IPeristedSource> Sources { get; }
+        IEnumerable<IPersistedEpochGroup> EpochGroups { get; }
     }
 
-    public interface ITimelineEntity : IEntity
+    public interface ITimelinePersistedEntity : IPersistedEntity
     {
         DateTimeOffset StartTime { get; }
         DateTimeOffset? EndTime { get; }
     }
 
-    public interface IExperiment : ITimelineEntity
+    public interface IPersistedExperiment : ITimelinePersistedEntity
     {
         string Purpose { get; set; }
-        IEnumerable<IEpochGroup> EpochGroups { get; } 
+        IEnumerable<IPersistedEpochGroup> EpochGroups { get; } 
     }
 
-    public interface IEpochGroup : ITimelineEntity
+    public interface IPersistedEpochGroup : ITimelinePersistedEntity
     {
         string Label { get; set; }
-        ISource Source { get; }
+        IPeristedSource Source { get; }
+        IEnumerable<IPersistedEpochGroup> EpochGroups { get; }
+        IEnumerable<IPersistedEpoch> Epochs { get; } 
     }
 
-    public interface INote
+    public interface IPersistedEpoch : ITimelinePersistedEntity
+    {
+        IEnumerable<KeyValuePair<string, object>> ProtocolParameters { get; } 
+    }
+
+    public interface IPersistedNote
     {
         DateTimeOffset Time { get; }
         string Text { get; }
