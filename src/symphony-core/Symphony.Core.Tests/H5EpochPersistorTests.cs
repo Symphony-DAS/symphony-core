@@ -10,7 +10,7 @@ namespace Symphony.Core
     {
         const string TEST_FILE = "myCSharp.h5";
 
-        private H5EpochPersistor persistor;
+        private H5Persistor persistor;
 
         [SetUp]
         public void Setup()
@@ -20,13 +20,13 @@ namespace Symphony.Core
                 System.IO.File.Delete(TEST_FILE);
             }
 
-            persistor = new H5EpochPersistor(TEST_FILE);
+            persistor = new H5Persistor(TEST_FILE, "my purpose", DateTimeOffset.Now);
         }
 
         [TearDown]
         public void Teardown()
         {
-            persistor.Close();
+            persistor.Close(DateTimeOffset.Now);
         }
 
         [Test]
@@ -41,18 +41,13 @@ namespace Symphony.Core
 
             s2.AddNote(DateTimeOffset.Now, "And this is another one on second");
 
-            Assert.AreEqual(2, persistor.Sources.Count());
+            var x = persistor.Experiment;
+            Assert.AreEqual(2, x.Sources.Count());
 
-            persistor.BeginExperiment("my purpose here", DateTimeOffset.Now);
             persistor.BeginEpochGroup("one", s, DateTimeOffset.Now);
             persistor.BeginEpochGroup("two", s, DateTimeOffset.Now);
 
             persistor.Delete(s2);
-
-            persistor.Close();
-            //persistor.BeginEpochGroup("three", s2, DateTimeOffset.Now);
-
-            //persistor.Delete(s);
         }
 
     }
