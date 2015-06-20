@@ -3,10 +3,11 @@ using System.Collections.Generic;
 
 namespace Symphony.Core
 {
-    public interface IPersistor
+    public interface IEpochPersistor
     {
         void Close(DateTimeOffset endTime);
         IPersistentExperiment Experiment { get; }
+        IPersistentDevice AddDevice(string name, string manufacturer);
         IPersistentSource AddSource(string label, IPersistentSource parent);
         IPersistentEpochGroup BeginEpochGroup(string label, IPersistentSource source, DateTimeOffset startTime);
         IPersistentEpochGroup EndEpochGroup(DateTimeOffset endTime);
@@ -16,7 +17,7 @@ namespace Symphony.Core
 
     public interface IPersistentEntity
     {
-        string ID { get; }
+        Guid UUID { get; }
     }
 
     public interface IAnnotatablePersistentEntity : IPersistentEntity
@@ -27,15 +28,21 @@ namespace Symphony.Core
         IEnumerable<string> Keywords { get; }
         void AddKeyword(string keyword);
         void RemoveKeyword(string keyword);
-        IEnumerable<Note> Notes { get; }
-        Note AddNote(DateTimeOffset time, string text);
+        IEnumerable<INote> Notes { get; }
+        INote AddNote(DateTimeOffset time, string text);
+    }
+
+    public interface IPersistentDevice : IAnnotatablePersistentEntity
+    {
+        string Name { get; }
+        string Manufacturer { get; }
     }
 
     public interface IPersistentSource : IAnnotatablePersistentEntity
     {
         string Label { get; }
         IEnumerable<IPersistentSource> Sources { get; }
-        IEnumerable<IPersistentEpochGroup> EpochGroups { get; }
+        IEnumerable<IPersistentEpochGroup> EpochGroups { get; } 
     }
 
     public interface ITimelinePersistentEntity : IAnnotatablePersistentEntity
@@ -47,6 +54,7 @@ namespace Symphony.Core
     public interface IPersistentExperiment : ITimelinePersistentEntity
     {
         string Purpose { get; }
+        IEnumerable<IPersistentDevice> Devices { get; }
         IEnumerable<IPersistentSource> Sources { get; }
         IEnumerable<IPersistentEpochGroup> EpochGroups { get; }
     }
@@ -70,24 +78,17 @@ namespace Symphony.Core
 
     public interface IPersistentResponse : IPersistentEntity
     {
-        string DeviceName { get; }
-        IEnumerable<IMeasurement> Data { get; } 
+        IEnumerable<IMeasurement> Data { get; }
+        IPersistentDevice Device { get; }
     }
 
     public interface IPersistentStimulus : IPersistentEntity
     {
-        
     }
 
-    public class Note
+    public interface INote
     {
-        public DateTimeOffset Time { get; private set; }
-        public string Text { get; private set; }
-
-        public Note(DateTimeOffset time, string text)
-        {
-            Time = time;
-            Text = text;
-        }
+        DateTimeOffset Time { get; }
+        string Text { get; }
     }
 }

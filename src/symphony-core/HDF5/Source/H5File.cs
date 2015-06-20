@@ -185,6 +185,13 @@ namespace HDF5
             return new H5Dataset(this, path);
         }
 
+        public H5Dataset CreateDataset<T>(string path, H5Datatype type, T[] data)
+        {
+            var dataset = CreateDataset(path, type, new long[] {data.Length}, null, null);
+            dataset.SetData(data);
+            return dataset;
+        }
+
         public H5Link CreateHardLink(string path, H5Object obj)
         {
             H5L.createHardLink(obj.File.Fid, obj.Path, Fid, path);

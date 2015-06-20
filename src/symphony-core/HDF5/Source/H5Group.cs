@@ -36,6 +36,12 @@ namespace HDF5
             return File.CreateDataset(path, type, dims, maxDims, chunks);
         }
 
+        public H5Dataset AddDataset<T>(string name, H5Datatype type, T[] data)
+        {
+            string path = Combine(Path, name);
+            return File.CreateDataset(path, type, data);
+        }
+
         public H5Link AddHardLink(string name, H5Object obj)
         {
             string path = Combine(Path, name);

@@ -23,6 +23,46 @@ namespace HDF5
             Value = value;
         }
 
+        public static implicit operator H5Attribute(string value)
+        {
+            return new H5Attribute(value);
+        }
+
+        public static implicit operator string(H5Attribute a)
+        {
+            return (string) a.GetValue();
+        }
+
+        public static implicit operator H5Attribute(long value)
+        {
+            return new H5Attribute(value);
+        }
+
+        public static implicit operator long(H5Attribute a)
+        {
+            return (long) a.GetValue();
+        }
+
+        public static implicit operator H5Attribute(double value)
+        {
+            return new H5Attribute(value);
+        }
+
+        public static implicit operator double(H5Attribute a)
+        {
+            return (double)a.GetValue();
+        }
+
+        public static implicit operator H5Attribute(uint value)
+        {
+            return new H5Attribute(value);
+        }
+
+        public static implicit operator uint(H5Attribute a)
+        {
+            return (uint)a.GetValue();
+        }
+
         public object GetValue()
         {
             H5ObjectWithAttributes oid = null;
