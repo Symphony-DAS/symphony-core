@@ -33,7 +33,7 @@ namespace Symphony.Core
         /// Constructs a new Epoch instance.
         /// </summary>
         /// <param name="protocolID">Protocol ID of the Epoch</param>
-        /// <param name="parameters">Protocol paramters of the Epoch</param>
+        /// <param name="parameters">Protocol parameters of the Epoch</param>
         public Epoch(string protocolID, IDictionary<string, object> parameters)
         {
             ProtocolID = protocolID;

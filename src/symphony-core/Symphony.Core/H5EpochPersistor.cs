@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -8,27 +9,64 @@ using HDF5DotNet;
 
 namespace Symphony.Core
 {
+    /// <summary>
+    /// IEpochPersistor implementation for persisting Epochs to an HDF5 data file. HDF5 does not currently
+    /// offer atomic operations so, while this implementation does it's best to maintain data integrity it's
+    /// not full-proof. In practice I think we'll find this sufficient. However this should probably be looked 
+    /// at again when/if HDF5 begins to offer transactions.
+    /// </summary>
     public class H5EpochPersistor : IEpochPersistor
     {
-        private const uint PersistenceVersion = 2;
         private const string VersionKey = "version";
+        private const uint PersistenceVersion = 2;
 
         private readonly H5File file;
-
         private readonly H5PersistentExperiment experiment;
-
         private readonly Stack<H5PersistentEpochGroup> openEpochGroups;
 
-        public H5EpochPersistor(string filename, string purpose, DateTimeOffset startTime)
+        /// <summary>
+        /// Creates a new HDF5 file, persistor, and root experiment.
+        /// </summary>
+        /// <param name="filename">Desired HDF5 path</param>
+        /// <param name="purpose">Experimental purpose for the root Experiment entity</param>
+        /// <param name="startTime">Start time for the root Experiment entity</param>
+        /// <returns>The new Epoch Persistor</returns>
+        public static H5EpochPersistor CreatePersistor(string filename, string purpose, DateTimeOffset startTime)
         {
-            file = new H5File(filename);
+            if (File.Exists(filename))
+                throw new Exception("file already exists");
+
+            var file = new H5File(filename);
 
             file.Attributes[VersionKey] = PersistenceVersion;
 
             H5Map.CreateTypes(file);
+            H5PersistentExperiment.CreateExperiment(file, purpose, startTime);
+            
+            return new H5EpochPersistor(filename);
+        }
 
-            experiment = H5PersistentExperiment.CreateExperiment(file, purpose, startTime);
+        /// <summary>
+        /// Constructs a new H5EpochPersistor with an existing HDF5 file at the given path.
+        /// </summary>
+        /// <param name="filename">Existing HDF5 file path</param>
+        public H5EpochPersistor(string filename)
+        {
+            if (!File.Exists(filename))
+                throw new Exception("file doesn't exist");
 
+            file = new H5File(filename);
+            if (!file.Attributes.ContainsKey(VersionKey))
+                throw new Exception("not symphony data file?");
+
+            Version = file.Attributes[VersionKey];
+            if (Version != PersistenceVersion)
+                throw new Exception("version mismatch");
+
+            if (file.Groups.Count() != 1)
+                throw new Exception("expected only a single group");
+
+            experiment = new H5PersistentExperiment(file.Groups.First());
             openEpochGroups = new Stack<H5PersistentEpochGroup>();
         }
 
@@ -46,10 +84,7 @@ namespace Symphony.Core
             file.Close();
         }
 
-        public uint Version
-        {
-            get { return file.Attributes[VersionKey]; }
-        }
+        public uint Version { get; private set; }
 
         public IPersistentExperiment Experiment { get { return experiment; } }
 
@@ -130,6 +165,14 @@ namespace Symphony.Core
         }
     }
 
+    /// <summary>
+    /// An H5PersistentEntity is stored as a group in the H5 file. The group uses attributes, datasets, and subgroups
+    /// to store fields of the entity. 
+    /// 
+    /// The vast majority of persistent entities will have NO associated keywords, properties, or notes, so we only create
+    /// actual H5 objects for those fields if necessary (i.e. when a keyword, property, or note is actually associated with
+    /// the entity).
+    /// </summary>
     abstract class H5PersistentEntity : IPersistentEntity
     {
         private const string UUIDKey = "uuid";
@@ -182,6 +225,7 @@ namespace Symphony.Core
             Group = group;
         }
 
+        // The HDF5 group representing the persistent entity.
         public H5Group Group { get; private set; }
 
         public Guid UUID { get; private set; }
@@ -241,6 +285,9 @@ namespace Symphony.Core
 
         public void AddKeyword(string keyword)
         {
+            // Need to be careful about adding the keyword to our in-memory collection before we're
+            // sure it's been added as an attribute to the entity group.
+
             var newKeywords = new HashSet<string>(keywords);
             newKeywords.Add(keyword);
             Group.Attributes[KeywordsKey] = string.Join(",", newKeywords);
@@ -249,6 +296,9 @@ namespace Symphony.Core
 
         public bool RemoveKeyword(string keyword)
         {
+            // Need to be careful about removing the keyword from our in-memory collection before we're
+            // sure it's been removed from the attributes of the entity group.
+
             var newKeywords = new HashSet<string>(keywords);
             bool removed = newKeywords.Remove(keyword);
             Group.Attributes[KeywordsKey] = string.Join(",", newKeywords);
@@ -397,6 +447,17 @@ namespace Symphony.Core
 
             group.Attributes[StartTimeUtcTicksKey] = startTime.UtcTicks;
             group.Attributes[StartTimeOffsetHoursKey] = startTime.Offset.TotalHours;
+
+            return group;
+        }
+
+        protected static H5Group CreateTimelineEntityGroup(H5Group parent, string prefix, DateTimeOffset startTime,
+                                                           DateTimeOffset endTime)
+        {
+            var group = CreateTimelineEntityGroup(parent, prefix, startTime);
+
+            group.Attributes[EndTimeUtcTicksKey] = endTime.UtcTicks;
+            group.Attributes[EndTimeOffsetHoursKey] = endTime.Offset.TotalHours;
 
             return group;
         }
@@ -646,7 +707,6 @@ namespace Symphony.Core
 
     class H5PersistentEpoch : H5TimelinePersistentEntity, IPersistentEpoch
     {
-        private const string DurationKey = "durationSeconds";
         private const string ResponsesGroupName = "responses";
         private const string StimuliGroupName = "stimuli";
 
@@ -658,9 +718,7 @@ namespace Symphony.Core
 
         public static H5PersistentEpoch CreateEpoch(H5Group parent, H5PersistentExperiment experiment, Epoch epoch)
         {
-            var group = CreateTimelineEntityGroup(parent, "epoch", epoch.StartTime);
-
-            group.Attributes[DurationKey] = ((TimeSpan) epoch.Duration).TotalSeconds;
+            var group = CreateTimelineEntityGroup(parent, "epoch", epoch.StartTime, (DateTimeOffset)epoch.StartTime + epoch.Duration);
             
             var responsesGroup = group.AddGroup(ResponsesGroupName);
             var stimuliGroup = group.AddGroup(StimuliGroupName);
@@ -682,8 +740,6 @@ namespace Symphony.Core
 
         public H5PersistentEpoch(H5Group group) : base(group)
         {
-            Duration = TimeSpan.FromSeconds(group.Attributes[DurationKey]);
-
             var subGroups = group.Groups.ToList();
             responsesGroup = subGroups.First(g => g.Name == ResponsesGroupName);
             stimuliGroup = subGroups.First(g => g.Name == StimuliGroupName);
@@ -691,8 +747,6 @@ namespace Symphony.Core
             responses = new Lazy<HashSet<H5PersistentResponse>>(() => new HashSet<H5PersistentResponse>(responsesGroup.Groups.Select(g => new H5PersistentResponse(g))));
             stimuli = new Lazy<HashSet<H5PersistentStimulus>>(() => new HashSet<H5PersistentStimulus>(stimuliGroup.Groups.Select(g => new H5PersistentStimulus(g))));
         }
-
-        public TimeSpan Duration { get; private set; }
 
         public IEnumerable<IPersistentResponse> Responses { get { return responses.Value; } }
 
@@ -760,6 +814,9 @@ namespace Symphony.Core
         public string Text { get; private set; }
     }
 
+    /// <summary>
+    /// Conversion routines to turn our .NET objects into HDF5 friendly structures and vice versa.
+    /// </summary>
     static class H5Map
     {
         [StructLayout(LayoutKind.Explicit)]

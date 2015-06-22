@@ -20,7 +20,7 @@ namespace Symphony.Core
                 System.IO.File.Delete(TEST_FILE);
             }
 
-            persistor = new H5EpochPersistor(TEST_FILE, "my purpose", DateTimeOffset.Now);
+            persistor = H5EpochPersistor.CreatePersistor(TEST_FILE, "my purpose", DateTimeOffset.Now);
         }
 
         [TearDown]
