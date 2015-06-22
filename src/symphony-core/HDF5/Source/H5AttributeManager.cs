@@ -34,13 +34,14 @@ namespace HDF5
             CreateAttribute(item.Name, item.Value);
         }
 
-        public void Remove(string key)
+        public bool Remove(string key)
         {
             H5ObjectWithAttributes oid = null;
             try
             {
                 oid = H5Ox.open(File.Fid, Path);
                 H5A.Delete(oid, key);
+                return ContainsKey(key);
             }
             finally
             {

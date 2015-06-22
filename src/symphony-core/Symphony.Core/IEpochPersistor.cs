@@ -11,6 +11,8 @@ namespace Symphony.Core
         IPersistentSource AddSource(string label, IPersistentSource parent);
         IPersistentEpochGroup BeginEpochGroup(string label, IPersistentSource source, DateTimeOffset startTime);
         IPersistentEpochGroup EndEpochGroup(DateTimeOffset endTime);
+        IPersistentEpochBlock BeginEpochBlock(string protocolID, IEnumerable<KeyValuePair<string, object>> protocolParameters, DateTimeOffset startTime);
+        IPersistentEpochBlock EndEpochBlock(DateTimeOffset endTime);
         IPersistentEpoch Serialize(Epoch epoch);
         void Delete(IPersistentEntity entity);
     }
@@ -18,34 +20,30 @@ namespace Symphony.Core
     public interface IPersistentEntity
     {
         Guid UUID { get; }
-    }
-
-    public interface IAnnotatablePersistentEntity : IPersistentEntity
-    {
         IEnumerable<KeyValuePair<string, object>> Properties { get; }
         void AddProperty(string key, object value);
-        void RemoveProperty(string key);
+        bool RemoveProperty(string key);
         IEnumerable<string> Keywords { get; }
         void AddKeyword(string keyword);
-        void RemoveKeyword(string keyword);
+        bool RemoveKeyword(string keyword);
         IEnumerable<INote> Notes { get; }
         INote AddNote(DateTimeOffset time, string text);
     }
 
-    public interface IPersistentDevice : IAnnotatablePersistentEntity
+    public interface IPersistentDevice : IPersistentEntity
     {
         string Name { get; }
         string Manufacturer { get; }
     }
 
-    public interface IPersistentSource : IAnnotatablePersistentEntity
+    public interface IPersistentSource : IPersistentEntity
     {
         string Label { get; }
         IEnumerable<IPersistentSource> Sources { get; }
         IEnumerable<IPersistentEpochGroup> EpochGroups { get; } 
     }
 
-    public interface ITimelinePersistentEntity : IAnnotatablePersistentEntity
+    public interface ITimelinePersistentEntity : IPersistentEntity
     {
         DateTimeOffset StartTime { get; }
         DateTimeOffset? EndTime { get; }
@@ -64,16 +62,21 @@ namespace Symphony.Core
         string Label { get; }
         IPersistentSource Source { get; }
         IEnumerable<IPersistentEpochGroup> EpochGroups { get; }
+        IEnumerable<IPersistentEpochBlock> EpochBlocks { get; } 
+    }
+
+    public interface IPersistentEpochBlock : ITimelinePersistentEntity
+    {
+        string ProtocolID { get; }
+        IEnumerable<KeyValuePair<string, object>> ProtocolParameters { get; }
         IEnumerable<IPersistentEpoch> Epochs { get; } 
     }
 
     public interface IPersistentEpoch : ITimelinePersistentEntity
     {
-        string ProtocolID { get; }
         TimeSpan Duration { get; }
-        IEnumerable<KeyValuePair<string, object>> ProtocolParameters { get; }
         IEnumerable<IPersistentResponse> Responses { get; }
-        IEnumerable<IPersistentStimulus> Stimuli { get; } 
+        IEnumerable<IPersistentStimulus> Stimuli { get; }
     }
 
     public interface IPersistentResponse : IPersistentEntity
