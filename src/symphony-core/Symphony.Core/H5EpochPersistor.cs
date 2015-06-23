@@ -753,52 +753,165 @@ namespace Symphony.Core
         public IEnumerable<IPersistentStimulus> Stimuli { get { return stimuli.Value; } }
     }
 
-    class H5PersistentResponse : H5PersistentEntity, IPersistentResponse
+    abstract class H5PersistentIOBase : H5PersistentEntity, IPersistentIOBase
     {
-        private const string DataDatasetName = "data";
         private const string DeviceGroupName = "device";
+        private const string DataConfigurationSpansGroupName = "dataConfigurationSpans";
+        private const string SpanGroupPrefix = "span_";
+        private const string SpanStartTimeKey = "startTimeSeconds";
+        private const string SpanDurationKey = "timeSpanSeconds";
 
-        private readonly H5Dataset dataDataset;
         private readonly H5Group deviceGroup;
+        private readonly H5Group dataConfigurationSpansGroup;
 
-        private readonly Lazy<List<IMeasurement>> data;
-        private readonly Lazy<IPersistentDevice> device; 
+        private readonly Lazy<IPersistentDevice> device;
+        private readonly Lazy<List<ConfigurationSpan>> configurationSpans;
 
-        public static H5PersistentResponse CreateResponse(H5Group parent, H5PersistentDevice device, Response response)
+        public static H5Group CreateIOBaseGroup(H5Group parent, H5PersistentDevice device, IEnumerable<IConfigurationSpan> configSpans)
         {
             var group = CreateEntityGroup(parent, device.Name);
 
+            var deviceGroup = group.AddHardLink(DeviceGroupName, device.Group);
+            var spansGroup = group.AddGroup(DataConfigurationSpansGroupName);
+
+            uint i = 0;
+            var totalTime = TimeSpan.Zero;
+            foreach (var span in configSpans)
+            {
+                var spanGroup = spansGroup.AddGroup(SpanGroupPrefix + i++);
+
+                spanGroup.Attributes[SpanStartTimeKey] = totalTime.TotalSeconds;
+                totalTime += span.Time;
+
+                spanGroup.Attributes[SpanDurationKey] = span.Time.TotalSeconds;
+                foreach (var node in span.Nodes)
+                {
+                    var nodeGroup = spanGroup.AddGroup(node.Name);
+                    foreach (var kv in node.Configuration)
+                    {
+                        nodeGroup.Attributes[kv.Key] = new H5Attribute(kv.Value);
+                    }
+                }
+            }
+
+            return group;
+        }
+
+        protected H5PersistentIOBase(H5Group group) : base(group)
+        {
+            var subGroups = group.Groups.ToList(); 
+            deviceGroup = subGroups.First(g => g.Name == DeviceGroupName);
+            dataConfigurationSpansGroup = subGroups.First(g => g.Name == DataConfigurationSpansGroupName);
+
+            device = new Lazy<IPersistentDevice>(() => new H5PersistentDevice(deviceGroup));
+
+            configurationSpans = new Lazy<List<ConfigurationSpan>>(() =>
+            {
+                var spanGroups = dataConfigurationSpansGroup.Groups.ToList();
+                var spans = new List<ConfigurationSpan>(spanGroups.Count);
+                foreach (var spanGroup in spanGroups)
+                {
+                    TimeSpan duration = TimeSpan.FromSeconds(spanGroup.Attributes[SpanDurationKey]);
+
+                    var nodeGroups = spanGroup.Groups.ToList();
+                    var nodes = new List<PipelineNodeConfiguration>(nodeGroups.Count);
+                    foreach (var nodeGroup in nodeGroups)
+                    {
+                        var attrs = nodeGroup.Attributes.ToDictionary(a => a.Name, a => a.GetValue());
+                        nodes.Add(new PipelineNodeConfiguration(nodeGroup.Name, attrs));
+                    }
+
+                    spans.Add(new ConfigurationSpan(duration, nodes));
+                }
+                return spans;
+            });
+        }
+
+        public IPersistentDevice Device { get { return device.Value; } }
+
+        public IEnumerable<IConfigurationSpan> ConfigurationSpans { get { return configurationSpans.Value; } }
+    }
+
+    class H5PersistentResponse : H5PersistentIOBase, IPersistentResponse
+    {
+        private const string SampleRateKey = "sampleRate";
+        private const string SampleRateUnitsKey = "sampleRateUnits";
+        private const string DataDatasetName = "data";
+
+        private readonly H5Dataset dataDataset;
+
+        private readonly Lazy<List<IMeasurement>> data;
+
+        public static H5PersistentResponse CreateResponse(H5Group parent, H5PersistentDevice device, Response response)
+        {
+            var group = CreateIOBaseGroup(parent, device, response.DataConfigurationSpans);
+
+            group.Attributes[SampleRateKey] = (double) response.SampleRate.QuantityInBaseUnit;
+            group.Attributes[SampleRateUnitsKey] = response.SampleRate.BaseUnit;
+
             group.AddDataset(DataDatasetName, H5Map.GetMeasurementType(parent.File), response.Data.Select(H5Map.Convert).ToArray());
-            group.AddHardLink(DeviceGroupName, device.Group);
 
             return new H5PersistentResponse(group);
         }
 
         public H5PersistentResponse(H5Group group) : base(group)
         {
+            double rate = group.Attributes[SampleRateKey];
+            string units = group.Attributes[SampleRateUnitsKey];
+            SampleRate = new Measurement(rate, units);
+
             dataDataset = group.Datasets.First(ds => ds.Name == DataDatasetName);
-            deviceGroup = group.Groups.First(g => g.Name == DeviceGroupName);
 
             data = new Lazy<List<IMeasurement>>(() => dataDataset.GetData<H5Map.MeasurementT>().Select(H5Map.Convert).ToList());
-            device = new Lazy<IPersistentDevice>(() => new H5PersistentDevice(deviceGroup));
         }
 
-        public IEnumerable<IMeasurement> Data { get { return data.Value; } }
+        public IMeasurement SampleRate { get; private set; }
 
-        public IPersistentDevice Device { get { return device.Value; } }
+        public IEnumerable<IMeasurement> Data { get { return data.Value; } }
     }
 
-    class H5PersistentStimulus : H5PersistentEntity, IPersistentStimulus
+    class H5PersistentStimulus : H5PersistentIOBase, IPersistentStimulus
     {
+        private const string StimulusIDKey = "stimulusID";
+        private const string UnitsKey = "units";
+        private const string ParametersGroupName = "parameters";
+
+        private readonly H5Group parametersGroup;
+
+        private readonly Lazy<Dictionary<string, object>> parameters;
+
         public static H5PersistentStimulus CreateStimulus(H5Group parent, H5PersistentDevice device, IStimulus stimulus)
         {
-            var group = CreateEntityGroup(parent, device.Name);
+            var group = CreateIOBaseGroup(parent, device, stimulus.OutputConfigurationSpans);
+
+            group.Attributes[StimulusIDKey] = stimulus.StimulusID;
+            group.Attributes[UnitsKey] = stimulus.Units;
+
+            var parametersGroup = group.AddGroup(ParametersGroupName);
+
+            foreach (var kv in stimulus.Parameters)
+            {
+                parametersGroup.Attributes[kv.Key] = new H5Attribute(kv.Value);
+            }
+
             return new H5PersistentStimulus(group);
         }
 
         public H5PersistentStimulus(H5Group group) : base(group)
         {
+            StimulusID = group.Attributes[StimulusIDKey];
+            Units = group.Attributes[UnitsKey];
+
+            parametersGroup = group.Groups.First(g => g.Name == ParametersGroupName);
+
+            parameters = new Lazy<Dictionary<string, object>>(() => parametersGroup.Attributes.ToDictionary(a => a.Name, a => a.GetValue()));
         }
+
+        public string StimulusID { get; private set; }
+
+        public string Units { get; private set; }
+
+        public IEnumerable<KeyValuePair<string, object>> Parameters { get { return parameters.Value; } }
     }
 
     class H5Note : INote

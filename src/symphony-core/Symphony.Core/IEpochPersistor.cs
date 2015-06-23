@@ -310,31 +310,71 @@ namespace Symphony.Core
     }
 
     /// <summary>
+    /// Interface for entities that describe I/O data.
+    /// </summary>
+    public interface IPersistentIOBase : IPersistentEntity
+    {
+        /// <summary>
+        /// The Device through which this object was presented or recorded.
+        /// </summary>
+        IPersistentDevice Device { get; }
+
+        /// <summary>
+        /// The parameters describing the configuration of the associated Device.
+        /// </summary>
+        IEnumerable<IConfigurationSpan> ConfigurationSpans { get; }
+    }
+
+    /// <summary>
     /// Represents a single recorded response produced by a Device.
     /// </summary>
-    public interface IPersistentResponse : IPersistentEntity
+    public interface IPersistentResponse : IPersistentIOBase
     {
+        /// <summary>
+        /// The sampling rate of this Response.
+        /// </summary>
+        IMeasurement SampleRate { get; }
+
         /// <summary>
         /// The Measurements recorded in this Response.
         /// </summary>
         IEnumerable<IMeasurement> Data { get; }
-
-        /// <summary>
-        /// The Device that recorded this Response.
-        /// </summary>
-        IPersistentDevice Device { get; }
     }
 
     /// <summary>
     /// Represents a single presented stimulus produced by a Device.
     /// </summary>
-    public interface IPersistentStimulus : IPersistentEntity
+    public interface IPersistentStimulus : IPersistentIOBase
     {
+        /// <summary>
+        /// The identifier of this Stimulus.
+        /// </summary>
+        string StimulusID { get; }
+
+        /// <summary>
+        /// BaseUnits for this stimulus' output data.
+        /// </summary>
+        string Units { get; }
+
+        /// <summary>
+        /// The parameters of stimulus generation.
+        /// </summary>
+        IEnumerable<KeyValuePair<string, object>> Parameters { get; }
     }
 
+    /// <summary>
+    /// Represents a timestamped text note that annotate an entity.
+    /// </summary>
     public interface INote
     {
+        /// <summary>
+        /// The timestamp of this Note.
+        /// </summary>
         DateTimeOffset Time { get; }
+
+        /// <summary>
+        /// The text of this Note.
+        /// </summary>
         string Text { get; }
     }
 }
