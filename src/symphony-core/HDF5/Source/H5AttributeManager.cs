@@ -41,7 +41,7 @@ namespace HDF5
             {
                 oid = H5Ox.open(File.Fid, Path);
                 H5A.Delete(oid, key);
-                return ContainsKey(key);
+                return !ContainsKey(key);
             }
             finally
             {
