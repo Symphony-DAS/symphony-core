@@ -24,7 +24,7 @@ namespace Symphony.Core
             startTime = new DateTimeOffset(2015, 6, 9, 10, 30, 50, TimeSpan.Zero);
             endTime = startTime.AddMinutes(55);
 
-            persistor = H5EpochPersistor.CreatePersistor(TEST_FILE, TEST_PURPOSE, startTime);
+            persistor = H5EpochPersistor.Create(TEST_FILE, TEST_PURPOSE, startTime);
         }
 
         [TearDown]

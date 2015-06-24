@@ -89,13 +89,10 @@ namespace HDF5
                 if (value is string)
                 {
                     tid = H5T.copy(H5T.H5Type.C_S1);
-                    H5T.setSize(tid, Math.Max(((string)value).Length, 1));
+                    H5T.setSize(tid, ((string) value).Length);
                     sid = H5S.create(H5S.H5SClass.SCALAR);
                     aid = H5A.create(oid, name, tid, sid);
-                    if (((string) value).Length > 0)
-                    {
-                        H5A.write(aid, tid, new H5Array<byte>(Encoding.ASCII.GetBytes((string)value)));   
-                    }
+                    H5A.write(aid, tid, new H5Array<byte>(Encoding.ASCII.GetBytes((string)value)));
                 }
                 else
                 {
