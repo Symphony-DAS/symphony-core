@@ -291,19 +291,12 @@ namespace Symphony.Core
         public void ShouldBeginEpochBlock()
         {
             var id = "protocol.id.here";
-            var parameters = new Dictionary<string, object>
-                {
-                    {"one", 1},
-                    {"two", "second"},
-                    {"three", 5.55}
-                };
             var time = DateTimeOffset.Now;
             var src = persistor.AddSource("label", null);
             var grp = persistor.BeginEpochGroup("group", src, time);
-            var blk = persistor.BeginEpochBlock(id, parameters, time);
+            var blk = persistor.BeginEpochBlock(id, time);
 
             Assert.AreEqual(id, blk.ProtocolID);
-            CollectionAssert.AreEquivalent(parameters, blk.ProtocolParameters);
             Assert.AreEqual(time, blk.StartTime);
             Assert.IsNull(blk.EndTime);
             Assert.AreEqual(0, blk.Epochs.Count());
@@ -316,10 +309,10 @@ namespace Symphony.Core
         {
             var src = persistor.AddSource("label", null);
             var grp = persistor.BeginEpochGroup("group", src, DateTimeOffset.Now);
-            var blk = persistor.BeginEpochBlock("id", new Dictionary<string, object>(), DateTimeOffset.Now);
+            var blk = persistor.BeginEpochBlock("id", DateTimeOffset.Now);
 
             Assert.Throws(typeof (InvalidOperationException),
-                          () => persistor.BeginEpochBlock("id", new Dictionary<string, object>(), DateTimeOffset.Now));
+                          () => persistor.BeginEpochBlock("id", DateTimeOffset.Now));
         }
 
         [Test]
@@ -327,7 +320,7 @@ namespace Symphony.Core
         {
             var src = persistor.AddSource("label", null);
             var grp = persistor.BeginEpochGroup("group", src, DateTimeOffset.Now);
-            var blk = persistor.BeginEpochBlock("id", new Dictionary<string, object>(), DateTimeOffset.Now);
+            var blk = persistor.BeginEpochBlock("id", DateTimeOffset.Now);
 
             var time = DateTimeOffset.Now;
             persistor.EndEpochBlock(time);
@@ -343,12 +336,13 @@ namespace Symphony.Core
 
             var src = persistor.AddSource("label", null);
             var grp = persistor.BeginEpochGroup("group", src, DateTimeOffset.Now);
-            var blk = persistor.BeginEpochBlock(epoch.ProtocolID, epoch.ProtocolParameters, DateTimeOffset.Now);
+            var blk = persistor.BeginEpochBlock(epoch.ProtocolID, DateTimeOffset.Now);
             
             var e = persistor.Serialize(epoch);
 
             Assert.AreEqual((DateTimeOffset) epoch.StartTime, e.StartTime);
             Assert.AreEqual((DateTimeOffset) epoch.StartTime + epoch.Duration, e.EndTime);
+            CollectionAssert.AreEquivalent(epoch.ProtocolParameters, e.ProtocolParameters);
             Assert.AreEqual(epoch.Responses.Count, e.Responses.Count());
             Assert.AreEqual(epoch.Stimuli.Count, e.Stimuli.Count());
             CollectionAssert.AreEquivalent(epoch.Keywords, e.Keywords);

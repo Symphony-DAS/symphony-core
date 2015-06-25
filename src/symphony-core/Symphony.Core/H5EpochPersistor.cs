@@ -128,13 +128,13 @@ namespace Symphony.Core
 
         private H5PersistentEpochBlock CurrentEpochBlock { get; set; }
 
-        public IPersistentEpochBlock BeginEpochBlock(string protocolID, IEnumerable<KeyValuePair<string, object>> protocolParameters, DateTimeOffset startTime)
+        public IPersistentEpochBlock BeginEpochBlock(string protocolID, DateTimeOffset startTime)
         {
             if (CurrentEpochGroup == null)
                 throw new InvalidOperationException("There are no open epoch groups");
             if (CurrentEpochBlock != null)
                 throw new InvalidOperationException("There is an open epoch block");
-            CurrentEpochBlock = CurrentEpochGroup.InsertEpochBlock(protocolID, protocolParameters, startTime);
+            CurrentEpochBlock = CurrentEpochGroup.InsertEpochBlock(protocolID, startTime);
             return CurrentEpochBlock;
         }
 
@@ -601,34 +601,26 @@ namespace Symphony.Core
             get { return epochBlocksGroup.Groups.Select(g => new H5PersistentEpochBlock(g)); }
         }
 
-        public H5PersistentEpochBlock InsertEpochBlock(string protocolID, IEnumerable<KeyValuePair<string, object>> protocolParameters, DateTimeOffset startTime)
+        public H5PersistentEpochBlock InsertEpochBlock(string protocolID, DateTimeOffset startTime)
         {
-            return H5PersistentEpochBlock.InsertEpochBlock(epochBlocksGroup, protocolID, protocolParameters, startTime);
+            return H5PersistentEpochBlock.InsertEpochBlock(epochBlocksGroup, protocolID, startTime);
         }
     }
 
     class H5PersistentEpochBlock : H5TimelinePersistentEntity, IPersistentEpochBlock
     {
         private const string ProtocolIDKey = "protocolID";
-        private const string ProtocolParametersGroupName = "protocolParameters";
         private const string EpochsGroupName = "epochs";
 
-        private readonly H5Group protocolParametersGroup;
         private readonly H5Group epochsGroup;
 
-        public static H5PersistentEpochBlock InsertEpochBlock(H5Group parent, string protocolID, IEnumerable<KeyValuePair<string, object>> protocolParameters, DateTimeOffset startTime)
+        public static H5PersistentEpochBlock InsertEpochBlock(H5Group parent, string protocolID, DateTimeOffset startTime)
         {
             var group = InsertTimelineEntityGroup(parent, protocolID, startTime);
 
             group.Attributes[ProtocolIDKey] = protocolID;
 
-            var parametersGroup = group.AddGroup(ProtocolParametersGroupName);
-            var epochsGroup = group.AddGroup(EpochsGroupName);
-
-            foreach (var kv in protocolParameters)
-            {
-                parametersGroup.Attributes[kv.Key] = new H5Attribute(kv.Value);
-            }
+            group.AddGroup(EpochsGroupName);
 
             return new H5PersistentEpochBlock(group);
         }
@@ -638,16 +630,10 @@ namespace Symphony.Core
             ProtocolID = group.Attributes[ProtocolIDKey];
 
             var subGroups = group.Groups.ToList();
-            protocolParametersGroup = subGroups.First(g => g.Name == ProtocolParametersGroupName);
             epochsGroup = subGroups.First(g => g.Name == EpochsGroupName);
         }
 
         public string ProtocolID { get; private set; }
-
-        public IEnumerable<KeyValuePair<string, object>> ProtocolParameters
-        {
-            get { return protocolParametersGroup.Attributes.Select(a => new KeyValuePair<string, object>(a.Name, a.GetValue())); }
-        }
 
         public IEnumerable<IPersistentEpoch> Epochs
         {
@@ -658,16 +644,17 @@ namespace Symphony.Core
         {
             if (epoch.ProtocolID != ProtocolID)
                 throw new ArgumentException("Epoch protocol id does not match epoch block protocol id");
-            // TODO: check that protocol parameters are identical
             return H5PersistentEpoch.InsertEpoch(epochsGroup, experiment, epoch);
         }
     }
 
     class H5PersistentEpoch : H5TimelinePersistentEntity, IPersistentEpoch
     {
+        private const string ProtocolParametersGroupName = "protocolParameters";
         private const string ResponsesGroupName = "responses";
         private const string StimuliGroupName = "stimuli";
 
+        private readonly H5Group protocolParametersGroup;
         private readonly H5Group responsesGroup;
         private readonly H5Group stimuliGroup;
 
@@ -675,8 +662,14 @@ namespace Symphony.Core
         {
             var group = InsertTimelineEntityGroup(parent, "epoch", epoch.StartTime, (DateTimeOffset)epoch.StartTime + epoch.Duration);
 
+            var parametersGroup = group.AddGroup(ProtocolParametersGroupName);
             var responsesGroup = group.AddGroup(ResponsesGroupName);
             var stimuliGroup = group.AddGroup(StimuliGroupName);
+
+            foreach (var kv in epoch.ProtocolParameters)
+            {
+                parametersGroup.Attributes[kv.Key] = new H5Attribute(kv.Value);
+            }
 
             foreach (var kv in epoch.Responses)
             {
@@ -701,8 +694,14 @@ namespace Symphony.Core
         public H5PersistentEpoch(H5Group group) : base(group)
         {
             var subGroups = group.Groups.ToList();
+            protocolParametersGroup = subGroups.First(g => g.Name == ProtocolParametersGroupName);
             responsesGroup = subGroups.First(g => g.Name == ResponsesGroupName);
             stimuliGroup = subGroups.First(g => g.Name == StimuliGroupName);
+        }
+
+        public IEnumerable<KeyValuePair<string, object>> ProtocolParameters
+        {
+            get { return protocolParametersGroup.Attributes.Select(a => new KeyValuePair<string, object>(a.Name, a.GetValue())); }
         }
 
         public IEnumerable<IPersistentResponse> Responses

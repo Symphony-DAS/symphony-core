@@ -77,10 +77,9 @@ namespace Symphony.Core
         /// Begins a new Epoch Block, a logical group of consecutive Epochs produced by a single protocol run.
         /// </summary>
         /// <param name="protocolID">Protocol ID of the protocol that produced the block</param>
-        /// <param name="protocolParameters">Protocol parameters of the protocol that produced the block</param>
         /// <param name="startTime">Start time of the Epoch Block</param>
         /// <returns>The Epoch Block that was started</returns>
-        IPersistentEpochBlock BeginEpochBlock(string protocolID, IEnumerable<KeyValuePair<string, object>> protocolParameters, DateTimeOffset startTime);
+        IPersistentEpochBlock BeginEpochBlock(string protocolID, DateTimeOffset startTime);
 
         /// <summary>
         /// Ends the current Epoch Block.
@@ -288,11 +287,6 @@ namespace Symphony.Core
         string ProtocolID { get; }
 
         /// <summary>
-        /// The parameters of the protocol used to produce this Epoch Block.
-        /// </summary>
-        IEnumerable<KeyValuePair<string, object>> ProtocolParameters { get; }
-
-        /// <summary>
         /// The Epochs contained within this Epoch Block.
         /// </summary>
         IEnumerable<IPersistentEpoch> Epochs { get; } 
@@ -303,6 +297,11 @@ namespace Symphony.Core
     /// </summary>
     public interface IPersistentEpoch : ITimelinePersistentEntity
     {
+        /// <summary>
+        /// The protocol parameters describing this Epoch.
+        /// </summary>
+        IEnumerable<KeyValuePair<string, object>> ProtocolParameters { get; }
+
         /// <summary>
         /// The Responses recorded during this Epoch.
         /// </summary>
