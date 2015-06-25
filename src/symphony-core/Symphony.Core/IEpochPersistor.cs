@@ -27,8 +27,7 @@ namespace Symphony.Core
         /// <summary>
         /// Closes output to this persistor. All open entities are closed.
         /// </summary>
-        /// <param name="endTime"></param>
-        void Close(DateTimeOffset endTime);
+        void Close();
 
         /// <summary>
         /// An Experiment is the root of the persistent hierarchy and is automatically created when a persistor
@@ -62,16 +61,14 @@ namespace Symphony.Core
         /// </summary>
         /// <param name="label">Label of the Epoch Group</param>
         /// <param name="source">Source associated with the Epoch Group</param>
-        /// <param name="startTime">Start time of the Epoch Group</param>
         /// <returns>The Epoch Group that was started</returns>
-        IPersistentEpochGroup BeginEpochGroup(string label, IPersistentSource source, DateTimeOffset startTime);
+        IPersistentEpochGroup BeginEpochGroup(string label, IPersistentSource source);
 
         /// <summary>
         /// Ends the current Epoch Group.
         /// </summary>
-        /// <param name="endTime">End time of the Epoch Group</param>
         /// <returns>The Epoch Group that was ended</returns>
-        IPersistentEpochGroup EndEpochGroup(DateTimeOffset endTime);
+        IPersistentEpochGroup EndEpochGroup();
 
         /// <summary>
         /// Begins a new Epoch Block, a logical group of consecutive Epochs produced by a single protocol run.

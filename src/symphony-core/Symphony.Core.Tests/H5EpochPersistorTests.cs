@@ -8,22 +8,16 @@ namespace Symphony.Core
 {
     class H5EpochPersistorTests
     {
-        const string TEST_FILE = "myCSharp.h5";
+        const string TEST_FILE = "test_experiment.h5";
         const string TEST_PURPOSE = "the test purpose here";
 
         private H5EpochPersistor persistor;
         private DateTimeOffset startTime;
-        private DateTimeOffset endTime;
 
         [SetUp]
         public void Setup()
         {
-            if (System.IO.File.Exists(TEST_FILE))
-                System.IO.File.Delete(TEST_FILE);
-
             startTime = DateTimeOffset.Now;
-            endTime = startTime.AddMinutes(55);
-
             persistor = H5EpochPersistor.Create(TEST_FILE, TEST_PURPOSE, startTime);
         }
 
@@ -32,12 +26,12 @@ namespace Symphony.Core
         {
             try
             {
-                persistor.Close(endTime);
+                persistor.Close(DateTimeOffset.Now);
             }
             finally
             {
-                //if (System.IO.File.Exists(TEST_FILE))
-                //    System.IO.File.Delete(TEST_FILE);
+                if (System.IO.File.Exists(TEST_FILE))
+                    System.IO.File.Delete(TEST_FILE);
             }
         }
 
@@ -157,7 +151,7 @@ namespace Symphony.Core
         [Test]
         public void ShouldAddSource()
         {
-            var label = "taco truck";
+            var label = "animal";
             var src = persistor.AddSource(label, null);
 
             Assert.AreEqual(label, src.Label);
@@ -184,7 +178,7 @@ namespace Symphony.Core
         [Test]
         public void ShouldAllowMultipleSourcesWithSameLabel()
         {
-            const string label = "Label";
+            const string label = "label";
 
             var s1 = persistor.AddSource(label, null);
             var s2 = persistor.AddSource(label, null);
@@ -240,10 +234,10 @@ namespace Symphony.Core
         public void ShouldNotAllowDeletingOpenEpochGroup()
         {
             var src = persistor.AddSource("label", null);
-            var grp1 = persistor.BeginEpochGroup("group1", src, DateTimeOffset.Now);
+            var grp1 = persistor.BeginEpochGroup("group1", src);
             Assert.Throws(typeof (InvalidOperationException), () => persistor.Delete(grp1));
 
-            var grp2 = persistor.BeginEpochGroup("group2", src, DateTimeOffset.Now);
+            var grp2 = persistor.BeginEpochGroup("group2", src);
             Assert.Throws(typeof(InvalidOperationException), () => persistor.Delete(grp1));
             Assert.Throws(typeof(InvalidOperationException), () => persistor.Delete(grp2));
         }
@@ -252,8 +246,8 @@ namespace Symphony.Core
         public void ShouldAllowDeletingClosedEpochGroup()
         {
             var src = persistor.AddSource("label", null);
-            var grp1 = persistor.BeginEpochGroup("group1", src, DateTimeOffset.Now);
-            persistor.EndEpochGroup(DateTimeOffset.Now);
+            var grp1 = persistor.BeginEpochGroup("group1", src);
+            persistor.EndEpochGroup();
             persistor.Delete(grp1);
             Assert.AreEqual(0, persistor.Experiment.EpochGroups.Count());
         }
@@ -262,7 +256,7 @@ namespace Symphony.Core
         public void ShouldSetEpochGroupEndTimeOnEnd()
         {
             var src = persistor.AddSource("label", null);
-            var grp = persistor.BeginEpochGroup("group", src, DateTimeOffset.Now);
+            var grp = persistor.BeginEpochGroup("group", src);
 
             var time = DateTimeOffset.Now;
             persistor.EndEpochGroup(time);
@@ -274,12 +268,12 @@ namespace Symphony.Core
         {
             var src = persistor.AddSource("label", null);
 
-            var top = persistor.BeginEpochGroup("top", src, DateTimeOffset.Now);
-            var mid1 = persistor.BeginEpochGroup("mid1", src, DateTimeOffset.Now);
-            var btm = persistor.BeginEpochGroup("btm", src, DateTimeOffset.Now);
-            persistor.EndEpochGroup(DateTimeOffset.Now);
-            persistor.EndEpochGroup(DateTimeOffset.Now);
-            var mid2 = persistor.BeginEpochGroup("mid2", src, DateTimeOffset.Now);
+            var top = persistor.BeginEpochGroup("top", src);
+            var mid1 = persistor.BeginEpochGroup("mid1", src);
+            var btm = persistor.BeginEpochGroup("btm", src);
+            persistor.EndEpochGroup();
+            persistor.EndEpochGroup();
+            var mid2 = persistor.BeginEpochGroup("mid2", src);
 
             CollectionAssert.AreEquivalent(new[] {top}, persistor.Experiment.EpochGroups);
             CollectionAssert.AreEquivalent(new[] {mid1, mid2}, top.EpochGroups);
@@ -308,7 +302,7 @@ namespace Symphony.Core
         public void ShouldAllowOnlyOneOpenEpochBlock()
         {
             var src = persistor.AddSource("label", null);
-            var grp = persistor.BeginEpochGroup("group", src, DateTimeOffset.Now);
+            var grp = persistor.BeginEpochGroup("group", src);
             var blk = persistor.BeginEpochBlock("id", DateTimeOffset.Now);
 
             Assert.Throws(typeof (InvalidOperationException),
@@ -319,7 +313,7 @@ namespace Symphony.Core
         public void ShouldSetEpochBlockEndTimeOnEnd()
         {
             var src = persistor.AddSource("label", null);
-            var grp = persistor.BeginEpochGroup("group", src, DateTimeOffset.Now);
+            var grp = persistor.BeginEpochGroup("group", src);
             var blk = persistor.BeginEpochBlock("id", DateTimeOffset.Now);
 
             var time = DateTimeOffset.Now;
@@ -335,8 +329,8 @@ namespace Symphony.Core
             var epoch = CreateTestEpoch(out dev1, out dev2);
 
             var src = persistor.AddSource("label", null);
-            var grp = persistor.BeginEpochGroup("group", src, DateTimeOffset.Now);
-            var blk = persistor.BeginEpochBlock(epoch.ProtocolID, DateTimeOffset.Now);
+            var grp = persistor.BeginEpochGroup("group", src);
+            var blk = persistor.BeginEpochBlock(epoch.ProtocolID, epoch.StartTime);
             
             var e = persistor.Serialize(epoch);
 
@@ -372,6 +366,61 @@ namespace Symphony.Core
             Assert.AreEqual(epoch.Responses[dev2].SampleRate, r2.SampleRate);
             CollectionAssert.AreEqual(epoch.Responses[dev2].Data, r2.Data);
             AssertConfigurationSpansEqual(epoch.Responses[dev2].DataConfigurationSpans, r2.ConfigurationSpans);
+        }
+
+        [Test]
+        public void ShouldNotAllowSerializingEpochToBlockWithDifferentProtocolId()
+        {
+            ExternalDeviceBase dev1;
+            ExternalDeviceBase dev2;
+            var epoch = CreateTestEpoch(out dev1, out dev2);
+
+            var src = persistor.AddSource("label", null);
+            var grp = persistor.BeginEpochGroup("group", src);
+            var blk = persistor.BeginEpochBlock("different.protocol.id", epoch.StartTime);
+
+            Assert.Throws(typeof (ArgumentException), () => persistor.Serialize(epoch));
+        }
+
+        [Test]
+        public void ShouldNotAllowSerializingEpochWithoutOpenEpochBlock()
+        {
+            ExternalDeviceBase dev1;
+            ExternalDeviceBase dev2;
+            var epoch = CreateTestEpoch(out dev1, out dev2);
+
+            Assert.Throws(typeof (InvalidOperationException), () => persistor.Serialize(epoch));
+
+            var src = persistor.AddSource("label", null);
+            var grp = persistor.BeginEpochGroup("group", src);
+            var blk = persistor.BeginEpochBlock(epoch.ProtocolID, DateTimeOffset.Now);
+            persistor.EndEpochBlock(DateTimeOffset.Now);
+
+            Assert.Throws(typeof(InvalidOperationException), () => persistor.Serialize(epoch));
+        }
+
+        [Test]
+        public void ShouldSetEndTimeOnAllOpenEntitiesOnClose()
+        {
+            var startTime = DateTimeOffset.Now;
+            var src = persistor.AddSource("label", null);
+            var grp1 = persistor.BeginEpochGroup("group1", src);
+            var grp2 = persistor.BeginEpochGroup("group2", src);
+            var blk = persistor.BeginEpochBlock("id", startTime);
+
+            var endTime = startTime.AddHours(1).AddMinutes(2).AddSeconds(55);
+            persistor.Close(endTime);
+
+            persistor = new H5EpochPersistor(TEST_FILE);
+            var exp = persistor.Experiment;
+            grp1 = exp.EpochGroups.First();
+            grp2 = grp1.EpochGroups.First();
+            blk = grp2.EpochBlocks.First();
+
+            Assert.AreEqual(endTime, exp.EndTime);
+            Assert.AreEqual(endTime, grp1.EndTime);
+            Assert.AreEqual(endTime, grp2.EndTime);
+            Assert.AreEqual(endTime, blk.EndTime);
         }
 
         private static void AssertConfigurationSpansEqual(IEnumerable<IConfigurationSpan> expected, IEnumerable<IConfigurationSpan> actual)

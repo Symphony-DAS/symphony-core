@@ -24,12 +24,16 @@ namespace Symphony.Core
         private readonly H5PersistentExperiment experiment;
         private readonly Stack<H5PersistentEpochGroup> openEpochGroups;
 
+        public static H5EpochPersistor Create(string filename, string purpose)
+        {
+            return Create(filename, purpose, DateTimeOffset.Now);
+        }
+
         /// <summary>
         /// Creates a new H5EpochPersistor with a new HDF5 file.
         /// </summary>
         /// <param name="filename">Desired HDF5 path</param>
         /// <param name="purpose">Experimental purpose for the root Experiment entity</param>
-        /// <param name="startTime">Start time for the root Experiment entity</param>
         /// <returns>The new Epoch Persistor</returns>
         public static H5EpochPersistor Create(string filename, string purpose, DateTimeOffset startTime)
         {
@@ -72,6 +76,11 @@ namespace Symphony.Core
             openEpochGroups = new Stack<H5PersistentEpochGroup>();
         }
 
+        public void Close()
+        {
+            Close(DateTimeOffset.Now);
+        }
+
         public void Close(DateTimeOffset endTime)
         {
             if (CurrentEpochBlock != null)
@@ -107,6 +116,11 @@ namespace Symphony.Core
             get { return openEpochGroups.Count == 0 ? null : openEpochGroups.Peek(); }
         }
 
+        public IPersistentEpochGroup BeginEpochGroup(string label, IPersistentSource source)
+        {
+            return BeginEpochGroup(label, source, DateTimeOffset.Now);
+        }
+
         public IPersistentEpochGroup BeginEpochGroup(string label, IPersistentSource source, DateTimeOffset startTime)
         {
             var epochGroup = CurrentEpochGroup == null
@@ -114,6 +128,11 @@ namespace Symphony.Core
                        : CurrentEpochGroup.InsertEpochGroup(label, (H5PersistentSource) source, startTime);
             openEpochGroups.Push(epochGroup);
             return epochGroup;
+        }
+
+        public IPersistentEpochGroup EndEpochGroup()
+        {
+            return EndEpochGroup(DateTimeOffset.Now);
         }
 
         public IPersistentEpochGroup EndEpochGroup(DateTimeOffset endTime)
@@ -666,25 +685,28 @@ namespace Symphony.Core
             var responsesGroup = group.AddGroup(ResponsesGroupName);
             var stimuliGroup = group.AddGroup(StimuliGroupName);
 
-            foreach (var kv in epoch.ProtocolParameters)
+            // ToList() everything before enumerating to guard against external collection modification
+            // causing exceptions during serialization
+
+            foreach (var kv in epoch.ProtocolParameters.ToList())
             {
                 parametersGroup.Attributes[kv.Key] = new H5Attribute(kv.Value);
             }
 
-            foreach (var kv in epoch.Responses)
+            foreach (var kv in epoch.Responses.ToList())
             {
                 var device = experiment.Device(kv.Key.Name, kv.Key.Manufacturer);
                 H5PersistentResponse.InsertResponse(responsesGroup, device, kv.Value);
             }
 
-            foreach (var kv in epoch.Stimuli)
+            foreach (var kv in epoch.Stimuli.ToList())
             {
                 var device = experiment.Device(kv.Key.Name, kv.Key.Manufacturer);
                 H5PersistentStimulus.InsertStimulus(stimuliGroup, device, kv.Value);
             }
 
             var e = new H5PersistentEpoch(group);
-            foreach (var keyword in epoch.Keywords)
+            foreach (var keyword in epoch.Keywords.ToList())
             {
                 e.AddKeyword(keyword);
             }
@@ -852,7 +874,7 @@ namespace Symphony.Core
 
             var parametersGroup = group.AddGroup(ParametersGroupName);
 
-            foreach (var kv in stimulus.Parameters)
+            foreach (var kv in stimulus.Parameters.ToList())
             {
                 parametersGroup.Attributes[kv.Key] = new H5Attribute(kv.Value);
             }
