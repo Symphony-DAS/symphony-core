@@ -63,15 +63,14 @@ namespace Symphony.Core
 
             file = new H5File(filename);
             if (!file.Attributes.ContainsKey(VersionKey))
-                throw new FileLoadException(
-                    "File does not have a version attribute. Are you sure this is a Symphony file?");
+                throw new FileLoadException("File does not have a version attribute. Are you sure this is a Symphony file?");
 
             Version = file.Attributes[VersionKey];
             if (Version != PersistenceVersion)
                 throw new FileLoadException("Version mismatch. This file may have been produced by an older version.");
 
             if (file.Groups.Count() != 1)
-                throw new FileLoadException("Expected a single top-level group");
+                throw new FileLoadException("Expected a single top-level group. Are you sure this is a Symphony file?");
 
             experiment = new H5PersistentExperiment(file.Groups.First());
             openEpochGroups = new Stack<H5PersistentEpochGroup>();
@@ -343,6 +342,11 @@ namespace Symphony.Core
 
         public static H5PersistentDevice InsertDevice(H5Group parent, H5PersistentExperiment experiment, string name, string manufacturer)
         {
+            if (string.IsNullOrEmpty(name))
+                throw new ArgumentException("Device name cannot be null or empty");
+            if (string.IsNullOrEmpty(manufacturer))
+                throw new ArgumentException("Device manufacturer cannot be null or empty");
+
             var group = InsertEntityGroup(parent, name);
 
             group.Attributes[NameKey] = name;
@@ -375,6 +379,9 @@ namespace Symphony.Core
 
         public static H5PersistentSource InsertSource(H5Group parent, H5PersistentExperiment experiment, string label)
         {
+            if (string.IsNullOrEmpty(label))
+                throw new ArgumentException("Source label cannot be null or empty");
+
             var group = InsertEntityGroup(parent, label);
 
             group.Attributes[LabelKey] = label;
@@ -575,6 +582,11 @@ namespace Symphony.Core
 
         public static H5PersistentEpochGroup InsertEpochGroup(H5Group parent, H5PersistentExperiment experiment, string label, H5PersistentSource source, DateTimeOffset startTime)
         {
+            if (string.IsNullOrEmpty(label))
+                throw new ArgumentException("Epoch group label cannot be null or empty");
+            if (source == null)
+                throw new ArgumentException("Epoch group source cannot be null");
+
             var group = InsertTimelineEntityGroup(parent, label, startTime);
 
             group.Attributes[LabelKey] = label;
@@ -644,6 +656,9 @@ namespace Symphony.Core
 
         public static H5PersistentEpochBlock InsertEpochBlock(H5Group parent, H5PersistentEpochGroup epochGroup, string protocolID, DateTimeOffset startTime)
         {
+            if (string.IsNullOrEmpty(protocolID))
+                throw new ArgumentException("Epoch block protocol id cannot be null or empty");
+
             var group = InsertTimelineEntityGroup(parent, protocolID, startTime);
 
             group.Attributes[ProtocolIDKey] = protocolID;
