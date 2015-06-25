@@ -290,10 +290,12 @@ namespace Symphony.Core
     }
 
     /// <summary>
-    /// Respresents a finite-duration epoch of the experiment time line. 
+    /// Represents a finite-duration epoch of the experiment time line. 
     /// </summary>
     public interface IPersistentEpoch : ITimelinePersistentEntity
     {
+        IEnumerable<IPersistentBackground> Backgrounds { get; } 
+
         /// <summary>
         /// The protocol parameters describing this Epoch.
         /// </summary>
@@ -310,13 +312,35 @@ namespace Symphony.Core
         IEnumerable<IPersistentStimulus> Stimuli { get; }
     }
 
+
+    /// <summary>
+    /// Represents a background in the absence of a stimulus
+    /// </summary>
+    public interface IPersistentBackground : IPersistentEntity
+    {
+        /// <summary>
+        /// The Device through which this Background was presented.
+        /// </summary>
+        IPersistentDevice Device { get; }
+
+        /// <summary>
+        /// The value of this Background.
+        /// </summary>
+        IMeasurement Value { get; }
+
+        /// <summary>
+        /// The sampling rate of this Background.
+        /// </summary>
+        IMeasurement SampleRate { get; }
+    }
+
     /// <summary>
     /// Interface for entities that describe I/O data.
     /// </summary>
     public interface IPersistentIOBase : IPersistentEntity
     {
         /// <summary>
-        /// The Device through which this object was presented or recorded.
+        /// The Device through which this entity was presented or recorded.
         /// </summary>
         IPersistentDevice Device { get; }
 

@@ -128,6 +128,14 @@ namespace Symphony.Core
             CollectionAssert.AreEquivalent(expected, experiment.Notes);
         }
 
+        //[Test]
+        //public void ShouldAddLongNote()
+        //{
+        //    var text = new string('*', 50);
+        //    var note = persistor.Experiment.AddNote(DateTimeOffset.Now, text);
+        //    Assert.AreEqual(text, note.Text);
+        //}
+
         [Test]
         public void ShouldAddDevice()
         {
@@ -375,9 +383,23 @@ namespace Symphony.Core
             Assert.AreEqual((DateTimeOffset) epoch.StartTime, e.StartTime);
             Assert.AreEqual((DateTimeOffset) epoch.StartTime + epoch.Duration, e.EndTime);
             CollectionAssert.AreEquivalent(epoch.ProtocolParameters, e.ProtocolParameters);
-            Assert.AreEqual(epoch.Responses.Count, e.Responses.Count());
-            Assert.AreEqual(epoch.Stimuli.Count, e.Stimuli.Count());
             CollectionAssert.AreEquivalent(epoch.Keywords, e.Keywords);
+
+            // Backgrounds
+            Assert.AreEqual(epoch.Backgrounds.Count, e.Backgrounds.Count());
+            foreach (var kv in epoch.Backgrounds)
+            {
+                var device = kv.Key;
+                var background = kv.Value;
+
+                var bk = e.Backgrounds.First(b => b.Device.Name == device.Name && b.Device.Manufacturer == device.Manufacturer);
+                
+                Assert.AreEqual(background.Value, bk.Value);
+                Assert.AreEqual(background.SampleRate, bk.SampleRate);
+            }
+
+            // Stimuli
+            Assert.AreEqual(epoch.Stimuli.Count, e.Stimuli.Count());
 
             var s1 = e.Stimuli.First(s => s.Device.Name == dev1.Name);
 
@@ -392,6 +414,9 @@ namespace Symphony.Core
             Assert.AreEqual(epoch.Stimuli[dev2].Units, s2.Units);
             CollectionAssert.AreEquivalent(epoch.Stimuli[dev2].Parameters, s2.Parameters);
             AssertConfigurationSpansEqual(epoch.Stimuli[dev2].OutputConfigurationSpans, s2.ConfigurationSpans);
+
+            // Responses
+            Assert.AreEqual(epoch.Responses.Count, e.Responses.Count());
 
             var r1 = e.Responses.First(r => r.Device.Name == dev1.Name);
 
