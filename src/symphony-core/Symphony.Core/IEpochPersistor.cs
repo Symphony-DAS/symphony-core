@@ -197,9 +197,14 @@ namespace Symphony.Core
         IEnumerable<IPersistentSource> Sources { get; }
 
         /// <summary>
-        /// The Epoch Groups associated with this Source.
+        /// The top-level Epoch Groups associated with this Source.
         /// </summary>
-        IEnumerable<IPersistentEpochGroup> EpochGroups { get; } 
+        IEnumerable<IPersistentEpochGroup> EpochGroups { get; }
+
+        /// <summary>
+        /// All Epoch Groups associated with this Source and all its children.
+        /// </summary>
+        IEnumerable<IPersistentEpochGroup> AllEpochGroups { get; } 
     }
 
     /// <summary>

@@ -374,7 +374,7 @@ namespace Symphony.Core
 
         public override void Delete()
         {
-            if (EpochGroups.Any())
+            if (AllEpochGroups.Any())
                 throw new InvalidOperationException("Cannot delete source with associated epoch groups");
             base.Delete();
         }
@@ -396,9 +396,14 @@ namespace Symphony.Core
             get { return epochGroupsGroup.Groups.Select(g => new H5PersistentEpochGroup(g)); }
         }
 
+        public IEnumerable<IPersistentEpochGroup> AllEpochGroups
+        {
+            get { return Sources.Aggregate(EpochGroups, (current, source) => current.Concat(source.AllEpochGroups)); }
+        }
+
         public void AddEpochGroup(H5PersistentEpochGroup epochGroup)
         {
-            Group.AddHardLink(epochGroup.Group.Name, epochGroup.Group);
+            epochGroupsGroup.AddHardLink(epochGroup.Group.Name, epochGroup.Group);
         }
 
         public void RemoveEpochGroup(H5PersistentEpochGroup epochGroup)
@@ -409,16 +414,16 @@ namespace Symphony.Core
 
     abstract class H5TimelinePersistentEntity : H5PersistentEntity, ITimelinePersistentEntity
     {
-        private const string StartTimeUtcTicksKey = "startTimeDotNetDateTimeOffsetUTCTicks";
-        private const string StartTimeOffsetHoursKey = "startTimeUTCOffsetHours";
-        private const string EndTimeUtcTicksKey = "endTimeDotNetDateTimeOffsetUTCTicks";
-        private const string EndTimeOffsetHoursKey = "endTimeUTCOffsetHours";
+        private const string StartTimeUtcTicksKey = "startTimeDotNetDateTimeOffsetTicks";
+        private const string StartTimeOffsetHoursKey = "startTimeOffsetHours";
+        private const string EndTimeUtcTicksKey = "endTimeDotNetDateTimeOffsetTicks";
+        private const string EndTimeOffsetHoursKey = "endTimeOffsetHours";
 
         protected static H5Group InsertTimelineEntityGroup(H5Group parent, string prefix, DateTimeOffset startTime)
         {
             var group = InsertEntityGroup(parent, prefix);
 
-            group.Attributes[StartTimeUtcTicksKey] = startTime.UtcTicks;
+            group.Attributes[StartTimeUtcTicksKey] = startTime.Ticks;
             group.Attributes[StartTimeOffsetHoursKey] = startTime.Offset.TotalHours;
 
             return group;
@@ -429,7 +434,7 @@ namespace Symphony.Core
         {
             var group = InsertTimelineEntityGroup(parent, prefix, startTime);
 
-            group.Attributes[EndTimeUtcTicksKey] = endTime.UtcTicks;
+            group.Attributes[EndTimeUtcTicksKey] = endTime.Ticks;
             group.Attributes[EndTimeOffsetHoursKey] = endTime.Offset.TotalHours;
 
             return group;
@@ -451,7 +456,7 @@ namespace Symphony.Core
 
         public void SetEndTime(DateTimeOffset time)
         {
-            Group.Attributes[EndTimeUtcTicksKey] = time.UtcTicks;
+            Group.Attributes[EndTimeUtcTicksKey] = time.Ticks;
             Group.Attributes[EndTimeOffsetHoursKey] = time.Offset.TotalHours;
             EndTime = time;
         }
@@ -496,6 +501,12 @@ namespace Symphony.Core
         public IEnumerable<IPersistentDevice> Devices
         {
             get { return devicesGroup.Groups.Select(g => new H5PersistentDevice(g)); }
+        }
+
+        public H5PersistentDevice Device(string name, string manufacture)
+        {
+            return (H5PersistentDevice) (Devices.FirstOrDefault(d => d.Name == name && d.Manufacturer == manufacture) ??
+                                         InsertDevice(name, manufacture));
         }
 
         public H5PersistentDevice InsertDevice(string name, string manufacturer)
@@ -547,7 +558,9 @@ namespace Symphony.Core
             group.AddGroup(EpochGroupsGroupName);
             group.AddGroup(EpochBlocksGroupName);
 
-            return new H5PersistentEpochGroup(group);
+            var g = new H5PersistentEpochGroup(group);
+            source.AddEpochGroup(g);
+            return g;
         }
 
         public H5PersistentEpochGroup(H5Group group) : base(group)
@@ -645,8 +658,7 @@ namespace Symphony.Core
         {
             if (epoch.ProtocolID != ProtocolID)
                 throw new ArgumentException("Epoch protocol id does not match epoch block protocol id");
-            if (epoch.ProtocolParameters != ProtocolParameters)
-                throw new ArgumentException("Epoch protocol parameters does not match epoch block protocol parameters");
+            // TODO: check that protocol parameters are identical
             return H5PersistentEpoch.InsertEpoch(epochsGroup, experiment, epoch);
         }
     }
@@ -662,23 +674,28 @@ namespace Symphony.Core
         public static H5PersistentEpoch InsertEpoch(H5Group parent, H5PersistentExperiment experiment, Epoch epoch)
         {
             var group = InsertTimelineEntityGroup(parent, "epoch", epoch.StartTime, (DateTimeOffset)epoch.StartTime + epoch.Duration);
-            
+
             var responsesGroup = group.AddGroup(ResponsesGroupName);
             var stimuliGroup = group.AddGroup(StimuliGroupName);
 
-            var devices = experiment.Devices.ToDictionary(d => d.Name, d => (H5PersistentDevice) d);
-
             foreach (var kv in epoch.Responses)
             {
-                H5PersistentResponse.InsertResponse(responsesGroup, devices[kv.Key.Name], kv.Value);
+                var device = experiment.Device(kv.Key.Name, kv.Key.Manufacturer);
+                H5PersistentResponse.InsertResponse(responsesGroup, device, kv.Value);
             }
 
             foreach (var kv in epoch.Stimuli)
             {
-                H5PersistentStimulus.InsertStimulus(stimuliGroup, devices[kv.Key.Name], kv.Value);
+                var device = experiment.Device(kv.Key.Name, kv.Key.Manufacturer);
+                H5PersistentStimulus.InsertStimulus(stimuliGroup, device, kv.Value);
             }
 
-            return new H5PersistentEpoch(group);
+            var e = new H5PersistentEpoch(group);
+            foreach (var keyword in epoch.Keywords)
+            {
+                e.AddKeyword(keyword);
+            }
+            return e;
         }
 
         public H5PersistentEpoch(H5Group group) : base(group)
@@ -704,6 +721,7 @@ namespace Symphony.Core
         private const string DeviceGroupName = "device";
         private const string DataConfigurationSpansGroupName = "dataConfigurationSpans";
         private const string SpanGroupPrefix = "span_";
+        private const string SpanIndexKey = "index";
         private const string SpanStartTimeKey = "startTimeSeconds";
         private const string SpanDurationKey = "timeSpanSeconds";
 
@@ -721,7 +739,8 @@ namespace Symphony.Core
             var totalTime = TimeSpan.Zero;
             foreach (var span in configSpans)
             {
-                var spanGroup = spansGroup.AddGroup(SpanGroupPrefix + i++);
+                var spanGroup = spansGroup.AddGroup(SpanGroupPrefix + i);
+                spanGroup.Attributes[SpanIndexKey] = i;
 
                 spanGroup.Attributes[SpanStartTimeKey] = totalTime.TotalSeconds;
                 totalTime += span.Time;
@@ -735,6 +754,8 @@ namespace Symphony.Core
                         nodeGroup.Attributes[kv.Key] = new H5Attribute(kv.Value);
                     }
                 }
+
+                i++;
             }
 
             return group;
@@ -757,6 +778,7 @@ namespace Symphony.Core
             get
             {
                 var spanGroups = dataConfigurationSpansGroup.Groups.ToList();
+                spanGroups.Sort((g1, g2) => ((uint) g1.Attributes[SpanIndexKey]).CompareTo(g2.Attributes[SpanIndexKey]));
                 foreach (var spanGroup in spanGroups)
                 {
                     TimeSpan duration = TimeSpan.FromSeconds(spanGroup.Attributes[SpanDurationKey]);

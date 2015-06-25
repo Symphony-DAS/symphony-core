@@ -21,7 +21,7 @@ namespace Symphony.Core
             if (System.IO.File.Exists(TEST_FILE))
                 System.IO.File.Delete(TEST_FILE);
 
-            startTime = new DateTimeOffset(2015, 6, 9, 10, 30, 50, TimeSpan.Zero);
+            startTime = DateTimeOffset.Now;
             endTime = startTime.AddMinutes(55);
 
             persistor = H5EpochPersistor.Create(TEST_FILE, TEST_PURPOSE, startTime);
@@ -54,6 +54,22 @@ namespace Symphony.Core
         }
 
         [Test]
+        public void ShouldSetExperimentEndTimeOnClose()
+        {
+            var time = DateTimeOffset.Now;
+            persistor.Close(time);
+            persistor = new H5EpochPersistor(TEST_FILE);
+            Assert.AreEqual(time, persistor.Experiment.EndTime);
+        }
+
+        [Test]
+        public void ShouldNotAllowDeletingExperiment()
+        {
+            var experiment = persistor.Experiment;
+            Assert.Throws(typeof (InvalidOperationException), () => persistor.Delete(experiment));
+        }
+
+        [Test]
         public void ShouldAddAndRemoveProperties()
         {
             var expected = new Dictionary<string, object>();
@@ -71,19 +87,6 @@ namespace Symphony.Core
             {
                 experiment.RemoveProperty(i.ToString());
                 expected.Remove(i.ToString());
-            }
-            CollectionAssert.AreEquivalent(expected, experiment.Properties);
-
-            persistor.Close(endTime);
-            persistor = new H5EpochPersistor(TEST_FILE);
-            experiment = persistor.Experiment;
-
-            CollectionAssert.AreEquivalent(expected, experiment.Properties);
-
-            foreach (var key in expected.Keys.ToList())
-            {
-                experiment.RemoveProperty(key);
-                expected.Remove(key);
             }
             CollectionAssert.AreEquivalent(expected, experiment.Properties);
         }
@@ -108,19 +111,6 @@ namespace Symphony.Core
                 expected.Remove(i.ToString());
             }
             CollectionAssert.AreEquivalent(expected, experiment.Keywords);
-
-            persistor.Close(endTime);
-            persistor = new H5EpochPersistor(TEST_FILE);
-            experiment = persistor.Experiment;
-
-            CollectionAssert.AreEquivalent(expected, experiment.Keywords);
-
-            foreach (var word in expected.ToList())
-            {
-                experiment.RemoveKeyword(word);
-                expected.Remove(word);
-            }
-            CollectionAssert.AreEquivalent(expected, experiment.Keywords);
         }
 
         [Test]
@@ -142,60 +132,355 @@ namespace Symphony.Core
                 expected.Add(n);
             }
             CollectionAssert.AreEquivalent(expected, experiment.Notes);
-
-            persistor.Close(endTime);
-            persistor = new H5EpochPersistor(TEST_FILE);
-            experiment = persistor.Experiment;
-
-            CollectionAssert.AreEquivalent(expected, experiment.Notes);
         }
 
         [Test]
-        public void ShouldAddAndDeleteDevices()
+        public void ShouldAddDevice()
         {
-            var expected = new HashSet<IPersistentDevice>();
+            var name = "axopatch";
+            var manufacturer = "axon";
+            var dev = persistor.AddDevice(name, manufacturer);
 
-            for (int i = 0; i < 10; i++)
-            {
-                string name = "dev" + i;
-                string manufacturer = "man" + i;
+            Assert.AreEqual(name, dev.Name);
+            Assert.AreEqual(manufacturer, dev.Manufacturer);
 
-                var d = persistor.AddDevice(name, manufacturer);
-                Assert.AreEqual(name, d.Name);
-                Assert.AreEqual(manufacturer, d.Manufacturer);
-
-                expected.Add(d);
-            }
-            CollectionAssert.AreEquivalent(expected, persistor.Experiment.Devices);
-
-            for (int i = 0; i < 5; i++)
-            {
-                var d = expected.First();
-                persistor.Delete(d);
-                expected.Remove(d);
-            }
-            CollectionAssert.AreEquivalent(expected, persistor.Experiment.Devices);
-
-            persistor.Close(endTime);
-            persistor = new H5EpochPersistor(TEST_FILE);
-
-            CollectionAssert.AreEquivalent(expected, persistor.Experiment.Devices);
+            CollectionAssert.AreEquivalent(new[] {dev}, persistor.Experiment.Devices);
         }
 
         [Test]
         public void ShouldNotAllowAddingDuplicateDevices()
         {
-            const string name = "Device";
-            const string manufacturer = "Manufacturer";
-
-            persistor.AddDevice(name, manufacturer);
-            Assert.Throws(typeof(ArgumentException), () => persistor.AddDevice(name, manufacturer));
+            persistor.AddDevice("device", "manufacturer");
+            Assert.Throws(typeof(ArgumentException), () => persistor.AddDevice("device", "manufacturer"));
         }
 
         [Test]
-        public void ShouldAddSources()
+        public void ShouldAddSource()
         {
+            var label = "taco truck";
+            var src = persistor.AddSource(label, null);
 
+            Assert.AreEqual(label, src.Label);
+            Assert.AreEqual(0, src.Sources.Count());
+            Assert.AreEqual(0, src.EpochGroups.Count());
+
+            CollectionAssert.AreEquivalent(new[] {src}, persistor.Experiment.Sources);
+        }
+
+        [Test]
+        public void ShouldNestSources()
+        {
+            var top = persistor.AddSource("top", null);
+            var mid1 = persistor.AddSource("mid1", top);
+            var btm = persistor.AddSource("btm", mid1);
+            var mid2 = persistor.AddSource("mid2", top);
+
+            CollectionAssert.AreEquivalent(new[] {top}, persistor.Experiment.Sources);
+            CollectionAssert.AreEquivalent(new[] {mid1, mid2}, top.Sources);
+            CollectionAssert.AreEquivalent(new[] {btm}, mid1.Sources);
+            Assert.AreEqual(0, mid2.Sources.Count());
+        }
+
+        [Test]
+        public void ShouldAllowMultipleSourcesWithSameLabel()
+        {
+            const string label = "Label";
+
+            var s1 = persistor.AddSource(label, null);
+            var s2 = persistor.AddSource(label, null);
+
+            Assert.AreNotEqual(s1, s2);
+            Assert.AreEqual(2, persistor.Experiment.Sources.Count());
+        }
+
+        [Test]
+        public void ShouldNotAllowDeletingSourceWithEpochGroup()
+        {
+            var src1 = persistor.AddSource("source1", null);
+            persistor.BeginEpochGroup("group1", src1, DateTimeOffset.Now);
+            Assert.Throws(typeof (InvalidOperationException), () => persistor.Delete(src1));
+
+            var src2 = persistor.AddSource("source2", null);
+            var src3 = persistor.AddSource("source3", src2);
+            persistor.BeginEpochGroup("group2", src3, DateTimeOffset.Now);
+            Assert.Throws(typeof (InvalidOperationException), () => persistor.Delete(src2));
+        }
+
+        [Test]
+        public void ShouldAllowDeletingSourceWithDeletedEpochGroup()
+        {
+            var src = persistor.AddSource("source", null);
+            var grp = persistor.BeginEpochGroup("group", src, DateTimeOffset.Now);
+            persistor.EndEpochGroup(DateTimeOffset.Now);
+
+            persistor.Delete(grp);
+            persistor.Delete(src);
+            Assert.AreEqual(0, persistor.Experiment.Sources.Count());
+        }
+
+        [Test]
+        public void ShouldBeginEpochGroup()
+        {
+            var label = "group";
+            var time = DateTimeOffset.Now;
+            var src = persistor.AddSource("label", null);
+            var grp = persistor.BeginEpochGroup(label, src, time);
+
+            Assert.AreEqual(label, grp.Label);
+            Assert.AreEqual(src, grp.Source);
+            Assert.AreEqual(time, grp.StartTime);
+            Assert.IsNull(grp.EndTime);
+            Assert.AreEqual(0, grp.EpochGroups.Count());
+            Assert.AreEqual(0, grp.EpochBlocks.Count());
+
+            CollectionAssert.AreEquivalent(new[] {grp}, persistor.Experiment.EpochGroups);
+        }
+
+        [Test]
+        public void ShouldNotAllowDeletingOpenEpochGroup()
+        {
+            var src = persistor.AddSource("label", null);
+            var grp1 = persistor.BeginEpochGroup("group1", src, DateTimeOffset.Now);
+            Assert.Throws(typeof (InvalidOperationException), () => persistor.Delete(grp1));
+
+            var grp2 = persistor.BeginEpochGroup("group2", src, DateTimeOffset.Now);
+            Assert.Throws(typeof(InvalidOperationException), () => persistor.Delete(grp1));
+            Assert.Throws(typeof(InvalidOperationException), () => persistor.Delete(grp2));
+        }
+
+        [Test]
+        public void ShouldAllowDeletingClosedEpochGroup()
+        {
+            var src = persistor.AddSource("label", null);
+            var grp1 = persistor.BeginEpochGroup("group1", src, DateTimeOffset.Now);
+            persistor.EndEpochGroup(DateTimeOffset.Now);
+            persistor.Delete(grp1);
+            Assert.AreEqual(0, persistor.Experiment.EpochGroups.Count());
+        }
+
+        [Test]
+        public void ShouldSetEpochGroupEndTimeOnEnd()
+        {
+            var src = persistor.AddSource("label", null);
+            var grp = persistor.BeginEpochGroup("group", src, DateTimeOffset.Now);
+
+            var time = DateTimeOffset.Now;
+            persistor.EndEpochGroup(time);
+            Assert.AreEqual(time, grp.EndTime);
+        }
+
+        [Test]
+        public void ShouldNestEpochGroups()
+        {
+            var src = persistor.AddSource("label", null);
+
+            var top = persistor.BeginEpochGroup("top", src, DateTimeOffset.Now);
+            var mid1 = persistor.BeginEpochGroup("mid1", src, DateTimeOffset.Now);
+            var btm = persistor.BeginEpochGroup("btm", src, DateTimeOffset.Now);
+            persistor.EndEpochGroup(DateTimeOffset.Now);
+            persistor.EndEpochGroup(DateTimeOffset.Now);
+            var mid2 = persistor.BeginEpochGroup("mid2", src, DateTimeOffset.Now);
+
+            CollectionAssert.AreEquivalent(new[] {top}, persistor.Experiment.EpochGroups);
+            CollectionAssert.AreEquivalent(new[] {mid1, mid2}, top.EpochGroups);
+            CollectionAssert.AreEquivalent(new[] {btm}, mid1.EpochGroups);
+            Assert.AreEqual(0, mid2.EpochGroups.Count());
+        }
+
+        [Test]
+        public void ShouldBeginEpochBlock()
+        {
+            var id = "protocol.id.here";
+            var parameters = new Dictionary<string, object>
+                {
+                    {"one", 1},
+                    {"two", "second"},
+                    {"three", 5.55}
+                };
+            var time = DateTimeOffset.Now;
+            var src = persistor.AddSource("label", null);
+            var grp = persistor.BeginEpochGroup("group", src, time);
+            var blk = persistor.BeginEpochBlock(id, parameters, time);
+
+            Assert.AreEqual(id, blk.ProtocolID);
+            CollectionAssert.AreEquivalent(parameters, blk.ProtocolParameters);
+            Assert.AreEqual(time, blk.StartTime);
+            Assert.IsNull(blk.EndTime);
+            Assert.AreEqual(0, blk.Epochs.Count());
+
+            CollectionAssert.AreEquivalent(new[] {blk}, grp.EpochBlocks);
+        }
+
+        [Test]
+        public void ShouldAllowOnlyOneOpenEpochBlock()
+        {
+            var src = persistor.AddSource("label", null);
+            var grp = persistor.BeginEpochGroup("group", src, DateTimeOffset.Now);
+            var blk = persistor.BeginEpochBlock("id", new Dictionary<string, object>(), DateTimeOffset.Now);
+
+            Assert.Throws(typeof (InvalidOperationException),
+                          () => persistor.BeginEpochBlock("id", new Dictionary<string, object>(), DateTimeOffset.Now));
+        }
+
+        [Test]
+        public void ShouldSetEpochBlockEndTimeOnEnd()
+        {
+            var src = persistor.AddSource("label", null);
+            var grp = persistor.BeginEpochGroup("group", src, DateTimeOffset.Now);
+            var blk = persistor.BeginEpochBlock("id", new Dictionary<string, object>(), DateTimeOffset.Now);
+
+            var time = DateTimeOffset.Now;
+            persistor.EndEpochBlock(time);
+            Assert.AreEqual(time, blk.EndTime);
+        }
+
+        [Test]
+        public void ShouldSerializeEpoch()
+        {
+            ExternalDeviceBase dev1;
+            ExternalDeviceBase dev2;
+            var epoch = CreateTestEpoch(out dev1, out dev2);
+
+            var src = persistor.AddSource("label", null);
+            var grp = persistor.BeginEpochGroup("group", src, DateTimeOffset.Now);
+            var blk = persistor.BeginEpochBlock(epoch.ProtocolID, epoch.ProtocolParameters, DateTimeOffset.Now);
+            
+            var e = persistor.Serialize(epoch);
+
+            Assert.AreEqual((DateTimeOffset) epoch.StartTime, e.StartTime);
+            Assert.AreEqual((DateTimeOffset) epoch.StartTime + epoch.Duration, e.EndTime);
+            Assert.AreEqual(epoch.Responses.Count, e.Responses.Count());
+            Assert.AreEqual(epoch.Stimuli.Count, e.Stimuli.Count());
+            CollectionAssert.AreEquivalent(epoch.Keywords, e.Keywords);
+
+            var s1 = e.Stimuli.First(s => s.Device.Name == dev1.Name);
+
+            Assert.AreEqual(epoch.Stimuli[dev1].StimulusID, s1.StimulusID);
+            Assert.AreEqual(epoch.Stimuli[dev1].Units, s1.Units);
+            CollectionAssert.AreEquivalent(epoch.Stimuli[dev1].Parameters, s1.Parameters);
+            AssertConfigurationSpansEqual(epoch.Stimuli[dev1].OutputConfigurationSpans, s1.ConfigurationSpans);
+
+            var s2 = e.Stimuli.First(s => s.Device.Name == dev2.Name);
+
+            Assert.AreEqual(epoch.Stimuli[dev2].StimulusID, s2.StimulusID);
+            Assert.AreEqual(epoch.Stimuli[dev2].Units, s2.Units);
+            CollectionAssert.AreEquivalent(epoch.Stimuli[dev2].Parameters, s2.Parameters);
+            AssertConfigurationSpansEqual(epoch.Stimuli[dev2].OutputConfigurationSpans, s2.ConfigurationSpans);
+
+            var r1 = e.Responses.First(r => r.Device.Name == dev1.Name);
+
+            Assert.AreEqual(epoch.Responses[dev1].SampleRate, r1.SampleRate);
+            CollectionAssert.AreEqual(epoch.Responses[dev1].Data, r1.Data);
+            AssertConfigurationSpansEqual(epoch.Responses[dev1].DataConfigurationSpans, r1.ConfigurationSpans);
+
+            var r2 = e.Responses.First(r => r.Device.Name == dev2.Name);
+
+            Assert.AreEqual(epoch.Responses[dev2].SampleRate, r2.SampleRate);
+            CollectionAssert.AreEqual(epoch.Responses[dev2].Data, r2.Data);
+            AssertConfigurationSpansEqual(epoch.Responses[dev2].DataConfigurationSpans, r2.ConfigurationSpans);
+        }
+
+        private static void AssertConfigurationSpansEqual(IEnumerable<IConfigurationSpan> expected, IEnumerable<IConfigurationSpan> actual)
+        {
+            var expectedSpans = expected.ToList();
+            var actualSpans = actual.ToList();
+            Assert.AreEqual(expectedSpans.Count, actualSpans.Count);
+
+            for (int i = 0; i < expectedSpans.Count; i++)
+            {
+                Assert.AreEqual(expectedSpans[i].Time, actualSpans[i].Time);
+
+                var expectedNodes = expectedSpans[i].Nodes.ToList();
+                var actualNodes = actualSpans[i].Nodes.ToList();
+                Assert.AreEqual(expectedNodes.Count, actualNodes.Count);
+
+                for (int j = 0; j < expectedNodes.Count; j++)
+                {
+                    Assert.AreEqual(expectedNodes[j].Name, actualNodes[j].Name);
+                    CollectionAssert.AreEquivalent(expectedNodes[j].Configuration, actualNodes[j].Configuration);
+                }
+            }
+        }
+
+        private static Epoch CreateTestEpoch(out ExternalDeviceBase dev1, out ExternalDeviceBase dev2)
+        {
+            dev1 = new UnitConvertingExternalDevice("dev1", "man1", new Measurement(0, "V"));
+            dev2 = new UnitConvertingExternalDevice("dev2", "man2", new Measurement(0, "V"));
+
+            var stream1 = new DAQInputStream("Stream1");
+            var stream2 = new DAQInputStream("Stream2");
+
+            var stimParameters = new Dictionary<string, object>();
+            stimParameters["param1"] = 1;
+            stimParameters["param2"] = 2;
+
+            var srate = new Measurement(1000, "Hz");
+
+            List<Measurement> samples =
+                Enumerable.Range(0, 10000).Select(i => new Measurement((decimal)Math.Sin((double)i / 100), "V")).ToList();
+            var stimData = new OutputData(samples, srate, false);
+
+            var stim1 = new RenderedStimulus("RenderedStimulus", stimParameters, stimData);
+            var stim2 = new RenderedStimulus("RenderedStimulus", stimParameters, stimData);
+
+            var protocolParameters = new Dictionary<string, object>
+                {
+                    {"one", 1},
+                    {"two", "second"},
+                    {"three", 5.55}
+                };
+
+            var epoch = new TestEpoch("protocol.banana", protocolParameters);
+            epoch.Stimuli[dev1] = stim1;
+            epoch.Stimuli[dev2] = stim2;
+
+            DateTimeOffset start = DateTimeOffset.Now;
+            epoch.SetStartTime(Maybe<DateTimeOffset>.Yes(start));
+
+            epoch.Backgrounds[dev1] = new Background(new Measurement(0, "V"), new Measurement(1000, "Hz"));
+            epoch.Backgrounds[dev2] = new Background(new Measurement(1, "V"), new Measurement(1000, "Hz"));
+
+            epoch.Responses[dev1] = new Response();
+            epoch.Responses[dev2] = new Response();
+
+            var streamConfig = new Dictionary<string, object>();
+            streamConfig["configParam1"] = 1;
+
+            var devConfig = new Dictionary<string, object>();
+            devConfig["configParam2"] = 2;
+
+            IInputData responseData1 = new InputData(samples, srate, start)
+                .DataWithStreamConfiguration(stream1, streamConfig)
+                .DataWithExternalDeviceConfiguration(dev1, devConfig);
+            IInputData responseData2 = new InputData(samples, srate, start)
+                .DataWithStreamConfiguration(stream2, streamConfig)
+                .DataWithExternalDeviceConfiguration(dev2, devConfig);
+
+            epoch.Responses[dev1].AppendData(responseData1);
+            epoch.Responses[dev1].AppendData(responseData2);
+            epoch.Responses[dev2].AppendData(responseData2);
+
+            epoch.Keywords.Add("word1");
+            epoch.Keywords.Add("word2");
+
+            return epoch;
+        }
+
+        private class TestEpoch : Epoch
+        {
+            public TestEpoch(string protocolID, IDictionary<string, object> parameters)
+                : base(protocolID, parameters)
+            {
+            }
+
+            public override Maybe<DateTimeOffset> StartTime { get { return _startTime; } }
+
+            private Maybe<DateTimeOffset> _startTime;
+
+            public void SetStartTime(Maybe<DateTimeOffset> t)
+            {
+                _startTime = t;
+            }
         }
     }
 }
