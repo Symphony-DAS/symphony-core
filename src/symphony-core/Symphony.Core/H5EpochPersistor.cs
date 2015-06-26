@@ -20,9 +20,9 @@ namespace Symphony.Core
         private const string VersionKey = "version";
         private const uint PersistenceVersion = 2;
 
-        private readonly H5File file;
-        private readonly H5PersistentExperiment experiment;
-        private readonly Stack<H5PersistentEpochGroup> openEpochGroups;
+        private readonly H5File _file;
+        private readonly H5PersistentExperiment _experiment;
+        private readonly Stack<H5PersistentEpochGroup> _openEpochGroups;
 
         public static H5EpochPersistor Create(string filename, string purpose)
         {
@@ -61,19 +61,19 @@ namespace Symphony.Core
             if (!File.Exists(filename))
                 throw new IOException("File does not exist");
 
-            file = new H5File(filename);
-            if (!file.Attributes.ContainsKey(VersionKey))
+            _file = new H5File(filename);
+            if (!_file.Attributes.ContainsKey(VersionKey))
                 throw new FileLoadException("File does not have a version attribute. Are you sure this is a Symphony file?");
 
-            Version = file.Attributes[VersionKey];
+            Version = _file.Attributes[VersionKey];
             if (Version != PersistenceVersion)
                 throw new FileLoadException("Version mismatch. This file may have been produced by an older version.");
 
-            if (file.Groups.Count() != 1)
+            if (_file.Groups.Count() != 1)
                 throw new FileLoadException("Expected a single top-level group. Are you sure this is a Symphony file?");
 
-            experiment = new H5PersistentExperiment(file.Groups.First());
-            openEpochGroups = new Stack<H5PersistentEpochGroup>();
+            _experiment = new H5PersistentExperiment(_file.Groups.First());
+            _openEpochGroups = new Stack<H5PersistentEpochGroup>();
         }
 
         public void Close()
@@ -91,29 +91,29 @@ namespace Symphony.Core
             {
                 EndEpochGroup(endTime);
             }
-            experiment.SetEndTime(endTime);
-            file.Close();
+            _experiment.SetEndTime(endTime);
+            _file.Close();
         }
 
         public uint Version { get; private set; }
 
-        public IPersistentExperiment Experiment { get { return experiment; } }
+        public IPersistentExperiment Experiment { get { return _experiment; } }
 
         public IPersistentDevice AddDevice(string name, string manufacturer)
         {
-            return experiment.InsertDevice(name, manufacturer);
+            return _experiment.InsertDevice(name, manufacturer);
         }
 
         public IPersistentSource AddSource(string label, IPersistentSource parent)
         {
             return parent == null
-                       ? experiment.InsertSource(label)
+                       ? _experiment.InsertSource(label)
                        : ((H5PersistentSource) parent).InsertSource(label);
         }
 
         private H5PersistentEpochGroup CurrentEpochGroup
         {
-            get { return openEpochGroups.Count == 0 ? null : openEpochGroups.Peek(); }
+            get { return _openEpochGroups.Count == 0 ? null : _openEpochGroups.Peek(); }
         }
 
         public IPersistentEpochGroup BeginEpochGroup(string label, IPersistentSource source)
@@ -124,9 +124,9 @@ namespace Symphony.Core
         public IPersistentEpochGroup BeginEpochGroup(string label, IPersistentSource source, DateTimeOffset startTime)
         {
             var epochGroup = CurrentEpochGroup == null
-                       ? experiment.InsertEpochGroup(label, (H5PersistentSource) source, startTime)
+                       ? _experiment.InsertEpochGroup(label, (H5PersistentSource) source, startTime)
                        : CurrentEpochGroup.InsertEpochGroup(label, (H5PersistentSource) source, startTime);
-            openEpochGroups.Push(epochGroup);
+            _openEpochGroups.Push(epochGroup);
             return epochGroup;
         }
 
@@ -142,7 +142,7 @@ namespace Symphony.Core
             if (CurrentEpochBlock != null)
                 throw new InvalidOperationException("There is an open epoch block");
             CurrentEpochGroup.SetEndTime(endTime);
-            return openEpochGroups.Pop();
+            return _openEpochGroups.Pop();
         }
 
         private H5PersistentEpochBlock CurrentEpochBlock { get; set; }
@@ -176,9 +176,9 @@ namespace Symphony.Core
 
         public void Delete(IPersistentEntity entity)
         {
-            if (entity.Equals(experiment))
+            if (entity.Equals(_experiment))
                 throw new InvalidOperationException("You cannot delete the experiment");
-            if (openEpochGroups.Contains(entity))
+            if (_openEpochGroups.Contains(entity))
                 throw new InvalidOperationException("You cannot delete an open epoch group");
             if (entity.Equals(CurrentEpochBlock))
                 throw new InvalidOperationException("You cannot delete an open epoch block");
@@ -201,8 +201,8 @@ namespace Symphony.Core
         private const string PropertiesGroupName = "properties";
         private const string NotesDatasetName = "notes";
 
-        private H5Group propertiesGroup;
-        private H5Dataset notesDataset;
+        private H5Group _propertiesGroup;
+        private H5Dataset _notesDataset;
 
         protected static H5Group InsertEntityGroup(H5Group parent, string name)
         {
@@ -219,8 +219,8 @@ namespace Symphony.Core
             Group = group;
             UUID = new Guid(group.Attributes[UUIDKey]);
 
-            propertiesGroup = group.Groups.FirstOrDefault(g => g.Name == PropertiesGroupName);
-            notesDataset = group.Datasets.FirstOrDefault(ds => ds.Name == NotesDatasetName);
+            _propertiesGroup = group.Groups.FirstOrDefault(g => g.Name == PropertiesGroupName);
+            _notesDataset = group.Datasets.FirstOrDefault(ds => ds.Name == NotesDatasetName);
         }
 
         // The HDF5 group representing the persistent entity.
@@ -237,7 +237,7 @@ namespace Symphony.Core
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
-            if (obj.GetType() != this.GetType()) return false;
+            if (obj.GetType() != GetType()) return false;
             return Equals((H5PersistentEntity) obj);
         }
 
@@ -255,24 +255,24 @@ namespace Symphony.Core
         { 
             get
             {
-                return propertiesGroup == null
+                return _propertiesGroup == null
                            ? Enumerable.Empty<KeyValuePair<string, object>>()
-                           : propertiesGroup.Attributes.Select(a => new KeyValuePair<string, object>(a.Name, a.GetValue()));
+                           : _propertiesGroup.Attributes.Select(a => new KeyValuePair<string, object>(a.Name, a.GetValue()));
             } 
         }
 
         public void AddProperty(string key, object value)
         {
-            if (propertiesGroup == null)
+            if (_propertiesGroup == null)
             {
-                propertiesGroup = Group.AddGroup(PropertiesGroupName);
+                _propertiesGroup = Group.AddGroup(PropertiesGroupName);
             }
-            propertiesGroup.Attributes[key] = new H5Attribute(value);
+            _propertiesGroup.Attributes[key] = new H5Attribute(value);
         }
 
         public bool RemoveProperty(string key)
         {
-            return propertiesGroup != null && propertiesGroup.Attributes.Remove(key);
+            return _propertiesGroup != null && _propertiesGroup.Attributes.Remove(key);
         }
 
         public IEnumerable<string> Keywords
@@ -311,9 +311,9 @@ namespace Symphony.Core
         {
             get
             {
-                return notesDataset == null
+                return _notesDataset == null
                            ? Enumerable.Empty<INote>()
-                           : notesDataset.GetData<H5Map.NoteT>().Select(H5Map.Convert);
+                           : _notesDataset.GetData<H5Map.NoteT>().Select(H5Map.Convert);
             }
         }
 
@@ -324,16 +324,16 @@ namespace Symphony.Core
 
         public INote AddNote(INote note)
         {
-            if (notesDataset == null)
+            if (_notesDataset == null)
             {
-                notesDataset = Group.AddDataset(NotesDatasetName, H5Map.GetNoteType(Group.File), new[] {0L}, new[] {-1L}, new[] {64L});
+                _notesDataset = Group.AddDataset(NotesDatasetName, H5Map.GetNoteType(Group.File), new[] {0L}, new[] {-1L}, new[] {64L});
             }
-            long n = notesDataset.NumberOfElements;
-            notesDataset.Extend(new[] {n + 1});
+            long n = _notesDataset.NumberOfElements;
+            _notesDataset.Extend(new[] {n + 1});
             var nt = H5Map.Convert(note);
             try
             {
-                notesDataset.SetData(new[] {nt}, new[] {n}, new[] {1L});
+                _notesDataset.SetData(new[] {nt}, new[] {n}, new[] {1L});
             }
             finally
             {
@@ -365,6 +365,7 @@ namespace Symphony.Core
 
         public H5PersistentDevice(H5Group group, H5PersistentExperiment experiment) : base(group)
         {
+            Experiment = experiment;
             Name = group.Attributes[NameKey];
             Manufacturer = group.Attributes[ManufacturerKey];
         }
@@ -382,8 +383,8 @@ namespace Symphony.Core
         private const string SourcesGroupName = "sources";
         private const string EpochGroupsGroupName = "epochGroups";
 
-        private readonly H5Group sourcesGroup;
-        private readonly H5Group epochGroupsGroup;
+        private readonly H5Group _sourcesGroup;
+        private readonly H5Group _epochGroupsGroup;
 
         public static H5PersistentSource InsertSource(H5Group parent, H5PersistentExperiment experiment, string label)
         {
@@ -406,8 +407,8 @@ namespace Symphony.Core
             Label = group.Attributes[LabelKey];
             
             var subGroups = Group.Groups.ToList();
-            sourcesGroup = subGroups.First(g => g.Name == SourcesGroupName);
-            epochGroupsGroup = subGroups.First(g => g.Name == EpochGroupsGroupName);
+            _sourcesGroup = subGroups.First(g => g.Name == SourcesGroupName);
+            _epochGroupsGroup = subGroups.First(g => g.Name == EpochGroupsGroupName);
         }
 
         public override void Delete()
@@ -423,17 +424,17 @@ namespace Symphony.Core
 
         public IEnumerable<IPersistentSource> Sources
         {
-            get { return sourcesGroup.Groups.Select(g => new H5PersistentSource(g, Experiment)); }
+            get { return _sourcesGroup.Groups.Select(g => new H5PersistentSource(g, Experiment)); }
         }
 
         public H5PersistentSource InsertSource(string label)
         {
-            return InsertSource(sourcesGroup, Experiment, label);
+            return InsertSource(_sourcesGroup, Experiment, label);
         }
 
         public IEnumerable<IPersistentEpochGroup> EpochGroups
         {
-            get { return epochGroupsGroup.Groups.Select(g => new H5PersistentEpochGroup(g, Experiment)); }
+            get { return _epochGroupsGroup.Groups.Select(g => new H5PersistentEpochGroup(g, Experiment)); }
         }
 
         public IEnumerable<IPersistentEpochGroup> AllEpochGroups
@@ -443,27 +444,27 @@ namespace Symphony.Core
 
         public void AddEpochGroup(H5PersistentEpochGroup epochGroup)
         {
-            epochGroupsGroup.AddHardLink(epochGroup.Group.Name, epochGroup.Group);
+            _epochGroupsGroup.AddHardLink(epochGroup.Group.Name, epochGroup.Group);
         }
 
         public void RemoveEpochGroup(H5PersistentEpochGroup epochGroup)
         {
-            epochGroupsGroup.Groups.First(g => g.Name == epochGroup.Group.Name).Delete();
+            _epochGroupsGroup.Groups.First(g => g.Name == epochGroup.Group.Name).Delete();
         }
     }
 
     abstract class H5TimelinePersistentEntity : H5PersistentEntity, ITimelinePersistentEntity
     {
-        private const string StartTimeUtcTicksKey = "startTimeDotNetDateTimeOffsetTicks";
-        private const string StartTimeOffsetHoursKey = "startTimeOffsetHours";
-        private const string EndTimeUtcTicksKey = "endTimeDotNetDateTimeOffsetTicks";
-        private const string EndTimeOffsetHoursKey = "endTimeOffsetHours";
+        private const string StartTimeTicksKey = "startTimeDotNetDateTimeOffsetTicks";
+        private const string StartTimeOffsetHoursKey = "startTimeDotNetDateTimeOffsetOffsetHours";
+        private const string EndTimeTicksKey = "endTimeDotNetDateTimeOffsetTicks";
+        private const string EndTimeOffsetHoursKey = "endTimeDotNetDateTimeOffsetOffsetHours";
 
         protected static H5Group InsertTimelineEntityGroup(H5Group parent, string prefix, DateTimeOffset startTime)
         {
             var group = InsertEntityGroup(parent, prefix);
 
-            group.Attributes[StartTimeUtcTicksKey] = startTime.Ticks;
+            group.Attributes[StartTimeTicksKey] = startTime.Ticks;
             group.Attributes[StartTimeOffsetHoursKey] = startTime.Offset.TotalHours;
 
             return group;
@@ -474,7 +475,7 @@ namespace Symphony.Core
         {
             var group = InsertTimelineEntityGroup(parent, prefix, startTime);
 
-            group.Attributes[EndTimeUtcTicksKey] = endTime.Ticks;
+            group.Attributes[EndTimeTicksKey] = endTime.Ticks;
             group.Attributes[EndTimeOffsetHoursKey] = endTime.Offset.TotalHours;
 
             return group;
@@ -483,10 +484,10 @@ namespace Symphony.Core
         protected H5TimelinePersistentEntity(H5Group group) : base(group)
         {
             var attr = group.Attributes;
-            StartTime = new DateTimeOffset(attr[StartTimeUtcTicksKey], TimeSpan.FromHours(attr[StartTimeOffsetHoursKey]));
-            if (attr.ContainsKey(EndTimeUtcTicksKey) && attr.ContainsKey(EndTimeOffsetHoursKey))
+            StartTime = new DateTimeOffset(attr[StartTimeTicksKey], TimeSpan.FromHours(attr[StartTimeOffsetHoursKey]));
+            if (attr.ContainsKey(EndTimeTicksKey) && attr.ContainsKey(EndTimeOffsetHoursKey))
             {
-                EndTime = new DateTimeOffset(attr[EndTimeUtcTicksKey], TimeSpan.FromHours(attr[EndTimeOffsetHoursKey]));
+                EndTime = new DateTimeOffset(attr[EndTimeTicksKey], TimeSpan.FromHours(attr[EndTimeOffsetHoursKey]));
             }
         }
 
@@ -496,7 +497,7 @@ namespace Symphony.Core
 
         public void SetEndTime(DateTimeOffset time)
         {
-            Group.Attributes[EndTimeUtcTicksKey] = time.Ticks;
+            Group.Attributes[EndTimeTicksKey] = time.Ticks;
             Group.Attributes[EndTimeOffsetHoursKey] = time.Offset.TotalHours;
             EndTime = time;
         }
@@ -509,9 +510,9 @@ namespace Symphony.Core
         private const string SourcesGroupName = "sources";
         private const string EpochGroupsGroupName = "epochGroups";
 
-        private readonly H5Group devicesGroup;
-        private readonly H5Group sourcesGroup;
-        private readonly H5Group epochGroupsGroup;
+        private readonly H5Group _devicesGroup;
+        private readonly H5Group _sourcesGroup;
+        private readonly H5Group _epochGroupsGroup;
 
         public static H5PersistentExperiment InsertExperiment(H5Group parent, string purpose, DateTimeOffset startTime)
         {
@@ -531,16 +532,16 @@ namespace Symphony.Core
             Purpose = group.Attributes[PurposeKey];
 
             var subGroups = group.Groups.ToList();
-            devicesGroup = subGroups.First(g => g.Name == DevicesGroupName);
-            sourcesGroup = subGroups.First(g => g.Name == SourcesGroupName);
-            epochGroupsGroup = subGroups.First(g => g.Name == EpochGroupsGroupName);
+            _devicesGroup = subGroups.First(g => g.Name == DevicesGroupName);
+            _sourcesGroup = subGroups.First(g => g.Name == SourcesGroupName);
+            _epochGroupsGroup = subGroups.First(g => g.Name == EpochGroupsGroupName);
         }
 
         public string Purpose { get; private set; }
 
         public IEnumerable<IPersistentDevice> Devices
         {
-            get { return devicesGroup.Groups.Select(g => new H5PersistentDevice(g, this)); }
+            get { return _devicesGroup.Groups.Select(g => new H5PersistentDevice(g, this)); }
         }
 
         public H5PersistentDevice Device(string name, string manufacture)
@@ -553,27 +554,27 @@ namespace Symphony.Core
         {
             if (Devices.Any(d => d.Name == name && d.Manufacturer == manufacturer))
                 throw new ArgumentException("Device already exists");
-            return H5PersistentDevice.InsertDevice(devicesGroup, this, name, manufacturer);
+            return H5PersistentDevice.InsertDevice(_devicesGroup, this, name, manufacturer);
         }
 
         public IEnumerable<IPersistentSource> Sources
         {
-            get { return sourcesGroup.Groups.Select(g => new H5PersistentSource(g, this)); }
+            get { return _sourcesGroup.Groups.Select(g => new H5PersistentSource(g, this)); }
         }
 
         public H5PersistentSource InsertSource(string label)
         {
-            return H5PersistentSource.InsertSource(sourcesGroup, this, label);
+            return H5PersistentSource.InsertSource(_sourcesGroup, this, label);
         }
 
         public IEnumerable<IPersistentEpochGroup> EpochGroups
         {
-            get { return epochGroupsGroup.Groups.Select(g => new H5PersistentEpochGroup(g, this)); }
+            get { return _epochGroupsGroup.Groups.Select(g => new H5PersistentEpochGroup(g, this)); }
         }
 
         public H5PersistentEpochGroup InsertEpochGroup(string label, H5PersistentSource source, DateTimeOffset startTime)
         {
-            return H5PersistentEpochGroup.InsertEpochGroup(epochGroupsGroup, this, label, source, startTime);
+            return H5PersistentEpochGroup.InsertEpochGroup(_epochGroupsGroup, this, label, source, startTime);
         }
     }
 
@@ -584,9 +585,9 @@ namespace Symphony.Core
         private const string EpochGroupsGroupName = "epochGroups";
         private const string EpochBlocksGroupName = "epochBlocks";
         
-        private readonly H5Group sourceGroup;
-        private readonly H5Group epochGroupsGroup;
-        private readonly H5Group epochBlocksGroup;
+        private readonly H5Group _sourceGroup;
+        private readonly H5Group _epochGroupsGroup;
+        private readonly H5Group _epochBlocksGroup;
 
         public static H5PersistentEpochGroup InsertEpochGroup(H5Group parent, H5PersistentExperiment experiment, string label, H5PersistentSource source, DateTimeOffset startTime)
         {
@@ -614,9 +615,9 @@ namespace Symphony.Core
             Label = group.Attributes[LabelKey];
 
             var subGroups = group.Groups.ToList();
-            sourceGroup = subGroups.First(g => g.Name == SourceGroupName);
-            epochGroupsGroup = subGroups.First(g => g.Name == EpochGroupsGroupName);
-            epochBlocksGroup = subGroups.First(g => g.Name == EpochBlocksGroupName);
+            _sourceGroup = subGroups.First(g => g.Name == SourceGroupName);
+            _epochGroupsGroup = subGroups.First(g => g.Name == EpochGroupsGroupName);
+            _epochBlocksGroup = subGroups.First(g => g.Name == EpochBlocksGroupName);
         }
 
         public override void Delete()
@@ -631,27 +632,27 @@ namespace Symphony.Core
 
         public IPersistentSource Source
         {
-            get { return new H5PersistentSource(sourceGroup, Experiment); }
+            get { return new H5PersistentSource(_sourceGroup, Experiment); }
         }
 
         public IEnumerable<IPersistentEpochGroup> EpochGroups
         {
-            get { return epochGroupsGroup.Groups.Select(g => new H5PersistentEpochGroup(g, Experiment)); }
+            get { return _epochGroupsGroup.Groups.Select(g => new H5PersistentEpochGroup(g, Experiment)); }
         }
 
         public H5PersistentEpochGroup InsertEpochGroup(string label, H5PersistentSource source, DateTimeOffset startTime)
         {
-            return InsertEpochGroup(epochGroupsGroup, Experiment, label, source, startTime);
+            return InsertEpochGroup(_epochGroupsGroup, Experiment, label, source, startTime);
         }
 
         public IEnumerable<IPersistentEpochBlock> EpochBlocks
         {
-            get { return epochBlocksGroup.Groups.Select(g => new H5PersistentEpochBlock(g, this)); }
+            get { return _epochBlocksGroup.Groups.Select(g => new H5PersistentEpochBlock(g, this)); }
         }
 
         public H5PersistentEpochBlock InsertEpochBlock(string protocolID, DateTimeOffset startTime)
         {
-            return H5PersistentEpochBlock.InsertEpochBlock(epochBlocksGroup, this, protocolID, startTime);
+            return H5PersistentEpochBlock.InsertEpochBlock(_epochBlocksGroup, this, protocolID, startTime);
         }
     }
 
@@ -660,7 +661,7 @@ namespace Symphony.Core
         private const string ProtocolIDKey = "protocolID";
         private const string EpochsGroupName = "epochs";
 
-        private readonly H5Group epochsGroup;
+        private readonly H5Group _epochsGroup;
 
         public static H5PersistentEpochBlock InsertEpochBlock(H5Group parent, H5PersistentEpochGroup epochGroup, string protocolID, DateTimeOffset startTime)
         {
@@ -682,7 +683,7 @@ namespace Symphony.Core
             ProtocolID = group.Attributes[ProtocolIDKey];
 
             var subGroups = group.Groups.ToList();
-            epochsGroup = subGroups.First(g => g.Name == EpochsGroupName);
+            _epochsGroup = subGroups.First(g => g.Name == EpochsGroupName);
         }
 
         public H5PersistentEpochGroup EpochGroup { get; private set; }
@@ -691,14 +692,14 @@ namespace Symphony.Core
 
         public IEnumerable<IPersistentEpoch> Epochs
         {
-            get { return epochsGroup.Groups.Select(g => new H5PersistentEpoch(g, this)); }
+            get { return _epochsGroup.Groups.Select(g => new H5PersistentEpoch(g, this)); }
         }
 
         public H5PersistentEpoch InsertEpoch(Epoch epoch)
         {
             if (epoch.ProtocolID != ProtocolID)
                 throw new ArgumentException("Epoch protocol id does not match epoch block protocol id");
-            return H5PersistentEpoch.InsertEpoch(epochsGroup, this, epoch);
+            return H5PersistentEpoch.InsertEpoch(_epochsGroup, this, epoch);
         }
     }
 
@@ -709,10 +710,10 @@ namespace Symphony.Core
         private const string ResponsesGroupName = "responses";
         private const string StimuliGroupName = "stimuli";
 
-        private readonly H5Group backgroundGroup;
-        private readonly H5Group protocolParametersGroup;
-        private readonly H5Group responsesGroup;
-        private readonly H5Group stimuliGroup;
+        private readonly H5Group _backgroundGroup;
+        private readonly H5Group _protocolParametersGroup;
+        private readonly H5Group _responsesGroup;
+        private readonly H5Group _stimuliGroup;
 
         public static H5PersistentEpoch InsertEpoch(H5Group parent, H5PersistentEpochBlock block, Epoch epoch)
         {
@@ -764,32 +765,32 @@ namespace Symphony.Core
             EpochBlock = block;
 
             var subGroups = group.Groups.ToList();
-            backgroundGroup = subGroups.First(g => g.Name == BackgroundsGroupName);
-            protocolParametersGroup = subGroups.First(g => g.Name == ProtocolParametersGroupName);
-            responsesGroup = subGroups.First(g => g.Name == ResponsesGroupName);
-            stimuliGroup = subGroups.First(g => g.Name == StimuliGroupName);
+            _backgroundGroup = subGroups.First(g => g.Name == BackgroundsGroupName);
+            _protocolParametersGroup = subGroups.First(g => g.Name == ProtocolParametersGroupName);
+            _responsesGroup = subGroups.First(g => g.Name == ResponsesGroupName);
+            _stimuliGroup = subGroups.First(g => g.Name == StimuliGroupName);
         }
 
         public H5PersistentEpochBlock EpochBlock { get; private set; }
 
         public IEnumerable<IPersistentBackground> Backgrounds
         {
-            get { return backgroundGroup.Groups.Select(g => new H5PersistentBackground(g, this)); }
+            get { return _backgroundGroup.Groups.Select(g => new H5PersistentBackground(g, this)); }
         }
 
         public IEnumerable<KeyValuePair<string, object>> ProtocolParameters
         {
-            get { return protocolParametersGroup.Attributes.Select(a => new KeyValuePair<string, object>(a.Name, a.GetValue())); }
+            get { return _protocolParametersGroup.Attributes.Select(a => new KeyValuePair<string, object>(a.Name, a.GetValue())); }
         }
 
         public IEnumerable<IPersistentResponse> Responses
         {
-            get { return responsesGroup.Groups.Select(g => new H5PersistentResponse(g, this)); }
+            get { return _responsesGroup.Groups.Select(g => new H5PersistentResponse(g, this)); }
         }
 
         public IEnumerable<IPersistentStimulus> Stimuli
         {
-            get { return stimuliGroup.Groups.Select(g => new H5PersistentStimulus(g, this)); }
+            get { return _stimuliGroup.Groups.Select(g => new H5PersistentStimulus(g, this)); }
         }
     }
 
@@ -801,7 +802,7 @@ namespace Symphony.Core
         private const string SampleRateUnitsKey = "sampleRateUnits";
         private const string DeviceGroupName = "device";
 
-        private readonly H5Group deviceGroup;
+        private readonly H5Group _deviceGroup;
 
         public static H5PersistentBackground InsertBackground(H5Group parent, H5PersistentEpoch epoch, H5PersistentDevice device, Background background)
         {
@@ -829,14 +830,14 @@ namespace Symphony.Core
             string sampleRateUnits = group.Attributes[SampleRateUnitsKey];
             SampleRate = new Measurement(sampleRate, sampleRateUnits);
 
-            deviceGroup = group.Groups.First(g => g.Name == DeviceGroupName);
+            _deviceGroup = group.Groups.First(g => g.Name == DeviceGroupName);
         }
 
         public H5PersistentEpoch Epoch { get; private set; }
 
         public IPersistentDevice Device
         {
-            get { return new H5PersistentDevice(deviceGroup, Epoch.EpochBlock.EpochGroup.Experiment); }
+            get { return new H5PersistentDevice(_deviceGroup, Epoch.EpochBlock.EpochGroup.Experiment); }
         }
 
         public IMeasurement Value { get; private set; }
@@ -853,8 +854,8 @@ namespace Symphony.Core
         private const string SpanStartTimeKey = "startTimeSeconds";
         private const string SpanDurationKey = "timeSpanSeconds";
 
-        private readonly H5Group deviceGroup;
-        private readonly H5Group dataConfigurationSpansGroup;
+        private readonly H5Group _deviceGroup;
+        private readonly H5Group _dataConfigurationSpansGroup;
 
         public static H5Group InsertIOBaseGroup(H5Group parent, H5PersistentEpoch epoch, H5PersistentDevice device, IEnumerable<IConfigurationSpan> configSpans)
         {
@@ -894,22 +895,22 @@ namespace Symphony.Core
             Epoch = epoch;
 
             var subGroups = group.Groups.ToList(); 
-            deviceGroup = subGroups.First(g => g.Name == DeviceGroupName);
-            dataConfigurationSpansGroup = subGroups.First(g => g.Name == DataConfigurationSpansGroupName);
+            _deviceGroup = subGroups.First(g => g.Name == DeviceGroupName);
+            _dataConfigurationSpansGroup = subGroups.First(g => g.Name == DataConfigurationSpansGroupName);
         }
 
         public H5PersistentEpoch Epoch { get; private set; }
 
         public IPersistentDevice Device
         {
-            get { return new H5PersistentDevice(deviceGroup, Epoch.EpochBlock.EpochGroup.Experiment); }
+            get { return new H5PersistentDevice(_deviceGroup, Epoch.EpochBlock.EpochGroup.Experiment); }
         }
 
         public IEnumerable<IConfigurationSpan> ConfigurationSpans
         {
             get
             {
-                var spanGroups = dataConfigurationSpansGroup.Groups.ToList();
+                var spanGroups = _dataConfigurationSpansGroup.Groups.ToList();
                 spanGroups.Sort((g1, g2) => ((uint) g1.Attributes[SpanIndexKey]).CompareTo(g2.Attributes[SpanIndexKey]));
                 foreach (var spanGroup in spanGroups)
                 {
@@ -933,9 +934,11 @@ namespace Symphony.Core
     {
         private const string SampleRateKey = "sampleRate";
         private const string SampleRateUnitsKey = "sampleRateUnits";
+        private const string InputTimeTicksKey = "inputTimeDotNetDateTimeOffsetTicks";
+        private const string InputTimeOffsetHoursKey = "inputTimeDotNetDateTimeOffsetOffsetHours";
         private const string DataDatasetName = "data";
 
-        private readonly H5Dataset dataDataset;
+        private readonly H5Dataset _dataDataset;
 
         public static H5PersistentResponse InsertResponse(H5Group parent, H5PersistentEpoch epoch, H5PersistentDevice device, Response response)
         {
@@ -943,6 +946,8 @@ namespace Symphony.Core
 
             group.Attributes[SampleRateKey] = (double) response.SampleRate.QuantityInBaseUnit;
             group.Attributes[SampleRateUnitsKey] = response.SampleRate.BaseUnit;
+            group.Attributes[InputTimeTicksKey] = response.InputTime.Ticks;
+            group.Attributes[InputTimeOffsetHoursKey] = response.InputTime.Offset.TotalHours;
 
             group.AddDataset(DataDatasetName, H5Map.GetMeasurementType(parent.File), response.Data.Select(H5Map.Convert).ToArray());
 
@@ -955,14 +960,20 @@ namespace Symphony.Core
             string units = group.Attributes[SampleRateUnitsKey];
             SampleRate = new Measurement(rate, units);
 
-            dataDataset = group.Datasets.First(ds => ds.Name == DataDatasetName);
+            long ticks = group.Attributes[InputTimeTicksKey];
+            double offset = group.Attributes[InputTimeOffsetHoursKey];
+            InputTime = new DateTimeOffset(ticks, TimeSpan.FromHours(offset));
+
+            _dataDataset = group.Datasets.First(ds => ds.Name == DataDatasetName);
         }
 
         public IMeasurement SampleRate { get; private set; }
 
+        public DateTimeOffset InputTime { get; private set; }
+
         public IEnumerable<IMeasurement> Data
         {
-            get { return dataDataset.GetData<H5Map.MeasurementT>().Select(H5Map.Convert); }
+            get { return _dataDataset.GetData<H5Map.MeasurementT>().Select(H5Map.Convert); }
         }
     }
 
@@ -970,11 +981,14 @@ namespace Symphony.Core
     {
         private const string StimulusIDKey = "stimulusID";
         private const string UnitsKey = "units";
+        private const string SampleRateKey = "sampleRate";
+        private const string SampleRateUnitsKey = "sampleRateUnits";
         private const string ParametersGroupName = "parameters";
+        private const string DurationKey = "durationSeconds";
+        private const string DataDatasetName = "data";
 
-        private readonly H5Group parametersGroup;
-
-        private readonly Lazy<Dictionary<string, object>> parameters;
+        private readonly H5Group _parametersGroup;
+        private readonly H5Dataset _dataDataset;
 
         public static H5PersistentStimulus InsertStimulus(H5Group parent, H5PersistentEpoch epoch, H5PersistentDevice device, IStimulus stimulus)
         {
@@ -982,12 +996,24 @@ namespace Symphony.Core
 
             group.Attributes[StimulusIDKey] = stimulus.StimulusID;
             group.Attributes[UnitsKey] = stimulus.Units;
+            group.Attributes[SampleRateKey] = (double) stimulus.SampleRate.QuantityInBaseUnit;
+            group.Attributes[SampleRateUnitsKey] = stimulus.SampleRate.BaseUnit;
+            if (stimulus.Duration.IsSome())
+            {
+                group.Attributes[DurationKey] = ((TimeSpan) stimulus.Duration).TotalSeconds;
+            }
 
             var parametersGroup = group.AddGroup(ParametersGroupName);
 
             foreach (var kv in stimulus.Parameters.ToList())
             {
                 parametersGroup.Attributes[kv.Key] = new H5Attribute(kv.Value);
+            }
+
+            if (stimulus.Data.IsSome())
+            {
+                IEnumerable<IMeasurement> data = stimulus.Data.Get();
+                group.AddDataset(DataDatasetName, H5Map.GetMeasurementType(parent.File), data.Select(H5Map.Convert).ToArray());
             }
 
             return new H5PersistentStimulus(group, epoch);
@@ -998,18 +1024,39 @@ namespace Symphony.Core
             StimulusID = group.Attributes[StimulusIDKey];
             Units = group.Attributes[UnitsKey];
 
-            parametersGroup = group.Groups.First(g => g.Name == ParametersGroupName);
+            double rate = group.Attributes[SampleRateKey];
+            string units = group.Attributes[SampleRateUnitsKey];
+            SampleRate = new Measurement(rate, units);
 
-            parameters = new Lazy<Dictionary<string, object>>(() => parametersGroup.Attributes.ToDictionary(a => a.Name, a => a.GetValue()));
+            Duration = group.Attributes.ContainsKey(DurationKey)
+                           ? Option<TimeSpan>.Some(TimeSpan.FromSeconds(group.Attributes[DurationKey]))
+                           : Option<TimeSpan>.None();
+
+            _parametersGroup = group.Groups.First(g => g.Name == ParametersGroupName);
+            _dataDataset = group.Datasets.FirstOrDefault(g => g.Name == DataDatasetName);
         }
 
         public string StimulusID { get; private set; }
 
         public string Units { get; private set; }
 
+        public IMeasurement SampleRate { get; private set; }
+
         public IEnumerable<KeyValuePair<string, object>> Parameters
         {
-            get { return parametersGroup.Attributes.Select(a => new KeyValuePair<string, object>(a.Name, a.GetValue())); }
+            get { return _parametersGroup.Attributes.Select(a => new KeyValuePair<string, object>(a.Name, a.GetValue())); }
+        }
+
+        public Option<TimeSpan> Duration { get; private set; }
+
+        public Option<IEnumerable<IMeasurement>> Data
+        {
+            get
+            {
+                return _dataDataset == null
+                           ? Option<IEnumerable<IMeasurement>>.None()
+                           : Option<IEnumerable<IMeasurement>>.Some(_dataDataset.GetData<H5Map.MeasurementT>().Select(H5Map.Convert));
+            }
         }
     }
 
@@ -1029,7 +1076,7 @@ namespace Symphony.Core
         {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
-            if (obj.GetType() != this.GetType()) return false;
+            if (obj.GetType() != GetType()) return false;
             return Equals((H5Note) obj);
         }
 
@@ -1053,7 +1100,7 @@ namespace Symphony.Core
     static class H5Map
     {
         [StructLayout(LayoutKind.Explicit, Pack = 1)]
-        public unsafe struct DateTimeOffsetT
+        public struct DateTimeOffsetT
         {
             [FieldOffset(0)]
             public long ticks;
@@ -1120,7 +1167,7 @@ namespace Symphony.Core
             return file.Datatypes.First(t => t.Name == MeasurementTypeName);
         }
 
-        // The returned NoteT must call Free() when it is no longer in use.
+        // The returned NoteT must be freed using Free() when it is no longer in use.
         public static NoteT Convert(INote n)
         {
             var nt = new NoteT

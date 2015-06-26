@@ -17,6 +17,9 @@ namespace Symphony.Core
         [SetUp]
         public void Setup()
         {
+            if (System.IO.File.Exists(TEST_FILE))
+                System.IO.File.Delete(TEST_FILE);
+
             startTime = DateTimeOffset.Now;
             persistor = H5EpochPersistor.Create(TEST_FILE, TEST_PURPOSE, startTime);
         }
@@ -30,8 +33,8 @@ namespace Symphony.Core
             }
             finally
             {
-                if (System.IO.File.Exists(TEST_FILE))
-                    System.IO.File.Delete(TEST_FILE);
+                //if (System.IO.File.Exists(TEST_FILE))
+                //    System.IO.File.Delete(TEST_FILE);
             }
         }
 
@@ -387,48 +390,43 @@ namespace Symphony.Core
 
             // Backgrounds
             Assert.AreEqual(epoch.Backgrounds.Count, e.Backgrounds.Count());
-            foreach (var kv in epoch.Backgrounds)
-            {
-                var device = kv.Key;
-                var background = kv.Value;
-
-                var bk = e.Backgrounds.First(b => b.Device.Name == device.Name && b.Device.Manufacturer == device.Manufacturer);
-                
-                Assert.AreEqual(background.Value, bk.Value);
-                Assert.AreEqual(background.SampleRate, bk.SampleRate);
-            }
+            AssertBackgroundsEqual(epoch.Backgrounds[dev1], e.Backgrounds.First(b => b.Device.Name == dev1.Name));
+            AssertBackgroundsEqual(epoch.Backgrounds[dev2], e.Backgrounds.First(b => b.Device.Name == dev2.Name));
 
             // Stimuli
             Assert.AreEqual(epoch.Stimuli.Count, e.Stimuli.Count());
-
-            var s1 = e.Stimuli.First(s => s.Device.Name == dev1.Name);
-
-            Assert.AreEqual(epoch.Stimuli[dev1].StimulusID, s1.StimulusID);
-            Assert.AreEqual(epoch.Stimuli[dev1].Units, s1.Units);
-            CollectionAssert.AreEquivalent(epoch.Stimuli[dev1].Parameters, s1.Parameters);
-            AssertConfigurationSpansEqual(epoch.Stimuli[dev1].OutputConfigurationSpans, s1.ConfigurationSpans);
-
-            var s2 = e.Stimuli.First(s => s.Device.Name == dev2.Name);
-
-            Assert.AreEqual(epoch.Stimuli[dev2].StimulusID, s2.StimulusID);
-            Assert.AreEqual(epoch.Stimuli[dev2].Units, s2.Units);
-            CollectionAssert.AreEquivalent(epoch.Stimuli[dev2].Parameters, s2.Parameters);
-            AssertConfigurationSpansEqual(epoch.Stimuli[dev2].OutputConfigurationSpans, s2.ConfigurationSpans);
+            AssertStimuliEqual(epoch.Stimuli[dev1], e.Stimuli.First(s => s.Device.Name == dev1.Name));
+            AssertStimuliEqual(epoch.Stimuli[dev2], e.Stimuli.First(s => s.Device.Name == dev2.Name));
 
             // Responses
             Assert.AreEqual(epoch.Responses.Count, e.Responses.Count());
+            AssertResponsesEqual(epoch.Responses[dev1], e.Responses.First(r => r.Device.Name == dev1.Name));
+            AssertResponsesEqual(epoch.Responses[dev2], e.Responses.First(r => r.Device.Name == dev2.Name));
+        }
 
-            var r1 = e.Responses.First(r => r.Device.Name == dev1.Name);
+        private static void AssertBackgroundsEqual(Background expected, IPersistentBackground actual)
+        {
+            Assert.AreEqual(expected.Value, actual.Value);
+            Assert.AreEqual(expected.SampleRate, actual.SampleRate);
+        }
 
-            Assert.AreEqual(epoch.Responses[dev1].SampleRate, r1.SampleRate);
-            CollectionAssert.AreEqual(epoch.Responses[dev1].Data, r1.Data);
-            AssertConfigurationSpansEqual(epoch.Responses[dev1].DataConfigurationSpans, r1.ConfigurationSpans);
+        private static void AssertStimuliEqual(IStimulus expected, IPersistentStimulus actual)
+        {
+            Assert.AreEqual(expected.StimulusID, actual.StimulusID);
+            Assert.AreEqual(expected.Units, actual.Units);
+            Assert.AreEqual(expected.SampleRate, actual.SampleRate);
+            Assert.AreEqual(expected.Duration, actual.Duration);
+            Assert.AreEqual(expected.Data, actual.Data);
+            CollectionAssert.AreEquivalent(expected.Parameters, actual.Parameters);
+            AssertConfigurationSpansEqual(expected.OutputConfigurationSpans, actual.ConfigurationSpans);
+        }
 
-            var r2 = e.Responses.First(r => r.Device.Name == dev2.Name);
-
-            Assert.AreEqual(epoch.Responses[dev2].SampleRate, r2.SampleRate);
-            CollectionAssert.AreEqual(epoch.Responses[dev2].Data, r2.Data);
-            AssertConfigurationSpansEqual(epoch.Responses[dev2].DataConfigurationSpans, r2.ConfigurationSpans);
+        private static void AssertResponsesEqual(Response expected, IPersistentResponse actual)
+        {
+            Assert.AreEqual(expected.SampleRate, actual.SampleRate);
+            Assert.AreEqual(expected.InputTime, actual.InputTime);
+            CollectionAssert.AreEqual(expected.Data, actual.Data);
+            AssertConfigurationSpansEqual(expected.DataConfigurationSpans, actual.ConfigurationSpans);
         }
 
         [Test]
@@ -527,7 +525,10 @@ namespace Symphony.Core
             var stimData = new OutputData(samples, srate, false);
 
             var stim1 = new RenderedStimulus("RenderedStimulus", stimParameters, stimData);
-            var stim2 = new RenderedStimulus("RenderedStimulus", stimParameters, stimData);
+            var stim2 = new RenderedStimulus("RenderedStimulus", stimParameters, stimData)
+                {
+                    ShouldDataBePersisted = true
+                };
 
             var protocolParameters = new Dictionary<string, object>
                 {

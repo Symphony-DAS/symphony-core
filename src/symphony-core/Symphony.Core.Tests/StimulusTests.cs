@@ -93,6 +93,11 @@ namespace Symphony.Core
 
             public override Option<TimeSpan> Duration { get { return Option<TimeSpan>.Some(TimeSpan.Zero); } }
 
+            public override Option<IEnumerable<IMeasurement>> Data
+            {
+                get { throw new NotImplementedException(); }
+            }
+
             public override IMeasurement SampleRate
             {
                 get { throw new NotImplementedException(); }

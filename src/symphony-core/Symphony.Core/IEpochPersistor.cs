@@ -361,6 +361,11 @@ namespace Symphony.Core
         IMeasurement SampleRate { get; }
 
         /// <summary>
+        /// The input time of this Response.
+        /// </summary>
+        DateTimeOffset InputTime { get; }
+
+        /// <summary>
         /// The Measurements recorded in this Response.
         /// </summary>
         IEnumerable<IMeasurement> Data { get; }
@@ -377,14 +382,29 @@ namespace Symphony.Core
         string StimulusID { get; }
 
         /// <summary>
-        /// BaseUnits for this stimulus' output data.
+        /// The BaseUnits for this stimulus' output data.
         /// </summary>
         string Units { get; }
+
+        /// <summary>
+        /// The sampling rate of this Stimulus.
+        /// </summary>
+        IMeasurement SampleRate { get; }
 
         /// <summary>
         /// The parameters of stimulus generation.
         /// </summary>
         IEnumerable<KeyValuePair<string, object>> Parameters { get; }
+
+        /// <summary>
+        /// The duration of this stimulus. Option No (false) to indicate indefinite.
+        /// </summary>
+        Option<TimeSpan> Duration { get; }
+
+        /// <summary>
+        /// The Measurements presented by this Stimulus. None if data is not persisted.
+        /// </summary>
+        Option<IEnumerable<IMeasurement>> Data { get; } 
     }
 
     /// <summary>
