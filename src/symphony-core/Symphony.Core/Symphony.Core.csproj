@@ -129,10 +129,7 @@
     <Compile Include="IEpochPersistor.cs" />
     <Compile Include="IODataStream.cs" />
     <Compile Include="Epoch.cs" />
-    <Compile Include="EpochHDF5Persistor.cs" />
-    <Compile Include="EpochPersistor.cs" />
     <Compile Include="EpochPersistorException.cs" />
-    <Compile Include="EpochXMLPersistor.cs" />
     <Compile Include="Exceptions.cs" />
     <Compile Include="ExternalDevice.cs" />
     <Compile Include="IHardwareController.cs" />

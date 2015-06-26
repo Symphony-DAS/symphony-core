@@ -427,7 +427,7 @@ namespace Symphony.Core
         /// immediately
         /// </summary>
         /// <param name="e">Epoch to add to the queue</param>
-        /// <see cref="RunEpoch(Epoch, EpochPersistor)"/>
+        /// <see cref="RunEpoch(Epoch, IEpochPersistor)"/>
         public void EnqueueEpoch(Epoch e)
         {
             if (!ValidateEpoch(e))

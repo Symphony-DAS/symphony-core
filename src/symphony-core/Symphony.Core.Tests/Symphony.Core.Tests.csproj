@@ -124,8 +124,6 @@
     <Compile Include="ControllerTests.cs" />
     <Compile Include="DAQControllerTests.cs" />
     <Compile Include="DAQStreamTests.cs" />
-    <Compile Include="EpochHDF5PersistorTests.cs" />
-    <Compile Include="EpochPersistorTests.cs" />
     <Compile Include="EpochTests.cs" />
     <Compile Include="ExternalDeviceTests.cs" />
     <Compile Include="H5EpochPersistorTests.cs" />
