@@ -33,8 +33,8 @@ namespace Symphony.Core
             }
             finally
             {
-                //if (System.IO.File.Exists(TEST_FILE))
-                //    System.IO.File.Delete(TEST_FILE);
+                if (System.IO.File.Exists(TEST_FILE))
+                    System.IO.File.Delete(TEST_FILE);
             }
         }
 
