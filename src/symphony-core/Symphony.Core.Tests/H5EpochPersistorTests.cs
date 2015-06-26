@@ -17,6 +17,9 @@ namespace Symphony.Core
         [SetUp]
         public void Setup()
         {
+            //if (System.IO.File.Exists(TEST_FILE))
+            //    System.IO.File.Delete(TEST_FILE);
+
             startTime = DateTimeOffset.Now;
             persistor = H5EpochPersistor.Create(TEST_FILE, TEST_PURPOSE, startTime);
         }
@@ -128,13 +131,13 @@ namespace Symphony.Core
             CollectionAssert.AreEquivalent(expected, experiment.Notes);
         }
 
-        //[Test]
-        //public void ShouldAddLongNote()
-        //{
-        //    var text = new string('*', 50);
-        //    var note = persistor.Experiment.AddNote(DateTimeOffset.Now, text);
-        //    Assert.AreEqual(text, note.Text);
-        //}
+        [Test]
+        public void ShouldAddLongNote()
+        {
+            var text = new string('*', 500);
+            var note = persistor.Experiment.AddNote(DateTimeOffset.Now, text);
+            Assert.AreEqual(text, note.Text);
+        }
 
         [Test]
         public void ShouldAddDevice()

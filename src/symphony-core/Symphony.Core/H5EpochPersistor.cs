@@ -330,7 +330,18 @@ namespace Symphony.Core
             }
             long n = notesDataset.NumberOfElements;
             notesDataset.Extend(new[] {n + 1});
-            notesDataset.SetData(new[] {H5Map.Convert(note)}, new[] {n}, new[] {1L});
+            var nt = H5Map.Convert(note);
+            try
+            {
+                notesDataset.SetData(new[] { nt }, new[] { n }, new[] { 1L });
+            }
+            finally
+            {
+                unsafe
+                {
+                    Marshal.FreeHGlobal((IntPtr) nt.text);
+                }
+            }
             return note;
         }
     }
@@ -1044,7 +1055,7 @@ namespace Symphony.Core
     /// </summary>
     static class H5Map
     {
-        [StructLayout(LayoutKind.Explicit)]
+        [StructLayout(LayoutKind.Explicit, Pack = 1)]
         public unsafe struct DateTimeOffsetT
         {
             [FieldOffset(0)]
@@ -1053,35 +1064,34 @@ namespace Symphony.Core
             public double offset;
         }
 
-        [StructLayout(LayoutKind.Explicit)]
+        [StructLayout(LayoutKind.Explicit, Pack = 1)]
         public unsafe struct NoteT
         {
             [FieldOffset(0)]
             public DateTimeOffsetT time;
             [FieldOffset(16)]
-            public fixed byte text[FixedStringLength];
+            public byte* text;
         }
 
-        [StructLayout(LayoutKind.Explicit)]
+        [StructLayout(LayoutKind.Explicit, Pack = 1)]
         public unsafe struct MeasurementT
         {
             [FieldOffset(0)]
             public double quantity;
             [FieldOffset(8)]
-            public fixed byte unit[FixedStringLength];
+            public fixed byte unit[UnitsStringLength];
         }
 
-        private const int FixedStringLength = 40;
+        private const int UnitsStringLength = 40;
 
-        private const string StringTypeName = "STRING40";
         private const string DateTimeOffsetTypeName = "DATETIMEOFFSET";
+        private const string NoteTextTypeName = "NOTE_TEXT";
         private const string NoteTypeName = "NOTE";
+        private const string UnitsTypeName = "UNITS";
         private const string MeasurementTypeName = "MEASUREMENT";
 
         public static void InsertTypes(H5File file)
         {
-            var stringType = file.CreateDatatype(StringTypeName, H5T.H5TClass.STRING, FixedStringLength);
-
             var dateTimeOffsetType = file.CreateDatatype(DateTimeOffsetTypeName,
                                                          new[] {"ticks", "offsetHours"},
                                                          new[]
@@ -1090,13 +1100,17 @@ namespace Symphony.Core
                                                                  new H5Datatype(H5T.H5Type.NATIVE_DOUBLE)
                                                              });
 
+            var noteTextType = file.CreateDatatype(NoteTextTypeName, H5T.H5TClass.STRING, -1);
+
             file.CreateDatatype(NoteTypeName,
                                 new[] {"time", "text"},
-                                new[] {dateTimeOffsetType, stringType});
+                                new[] {dateTimeOffsetType, noteTextType});
+
+            var unitsType = file.CreateDatatype(UnitsTypeName, H5T.H5TClass.STRING, UnitsStringLength);
 
             file.CreateDatatype(MeasurementTypeName,
-                                new[] {"quantity", "unit"},
-                                new[] {new H5Datatype(H5T.H5Type.NATIVE_DOUBLE), stringType});
+                                new[] {"quantity", "units"},
+                                new[] {new H5Datatype(H5T.H5Type.NATIVE_DOUBLE), unitsType});
         }
 
         public static H5Datatype GetNoteType(H5File file)
@@ -1119,10 +1133,9 @@ namespace Symphony.Core
                     offset = n.Time.Offset.TotalHours
                 }
             };
-            byte[] textdata = Encoding.ASCII.GetBytes(n.Text);
             unsafe
             {
-                Marshal.Copy(textdata, 0, (IntPtr)nt.text, textdata.Length);
+                nt.text = (byte*) Marshal.StringToHGlobalAnsi(n.Text);
             }
             return nt;
         }
@@ -1135,7 +1148,7 @@ namespace Symphony.Core
             string text;
             unsafe
             {
-                text = Marshal.PtrToStringAnsi((IntPtr)nt.text);
+                text = Marshal.PtrToStringAnsi((IntPtr) nt.text);
             }
             return new H5Note(time, text);
         }
@@ -1143,10 +1156,10 @@ namespace Symphony.Core
         public static MeasurementT Convert(IMeasurement m)
         {
             var mt = new MeasurementT {quantity = (double) m.Quantity};
-            byte[] textdata = Encoding.ASCII.GetBytes(m.DisplayUnit);
+            var unitdata = Encoding.ASCII.GetBytes(m.DisplayUnit);
             unsafe
             {
-                Marshal.Copy(textdata, 0, (IntPtr)mt.unit, textdata.Length);
+                Marshal.Copy(unitdata, 0, (IntPtr) mt.unit, unitdata.Length);
             }
             return mt;
         }
@@ -1156,7 +1169,7 @@ namespace Symphony.Core
             string unit;
             unsafe
             {
-                unit = Marshal.PtrToStringAnsi((IntPtr)mt.unit);
+                unit = Marshal.PtrToStringAnsi((IntPtr) mt.unit);
             }
             return new Measurement(mt.quantity, unit);
         }
