@@ -163,8 +163,7 @@ namespace HDF5.Tests
                                                        new H5Datatype(H5T.H5Type.NATIVE_DOUBLE)
                                                    });
 
-                var dataset = file.AddDataset("points", type, new long[] {10});
-                dataset.SetData(points);
+                var dataset = file.AddDataset("points", type, points);
             }
 
             using (var file = new H5File(TEST_FILE))
@@ -208,8 +207,7 @@ namespace HDF5.Tests
                                                 new[] {stringType, pointType});
 
 
-                var dataset = file.AddDataset("points", type, new long[] { 10 });
-                dataset.SetData(points);
+                var dataset = file.AddDataset("points", type, points);
                 Assert.AreEqual(points, dataset.GetData<NamedPoint>());
             }
         }

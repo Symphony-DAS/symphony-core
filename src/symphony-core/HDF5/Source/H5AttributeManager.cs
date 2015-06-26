@@ -154,5 +154,10 @@ namespace HDF5
         {
             return GetEnumerator();
         }
+
+        public static bool IsSupportedType(Type type)
+        {
+            return type.IsPrimitive || (type.IsArray && type.GetElementType().IsPrimitive);
+        }
     }
 }

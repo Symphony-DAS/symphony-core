@@ -6,6 +6,7 @@ using System.Runtime.InteropServices;
 using System.Text;
 using HDF5;
 using HDF5DotNet;
+using log4net;
 
 namespace Symphony.Core
 {
@@ -15,7 +16,7 @@ namespace Symphony.Core
     /// not full-proof. In practice I think we'll find this sufficient. However this should probably be looked 
     /// at again when/if HDF5 begins to offer transactions.
     /// </summary>
-    public class H5EpochPersistor : IEpochPersistor
+    public class H5EpochPersistor : IEpochPersistor, IDisposable
     {
         private const string VersionKey = "version";
         private const uint PersistenceVersion = 2;
@@ -76,6 +77,32 @@ namespace Symphony.Core
             _openEpochGroups = new Stack<H5PersistentEpochGroup>();
         }
 
+        ~H5EpochPersistor()
+        {
+            Dispose(false);
+        }
+
+        public void Dispose()
+        {
+            Dispose(true);
+        }
+
+        bool _disposed = false;
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (!_disposed)
+            {
+                if (disposing)
+                {
+                    // Dispose managed resources
+                    CloseDocument();
+                    GC.SuppressFinalize(this);
+                }
+            }
+            _disposed = true;
+        }
+
         public void Close()
         {
             Close(DateTimeOffset.Now);
@@ -92,8 +119,16 @@ namespace Symphony.Core
                 EndEpochGroup(endTime);
             }
             _experiment.SetEndTime(endTime);
+            
+            CloseDocument();
+        }
+
+        public void CloseDocument()
+        {
             _file.Close();
         }
+
+        internal static ILog Log = LogManager.GetLogger(typeof(H5EpochPersistor));
 
         public uint Version { get; private set; }
 
@@ -269,6 +304,9 @@ namespace Symphony.Core
 
         public void AddProperty(string key, object value)
         {
+            if (!H5AttributeManager.IsSupportedType(value.GetType()))
+                throw new ArgumentException(string.Format("Value ({0} : {1}) is of unsupported type", key, value));
+
             if (_propertiesGroup == null)
             {
                 _propertiesGroup = Group.AddGroup(PropertiesGroupName);
@@ -791,7 +829,15 @@ namespace Symphony.Core
 
                 foreach (var kv in epoch.ProtocolParameters.ToList())
                 {
-                    parametersGroup.Attributes[kv.Key] = new H5Attribute(kv.Value);
+                    if (H5AttributeManager.IsSupportedType(kv.Value.GetType()))
+                    {
+                        parametersGroup.Attributes[kv.Key] = new H5Attribute(kv.Value);
+                    }
+                    else
+                    {
+                        H5EpochPersistor.Log.WarnFormat("Protocol parameter value ({0} : {1}) is of usupported type. Falling back to string representation.", kv.Key, kv.Value);
+                        parametersGroup.Attributes[kv.Key] = kv.Value.ToString();
+                    }
                 }
 
                 foreach (var kv in epoch.Responses.ToList())
@@ -946,7 +992,15 @@ namespace Symphony.Core
                         var nodeGroup = spanGroup.AddGroup(node.Name);
                         foreach (var kv in node.Configuration)
                         {
-                            nodeGroup.Attributes[kv.Key] = new H5Attribute(kv.Value);
+                            if (H5AttributeManager.IsSupportedType(kv.Value.GetType()))
+                            {
+                                nodeGroup.Attributes[kv.Key] = new H5Attribute(kv.Value);
+                            }
+                            else
+                            {
+                                H5EpochPersistor.Log.WarnFormat("Node configuration value ({0} : {1}) is of usupported type. Falling back to string representation.", kv.Key, kv.Value);
+                                nodeGroup.Attributes[kv.Key] = kv.Value.ToString();
+                            }
                         }
                     }
 
@@ -1085,7 +1139,16 @@ namespace Symphony.Core
 
                 foreach (var kv in stimulus.Parameters.ToList())
                 {
-                    parametersGroup.Attributes[kv.Key] = new H5Attribute(kv.Value);
+                    if (H5AttributeManager.IsSupportedType(kv.Value.GetType()))
+                    {
+                        parametersGroup.Attributes[kv.Key] = new H5Attribute(kv.Value);
+                    }
+                    else
+                    {
+                        H5EpochPersistor.Log.WarnFormat("Stimulus parameter value ({0} : {1}) is of usupported type. Falling back to string representation.", kv.Key, kv.Value);
+                        parametersGroup.Attributes[kv.Key] = kv.Value.ToString();
+                    }
+                    
                 }
 
                 if (stimulus.Data.IsSome())
@@ -1311,4 +1374,5 @@ namespace Symphony.Core
             return new Measurement(mt.quantity, unit);
         }
     }
+
 }

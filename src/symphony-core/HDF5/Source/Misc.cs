@@ -3,6 +3,14 @@ using HDF5DotNet;
 
 namespace HDF5
 {
+    internal static class H5Open
+    {
+        static H5Open()
+        {
+            H5.Open();
+        }
+    }
+
     internal static class H5Ox
     {
         public static H5ObjectWithAttributes open(H5FileId id, string path)
@@ -67,7 +75,7 @@ namespace HDF5
                 case TypeCode.Boolean:
                     return H5T.copy(H5T.H5Type.NATIVE_UCHAR);
                 default:
-                    throw new ArgumentException("Unsupported system type");
+                    throw new NotSupportedException("Unsupported system type");
             }
         }
 
@@ -97,7 +105,7 @@ namespace HDF5
                 return typeof(double);
             if (H5T.equal(nativeType, new H5DataTypeId(H5T.H5Type.NATIVE_UCHAR)))
                 return typeof(bool);
-            throw new ArgumentException("Unsupported native type");
+            throw new NotSupportedException("Unsupported native type");
         }
     }
 }

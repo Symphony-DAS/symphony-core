@@ -618,6 +618,11 @@ namespace IntegrationTests
 
             Assert.That(HekaDAQController.AvailableControllers().Count(), Is.GreaterThan(0));
 
+            using (var persistor = H5EpochPersistor.Create(h5Path, "testing purposes"))
+            {
+                persistor.AddSource("source", null);
+            }
+
             foreach (var daq in HekaDAQController.AvailableControllers())
             {
 
@@ -667,13 +672,16 @@ namespace IntegrationTests
 
 
                         //Run single epoch
-                        using (var persistor = new EpochHDF5Persistor(h5Path, null, 9))
+                        using (var persistor = new H5EpochPersistor(h5Path))
                         {
-                            persistor.BeginEpochGroup("label", "source", new string[0], new Dictionary<string, object>(),
-                                                      Guid.NewGuid(), DateTimeOffset.Now);
+                            var source = persistor.Experiment.Sources.First();
+
+                            persistor.BeginEpochGroup("label", source, DateTimeOffset.Now);
+                            persistor.BeginEpochBlock(e.ProtocolID, DateTimeOffset.Now);
 
                             controller.RunEpoch(e, persistor);
 
+                            persistor.EndEpochBlock(DateTimeOffset.Now);
                             persistor.EndEpochGroup();
                         }
 

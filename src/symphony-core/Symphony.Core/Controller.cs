@@ -491,59 +491,6 @@ namespace Symphony.Core
 
 
         /// <summary>
-        /// Begin a new Epoch Group (i.e. a logical block of Epochs). As each Epoch Group is persisted
-        /// to a separate data file, this method creates the appropriate output file and
-        /// EpochPersistor instance.
-        /// </summary>
-        /// <param name="path">The name of the file into which to store the epoch; if the name
-        ///   ends in ".xml", it will store the file using the EpochXMLPersistor, and if the name
-        ///   ends in ".hdf5", it will store the file using the EpochHDF5Persistor. This file will
-        ///   be overwritten if it already exists at this location.</param>
-        /// <param name="epochGroupLabel">Label for the new Epoch Group</param>
-        /// <param name="source">Identifier for EpochGroup's Source</param>
-        /// <param name="keywords"></param>
-        /// <param name="properties"></param>
-        /// <returns>The EpochPersistor instance to be used for saving Epochs</returns>
-        /// <see cref="RunEpoch(Epoch, EpochPersistor)"/>
-        public EpochPersistor BeginEpochGroup(string path, string epochGroupLabel, string source, IEnumerable<string> keywords, IDictionary<string, object> properties)
-        {
-            EpochPersistor result = null;
-            if (path.EndsWith(".xml"))
-            {
-                result = new EpochXMLPersistor(path);
-            }
-            else if (path.EndsWith(".hdf5"))
-            {
-                result = new EpochHDF5Persistor(path, null);
-            }
-            else
-                throw new ArgumentException(String.Format("{0} doesn't look like a legit Epoch filename", path));
-
-            var kws = keywords == null ? new string[0] : keywords.ToArray();
-            var props = properties ?? new Dictionary<string, object>();
-
-            result.BeginEpochGroup(epochGroupLabel, source, kws, props, Guid.NewGuid(), Clock.Now);
-
-            return result;
-        }
-
-        /// <summary>
-        /// Closes an Epoch Group. This method should be called after running all Epochs in the
-        /// Epoch Group represented by EpochPersistor to give the persistor a chance to write any
-        /// neceesary closing information.
-        /// <para>
-        /// Closes the persistor's file.
-        /// </para>
-        /// </summary>
-        /// <param name="e">EpochPersistor representing the completed EpochGroup</param>
-        /// <see cref="BeginEpochGroup"/>
-        public void EndEpochGroup(EpochPersistor e)
-        {
-            e.EndEpochGroup();
-            e.Close();
-        }
-        
-        /// <summary>
         /// Matlab-friendly factory method to run a single Epoch.
         /// </summary>
         /// <remarks>Constructs an Epoch with homogenous stimulus ID, sample rate and units, then runs the
@@ -566,7 +513,7 @@ namespace Symphony.Core
             IDictionary<ExternalDeviceBase, IEnumerable<IMeasurement>> stimuli,
             IDictionary<ExternalDeviceBase, IMeasurement> backgrounds,
             IEnumerable<ExternalDeviceBase> responses,
-            EpochPersistor persistor)
+            IEpochPersistor persistor)
         {
             var epoch = new Epoch(protocolID,
                               parameters);
@@ -607,7 +554,7 @@ namespace Symphony.Core
         /// <exception cref="ArgumentException">Validation failed for the provided Epoch</exception>
         /// <exception cref="ValidationException">Validation failed for this Controller</exception>
         /// <exception cref="SymphonyControllerException">This Controller is currently running</exception>
-        public void RunEpoch(Epoch e, EpochPersistor persistor)
+        public void RunEpoch(Epoch e, IEpochPersistor persistor)
         {
             if (IsRunning)
                 throw new SymphonyControllerException("Controller is currently running");
@@ -654,7 +601,7 @@ namespace Symphony.Core
         /// <see cref="BackgroundDataStreams"/>
         /// <see cref="RequestPause()"/>
         /// <see cref="RequestStop()"/>
-        public Task StartAsync(EpochPersistor persistor)
+        public Task StartAsync(IEpochPersistor persistor)
         {
             if (IsRunning)
                 throw new SymphonyControllerException("Controller is currently running");
@@ -678,7 +625,7 @@ namespace Symphony.Core
         /// </summary>
         /// <param name="epochQueue">Epoch queue to process</param>
         /// <param name="persistor">Epoch persistor for saving data</param>
-        private void Process(ConcurrentQueue<Epoch> epochQueue, EpochPersistor persistor)
+        private void Process(ConcurrentQueue<Epoch> epochQueue, IEpochPersistor persistor)
         {
             try
             {
@@ -713,7 +660,7 @@ namespace Symphony.Core
             }
         }
 
-        private void ProcessLoop(ConcurrentQueue<Epoch> epochQueue, EpochPersistor persistor)
+        private void ProcessLoop(ConcurrentQueue<Epoch> epochQueue, IEpochPersistor persistor)
         {
             var incompleteEpochs = new ConcurrentQueue<Epoch>();
             
@@ -938,7 +885,7 @@ namespace Symphony.Core
 
         private static readonly ILog log = LogManager.GetLogger(typeof(Controller));
 
-        private void SaveEpoch(EpochPersistor persistor, Epoch e)
+        private void SaveEpoch(IEpochPersistor persistor, Epoch e)
         {
             persistor.Serialize(e);
             OnSavedEpoch(e);
