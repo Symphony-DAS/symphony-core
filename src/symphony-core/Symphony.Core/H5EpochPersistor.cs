@@ -326,21 +326,18 @@ namespace Symphony.Core
         {
             if (notesDataset == null)
             {
-                notesDataset = Group.AddDataset(NotesDatasetName, H5Map.GetNoteType(Group.File), new[] {0L}, new[] {-1L}, new[] {10L});
+                notesDataset = Group.AddDataset(NotesDatasetName, H5Map.GetNoteType(Group.File), new[] {0L}, new[] {-1L}, new[] {64L});
             }
             long n = notesDataset.NumberOfElements;
             notesDataset.Extend(new[] {n + 1});
             var nt = H5Map.Convert(note);
             try
             {
-                notesDataset.SetData(new[] { nt }, new[] { n }, new[] { 1L });
+                notesDataset.SetData(new[] {nt}, new[] {n}, new[] {1L});
             }
             finally
             {
-                unsafe
-                {
-                    Marshal.FreeHGlobal((IntPtr) nt.text);
-                }
+                H5Map.Free(nt);
             }
             return note;
         }
@@ -1082,7 +1079,7 @@ namespace Symphony.Core
             public fixed byte unit[UnitsStringLength];
         }
 
-        private const int UnitsStringLength = 40;
+        private const int UnitsStringLength = 10;
 
         private const string DateTimeOffsetTypeName = "DATETIMEOFFSET";
         private const string NoteTextTypeName = "NOTE_TEXT";
@@ -1123,6 +1120,7 @@ namespace Symphony.Core
             return file.Datatypes.First(t => t.Name == MeasurementTypeName);
         }
 
+        // The returned NoteT must call Free() when it is no longer in use.
         public static NoteT Convert(INote n)
         {
             var nt = new NoteT
@@ -1138,6 +1136,15 @@ namespace Symphony.Core
                 nt.text = (byte*) Marshal.StringToHGlobalAnsi(n.Text);
             }
             return nt;
+        }
+
+        public static unsafe void Free(NoteT nt)
+        {
+            if (((IntPtr)nt.text) != IntPtr.Zero)
+            {
+                Marshal.FreeHGlobal((IntPtr) nt.text);
+                nt.text = (byte*) IntPtr.Zero;
+            }
         }
 
         public static INote Convert(NoteT nt)
@@ -1159,7 +1166,7 @@ namespace Symphony.Core
             var unitdata = Encoding.ASCII.GetBytes(m.DisplayUnit);
             unsafe
             {
-                Marshal.Copy(unitdata, 0, (IntPtr) mt.unit, unitdata.Length);
+                Marshal.Copy(unitdata, 0, (IntPtr) mt.unit, Math.Min(unitdata.Length, UnitsStringLength));
             }
             return mt;
         }

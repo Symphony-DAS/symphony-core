@@ -17,9 +17,6 @@ namespace Symphony.Core
         [SetUp]
         public void Setup()
         {
-            //if (System.IO.File.Exists(TEST_FILE))
-            //    System.IO.File.Delete(TEST_FILE);
-
             startTime = DateTimeOffset.Now;
             persistor = H5EpochPersistor.Create(TEST_FILE, TEST_PURPOSE, startTime);
         }
