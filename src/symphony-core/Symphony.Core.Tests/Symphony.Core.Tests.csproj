@@ -75,47 +75,25 @@
     <PlatformTarget>x64</PlatformTarget>
     <ErrorReport>prompt</ErrorReport>
   </PropertyGroup>
-  <ItemGroup Condition=" '$(Platform)' == 'x86' ">
-    <Reference Include="HDF5DotNet, Version=1.8.9.0, Culture=neutral, processorArchitecture=x86">
-      <HintPath>$(ProjectDir)..\..\..\externals\HDF5DotNet\x86\HDF5DotNet.dll</HintPath>
-    </Reference>
-  </ItemGroup>
   <ItemGroup Condition=" '$(Platform)' == 'x64' ">
     <Reference Include="HDF5DotNet, Version=1.8.9.0, Culture=neutral, processorArchitecture=x64">
       <HintPath>$(ProjectDir)..\..\..\externals\HDF5DotNet\x64\HDF5DotNet.dll</HintPath>
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Reference Include="ApprovalTests, Version=1.21.4657.21485, Culture=neutral, PublicKeyToken=11bd7d124fc62e0f, processorArchitecture=MSIL">
-      <HintPath>$(SolutionDir)packages\ApprovalTests.2.1\lib\ApprovalTests.dll</HintPath>
-    </Reference>
-    <Reference Include="ApprovalUtilities, Version=1.21.4657.21484, Culture=neutral, PublicKeyToken=11bd7d124fc62e0f, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>$(SolutionDir)packages\ApprovalTests.2.1\lib\ApprovalUtilities.dll</HintPath>
-    </Reference>
     <Reference Include="Moq">
       <HintPath>$(SolutionDir)packages\Moq.4.0.10827\lib\NET40\Moq.dll</HintPath>
     </Reference>
-    <Reference Include="nunit.framework, Version=2.5.7.10213, Culture=neutral, PublicKeyToken=96d09a1eb7f44a77, processorArchitecture=MSIL">
+    <Reference Include="nunit.framework">
+      <HintPath>..\packages\NUnit.2.6.4\lib\nunit.framework.dll</HintPath>
+      <Private>True</Private>
+    </Reference>
+    <Reference Include="nunit.mocks, Version=2.6.4.14350, Culture=neutral, PublicKeyToken=96d09a1eb7f44a77, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
-      <HintPath>$(SolutionDir)packages\NUnit.2.5.7.10213\lib\nunit.framework.dll</HintPath>
-    </Reference>
-    <Reference Include="nunit.mocks">
-      <HintPath>$(SolutionDir)packages\NUnit.2.5.7.10213\lib\nunit.mocks.dll</HintPath>
-    </Reference>
-    <Reference Include="pnunit.framework">
-      <HintPath>$(SolutionDir)packages\NUnit.2.5.7.10213\lib\pnunit.framework.dll</HintPath>
-    </Reference>
-    <Reference Include="Sprache, Version=1.9.1.31, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>$(SolutionDir)packages\Sprache.1.9.1.31\lib\NET40\Sprache.dll</HintPath>
+      <HintPath>..\packages\NUnit.Mocks.2.6.4\lib\nunit.mocks.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
-    <Reference Include="System.Xml.Linq" />
-    <Reference Include="System.Data.DataSetExtensions" />
-    <Reference Include="Microsoft.CSharp" />
-    <Reference Include="System.Data" />
-    <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="..\CommonAssemblyInfo.cs">
@@ -147,10 +125,6 @@
     <ProjectReference Include="..\Symphony.Core\Symphony.Core.csproj">
       <Project>{F67AD286-059F-4C8D-9D99-D92DB2DC887A}</Project>
       <Name>Symphony.Core</Name>
-    </ProjectReference>
-    <ProjectReference Include="..\Symphony.ExternalDevices\Symphony.ExternalDevices.csproj">
-      <Project>{8A9AF9F2-7ADF-48AA-8C34-0ED8BFB5D1D5}</Project>
-      <Name>Symphony.ExternalDevices</Name>
     </ProjectReference>
   </ItemGroup>
   <ItemGroup>

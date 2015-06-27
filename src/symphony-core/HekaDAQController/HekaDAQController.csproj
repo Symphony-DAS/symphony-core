@@ -93,11 +93,6 @@
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
-    <Reference Include="System.Xml.Linq" />
-    <Reference Include="System.Data.DataSetExtensions" />
-    <Reference Include="Microsoft.CSharp" />
-    <Reference Include="System.Data" />
-    <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="..\CommonAssemblyInfo.cs">
@@ -111,7 +106,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\HekaIOBridge\HekaIOBridge.vcxproj">
-      <Project>{1E6C7ABF-3546-428A-A61B-CFB83DB61317}</Project>
+      <Project>{1e6c7abf-3546-428a-a61b-cfb83db61317}</Project>
       <Name>HekaIOBridge %28Visual Studio 2010%29</Name>
     </ProjectReference>
     <ProjectReference Include="..\HekaNativeInterop\HekaNativeInterop.csproj">

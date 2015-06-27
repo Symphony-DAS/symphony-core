@@ -157,7 +157,7 @@ namespace HDF5
 
         public static bool IsSupportedType(Type type)
         {
-            return type.IsPrimitive || (type.IsArray && type.GetElementType().IsPrimitive);
+            return type == typeof(string) || type.IsPrimitive || (type.IsArray && type.GetElementType().IsPrimitive);
         }
     }
 }

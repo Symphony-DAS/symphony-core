@@ -1,12 +1,5 @@
 ﻿using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-
-using System.Xml;
-using System.Xml.Serialization;
-using ApprovalTests;
-using ApprovalTests.Reporters;
-using HDF5DotNet;
 
 namespace Symphony.Core
 {

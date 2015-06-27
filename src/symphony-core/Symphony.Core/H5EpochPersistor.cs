@@ -996,6 +996,13 @@ namespace Symphony.Core
                             {
                                 nodeGroup.Attributes[kv.Key] = new H5Attribute(kv.Value);
                             }
+                            else if (kv.Value is IMeasurement)
+                            {
+                                var m = (IMeasurement) kv.Value;
+                                nodeGroup.Attributes[kv.Key + "_quantity"] = (double) m.Quantity;
+                                nodeGroup.Attributes[kv.Value + "_units"] = m.DisplayUnit;
+                                nodeGroup.Attributes[kv.Key] = m.ToString();
+                            }
                             else
                             {
                                 H5EpochPersistor.Log.WarnFormat("Node configuration value ({0} : {1}) is of usupported type. Falling back to string representation.", kv.Key, kv.Value);

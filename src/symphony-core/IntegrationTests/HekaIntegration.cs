@@ -6,7 +6,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Heka;
 using Symphony.Core;
-using log4net;
 
 namespace IntegrationTests
 {

@@ -1,14 +1,9 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using System.Xml;
-using ApprovalTests;
-using ApprovalTests.Reporters;
-using HDF5DotNet;
 using Symphony.Core;
 using Symphony.SimulationDAQController;
 using NUnit.Framework;
@@ -29,7 +24,7 @@ namespace IntegrationTests
             RunSingleEpoch(sampleRate, nChannels, new FakeEpochPersistor());
         }
 
-        private void RunSingleEpoch(double sampleRate, int nChannels, IEpochPersistor epochPersistor)
+        private Epoch RunSingleEpoch(double sampleRate, int nChannels, IEpochPersistor epochPersistor)
         {
             Epoch e;
             IExternalDevice dev0;
@@ -41,7 +36,7 @@ namespace IntegrationTests
 
             var time = new DateTimeOffset(2011, 8, 22, 11, 12, 0, 0, TimeSpan.FromHours(-6));
 
-            epochPersistor.BeginEpochBlock(e.ProtocolID, time);
+            var block = epochPersistor.BeginEpochBlock(e.ProtocolID, time);
             
             controller.RunEpoch(e, epochPersistor);
             
@@ -57,14 +52,17 @@ namespace IntegrationTests
                 .Count(dif => Math.Abs(dif) > (decimal) MAX_VOLTAGE_DIFF);
 
             Assert.AreEqual(0, failures);
+
+            return e;
         }
 
         [Test]
-        [UseReporter(typeof(NUnitReporter))]
         public void SingleH5EpochPersistence()
         {
             if (File.Exists("SingleH5Persistence.h5"))
                 File.Delete("SingleH5Persistence.h5");
+
+            Epoch e;
 
             using (var persistor = H5EpochPersistor.Create("SingleH5Persistence.h5", "for testing purposes"))
             {
@@ -74,13 +72,22 @@ namespace IntegrationTests
 
                 persistor.BeginEpochGroup("label1", src, time);
 
-                RunSingleEpoch(5000, 2, persistor);
+                e = RunSingleEpoch(5000, 2, persistor);
                 persistor.EndEpochGroup(time.AddMinutes(2));
                 
                 persistor.Close();
             }
 
-            //VerifyHDF5File("SingleH5Persistence.h5");
+            using (var persistor = new H5EpochPersistor("SingleH5Persistence.h5"))
+            {
+                Assert.AreEqual(1, persistor.Experiment.EpochGroups.Count());
+
+                var eg = persistor.Experiment.EpochGroups.First();
+
+                Assert.AreEqual(1, eg.EpochBlocks.Count());
+                Assert.AreEqual(1, eg.EpochBlocks.First().Epochs.Count());
+                PersistentEpochAssert.AssertEpochsEqual(e, eg.EpochBlocks.First().Epochs.First());
+            }
         }
 
         [Test]
@@ -90,6 +97,9 @@ namespace IntegrationTests
             if (File.Exists("AppendToExistingHDF5.h5"))
                 File.Delete("AppendToExistingHDF5.h5");
 
+            Epoch e1;
+            Epoch e2;
+
             using (var persistor = H5EpochPersistor.Create("AppendToExistingHDF5.h5", "for testing purposes"))
             {
                 var time = new DateTimeOffset(2011, 8, 22, 11, 12, 0, 0, TimeSpan.FromHours(-6));
@@ -97,7 +107,7 @@ namespace IntegrationTests
                 var src = persistor.AddSource("source1", null);
                 persistor.BeginEpochGroup("label1", src, time);
 
-                RunSingleEpoch(5000, 2, persistor);
+                e1 = RunSingleEpoch(5000, 2, persistor);
                 persistor.EndEpochGroup(time.AddMilliseconds(100));
 
                 persistor.Close();
@@ -110,14 +120,28 @@ namespace IntegrationTests
                 var src = persistor.AddSource("source2", null);
                 persistor.BeginEpochGroup("label2", src, time);
 
-                RunSingleEpoch(5000, 2, persistor);
+                e2 = RunSingleEpoch(5000, 2, persistor);
                 persistor.EndEpochGroup(time.AddMilliseconds(100));
 
                 persistor.Close();
             }
 
+            using (var persistor = new H5EpochPersistor("AppendToExistingHDF5.h5"))
+            {
+                Assert.AreEqual(2, persistor.Experiment.EpochGroups.Count());
 
-            //VerifyHDF5File("AppendToExistingHDF5.h5");
+                var eg1 = persistor.Experiment.EpochGroups.First(g => g.Label == "label1");
+
+                Assert.AreEqual(1, eg1.EpochBlocks.Count());
+                Assert.AreEqual(1, eg1.EpochBlocks.First().Epochs.Count());
+                PersistentEpochAssert.AssertEpochsEqual(e1, eg1.EpochBlocks.First().Epochs.First());
+
+                var eg2 = persistor.Experiment.EpochGroups.First(g => g.Label == "label2");
+
+                Assert.AreEqual(1, eg2.EpochBlocks.Count());
+                Assert.AreEqual(1, eg2.EpochBlocks.First().Epochs.Count());
+                PersistentEpochAssert.AssertEpochsEqual(e2, eg2.EpochBlocks.First().Epochs.First());
+            }
         }
 
 
@@ -316,21 +340,6 @@ namespace IntegrationTests
             e.Backgrounds[dev1] = new Background(new Measurement(0, "V"), srate);
 
             return controller;
-        }
-
-        private static void VerifyHDF5File(string file)
-        {
-            // Directly comparing HDF5 files does not work because of some
-            // unknown discrepancies in the binary files. We'll compare the 
-            // XML dump via h5dump instead.
-            var startInfo = new ProcessStartInfo(@"..\..\..\..\..\..\externals\HDF5\bin\h5dump",
-                                                 @" --xml " + file);
-            startInfo.RedirectStandardOutput = true;
-            startInfo.UseShellExecute = false;
-            startInfo.CreateNoWindow = true;
-            Process proc = Process.Start(startInfo);
-
-            Approvals.VerifyXml(proc.StandardOutput.ReadToEnd());
         }
     }
 }

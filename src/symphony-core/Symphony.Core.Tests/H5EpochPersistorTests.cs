@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using HDF5DotNet;
 using NUnit.Framework;
 
 namespace Symphony.Core
@@ -381,52 +380,9 @@ namespace Symphony.Core
             var grp = persistor.BeginEpochGroup("group", src);
             var blk = persistor.BeginEpochBlock(epoch.ProtocolID, epoch.StartTime);
             
-            var e = persistor.Serialize(epoch);
+            var persistedEpoch = persistor.Serialize(epoch);
 
-            Assert.AreEqual((DateTimeOffset) epoch.StartTime, e.StartTime);
-            Assert.AreEqual((DateTimeOffset) epoch.StartTime + epoch.Duration, e.EndTime);
-            CollectionAssert.AreEquivalent(epoch.ProtocolParameters, e.ProtocolParameters);
-            CollectionAssert.AreEquivalent(epoch.Keywords, e.Keywords);
-
-            // Backgrounds
-            Assert.AreEqual(epoch.Backgrounds.Count, e.Backgrounds.Count());
-            AssertBackgroundsEqual(epoch.Backgrounds[dev1], e.Backgrounds.First(b => b.Device.Name == dev1.Name));
-            AssertBackgroundsEqual(epoch.Backgrounds[dev2], e.Backgrounds.First(b => b.Device.Name == dev2.Name));
-
-            // Stimuli
-            Assert.AreEqual(epoch.Stimuli.Count, e.Stimuli.Count());
-            AssertStimuliEqual(epoch.Stimuli[dev1], e.Stimuli.First(s => s.Device.Name == dev1.Name));
-            AssertStimuliEqual(epoch.Stimuli[dev2], e.Stimuli.First(s => s.Device.Name == dev2.Name));
-
-            // Responses
-            Assert.AreEqual(epoch.Responses.Count, e.Responses.Count());
-            AssertResponsesEqual(epoch.Responses[dev1], e.Responses.First(r => r.Device.Name == dev1.Name));
-            AssertResponsesEqual(epoch.Responses[dev2], e.Responses.First(r => r.Device.Name == dev2.Name));
-        }
-
-        private static void AssertBackgroundsEqual(Background expected, IPersistentBackground actual)
-        {
-            Assert.AreEqual(expected.Value, actual.Value);
-            Assert.AreEqual(expected.SampleRate, actual.SampleRate);
-        }
-
-        private static void AssertStimuliEqual(IStimulus expected, IPersistentStimulus actual)
-        {
-            Assert.AreEqual(expected.StimulusID, actual.StimulusID);
-            Assert.AreEqual(expected.Units, actual.Units);
-            Assert.AreEqual(expected.SampleRate, actual.SampleRate);
-            Assert.AreEqual(expected.Duration, actual.Duration);
-            Assert.AreEqual(expected.Data, actual.Data);
-            CollectionAssert.AreEquivalent(expected.Parameters, actual.Parameters);
-            AssertConfigurationSpansEqual(expected.OutputConfigurationSpans, actual.ConfigurationSpans);
-        }
-
-        private static void AssertResponsesEqual(Response expected, IPersistentResponse actual)
-        {
-            Assert.AreEqual(expected.SampleRate, actual.SampleRate);
-            Assert.AreEqual(expected.InputTime, actual.InputTime);
-            CollectionAssert.AreEqual(expected.Data, actual.Data);
-            AssertConfigurationSpansEqual(expected.DataConfigurationSpans, actual.ConfigurationSpans);
+            PersistentEpochAssert.AssertEpochsEqual(epoch, persistedEpoch);
         }
 
         [Test]
@@ -482,28 +438,6 @@ namespace Symphony.Core
             Assert.AreEqual(endTime, grp1.EndTime);
             Assert.AreEqual(endTime, grp2.EndTime);
             Assert.AreEqual(endTime, blk.EndTime);
-        }
-
-        private static void AssertConfigurationSpansEqual(IEnumerable<IConfigurationSpan> expected, IEnumerable<IConfigurationSpan> actual)
-        {
-            var expectedSpans = expected.ToList();
-            var actualSpans = actual.ToList();
-            Assert.AreEqual(expectedSpans.Count, actualSpans.Count);
-
-            for (int i = 0; i < expectedSpans.Count; i++)
-            {
-                Assert.AreEqual(expectedSpans[i].Time, actualSpans[i].Time);
-
-                var expectedNodes = expectedSpans[i].Nodes.ToList();
-                var actualNodes = actualSpans[i].Nodes.ToList();
-                Assert.AreEqual(expectedNodes.Count, actualNodes.Count);
-
-                for (int j = 0; j < expectedNodes.Count; j++)
-                {
-                    Assert.AreEqual(expectedNodes[j].Name, actualNodes[j].Name);
-                    CollectionAssert.AreEquivalent(expectedNodes[j].Configuration, actualNodes[j].Configuration);
-                }
-            }
         }
 
         private static Epoch CreateTestEpoch(out ExternalDeviceBase dev1, out ExternalDeviceBase dev2)
@@ -587,6 +521,89 @@ namespace Symphony.Core
             public void SetStartTime(Maybe<DateTimeOffset> t)
             {
                 _startTime = t;
+            }
+        }
+    }
+
+    public static class PersistentEpochAssert
+    {
+        public static void AssertEpochsEqual(Epoch expected, IPersistentEpoch actual)
+        {
+            Assert.AreEqual((DateTimeOffset)expected.StartTime, actual.StartTime);
+            Assert.AreEqual((DateTimeOffset)expected.StartTime + expected.Duration, actual.EndTime);
+            CollectionAssert.AreEquivalent(expected.ProtocolParameters, actual.ProtocolParameters);
+            CollectionAssert.AreEquivalent(expected.Keywords, actual.Keywords);
+
+            // Backgrounds
+            Assert.AreEqual(expected.Backgrounds.Count, actual.Backgrounds.Count());
+            foreach (var kv in expected.Backgrounds)
+            {
+                var a = actual.Backgrounds.First(b => b.Device.Name == kv.Key.Name && b.Device.Manufacturer == kv.Key.Manufacturer);
+                AssertBackgroundsEqual(kv.Value, a);
+            }
+
+            // Stimuli
+            Assert.AreEqual(expected.Stimuli.Count, actual.Stimuli.Count());
+            foreach (var kv in expected.Stimuli)
+            {
+                var a = actual.Stimuli.First(b => b.Device.Name == kv.Key.Name && b.Device.Manufacturer == kv.Key.Manufacturer);
+                AssertStimuliEqual(kv.Value, a);
+            }
+
+            // Responses
+            Assert.AreEqual(expected.Responses.Count, actual.Responses.Count());
+            foreach (var kv in expected.Responses)
+            {
+                var a = actual.Responses.First(b => b.Device.Name == kv.Key.Name && b.Device.Manufacturer == kv.Key.Manufacturer);
+                AssertResponsesEqual(kv.Value, a);
+            }
+        }
+
+        public static void AssertBackgroundsEqual(Background expected, IPersistentBackground actual)
+        {
+            Assert.AreEqual(expected.Value, actual.Value);
+            Assert.AreEqual(expected.SampleRate, actual.SampleRate);
+        }
+
+        public static void AssertStimuliEqual(IStimulus expected, IPersistentStimulus actual)
+        {
+            Assert.AreEqual(expected.StimulusID, actual.StimulusID);
+            Assert.AreEqual(expected.Units, actual.Units);
+            Assert.AreEqual(expected.SampleRate, actual.SampleRate);
+            Assert.AreEqual(expected.Duration, actual.Duration);
+            Assert.AreEqual(expected.Data, actual.Data);
+            CollectionAssert.AreEquivalent(expected.Parameters, actual.Parameters);
+            AssertConfigurationSpansEqual(expected.OutputConfigurationSpans, actual.ConfigurationSpans);
+        }
+
+        public static void AssertResponsesEqual(Response expected, IPersistentResponse actual)
+        {
+            Assert.AreEqual(expected.SampleRate, actual.SampleRate);
+            Assert.AreEqual(expected.InputTime, actual.InputTime);
+            CollectionAssert.AreEqual(expected.Data, actual.Data);
+            AssertConfigurationSpansEqual(expected.DataConfigurationSpans, actual.ConfigurationSpans);
+        }
+
+        private static void AssertConfigurationSpansEqual(IEnumerable<IConfigurationSpan> expected, IEnumerable<IConfigurationSpan> actual)
+        {
+            var expectedSpans = expected.ToList();
+            var actualSpans = actual.ToList();
+            Assert.AreEqual(expectedSpans.Count, actualSpans.Count);
+
+            for (int i = 0; i < expectedSpans.Count; i++)
+            {
+                Assert.AreEqual(expectedSpans[i].Time, actualSpans[i].Time);
+
+                var expectedNodes = expectedSpans[i].Nodes.ToList();
+                var actualNodes = actualSpans[i].Nodes.ToList();
+                Assert.AreEqual(expectedNodes.Count, actualNodes.Count);
+
+                foreach (var e in expectedNodes)
+                {
+                    Assert.AreEqual(1, actualNodes.Count(n => n.Name == e.Name));
+                    var a = actualNodes.First(n => n.Name == e.Name);
+                    CollectionAssert.AreEquivalent(e.Configuration, a.Configuration);
+                }
             }
         }
     }
