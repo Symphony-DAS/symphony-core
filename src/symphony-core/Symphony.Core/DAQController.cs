@@ -314,10 +314,7 @@ namespace Symphony.Core
 
             var cts = new CancellationTokenSource();
 
-            EventHandler<TimeStampedEventArgs> stopRequested = (c, args) =>
-            {
-                cts.Cancel();
-            };
+            EventHandler<TimeStampedEventArgs> stopRequested = (c, args) => cts.Cancel();
 
             try
             {
