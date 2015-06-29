@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using HDF5DotNet;
+﻿using HDF5DotNet;
 
 namespace HDF5
 {

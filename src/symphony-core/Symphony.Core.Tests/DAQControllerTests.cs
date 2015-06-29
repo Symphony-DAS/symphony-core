@@ -4,7 +4,6 @@ using System.Linq;
 using NSubstitute;
 using NUnit.Framework;
 using System.Threading;
-using NUnit.Mocks;
 
 namespace Symphony.Core
 {

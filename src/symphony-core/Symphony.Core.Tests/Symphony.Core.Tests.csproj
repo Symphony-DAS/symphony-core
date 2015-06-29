@@ -82,11 +82,6 @@
     <ErrorReport>prompt</ErrorReport>
     <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
-  <ItemGroup Condition=" '$(Platform)' == 'x64' ">
-    <Reference Include="HDF5DotNet, Version=1.8.9.0, Culture=neutral, processorArchitecture=x64">
-      <HintPath>$(ProjectDir)..\..\..\externals\HDF5DotNet\x64\HDF5DotNet.dll</HintPath>
-    </Reference>
-  </ItemGroup>
   <ItemGroup>
     <Reference Include="Moq, Version=4.0.10827.0, Culture=neutral, PublicKeyToken=69f491c39445e920, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
@@ -98,13 +93,6 @@
     <Reference Include="nunit.framework, Version=2.6.4.14350, Culture=neutral, PublicKeyToken=96d09a1eb7f44a77, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\NUnit.2.6.4\lib\nunit.framework.dll</HintPath>
-    </Reference>
-    <Reference Include="nunit.mocks, Version=2.6.4.14350, Culture=neutral, PublicKeyToken=96d09a1eb7f44a77, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>..\packages\NUnit.Mocks.2.6.4\lib\nunit.mocks.dll</HintPath>
-    </Reference>
-    <Reference Include="Sprache">
-      <HintPath>..\packages\Sprache.1.9.1.31\lib\NET40\Sprache.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />

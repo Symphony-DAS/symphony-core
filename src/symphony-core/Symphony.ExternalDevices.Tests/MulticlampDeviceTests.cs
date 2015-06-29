@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using NSubstitute;
 using NUnit.Framework;
-using NUnit.Mocks;
 using Symphony.Core;
 
 namespace Symphony.ExternalDevices
