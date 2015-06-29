@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using NUnit.Mocks;
+using NSubstitute;
 
 namespace Symphony.Core
 {
@@ -55,19 +56,19 @@ namespace Symphony.Core
         [Test]
         public void InputStreamShouldReadValue()
         {
-            var controller = new DynamicMock(typeof(IDAQController));
-            var s = new DAQInputStream("test", controller.MockInstance as IDAQController)
+            var controller = Substitute.For<IDAQController>();
+            var s = new DAQInputStream("test", controller)
                 {
                     MeasurementConversionTarget = "V"
                 };
 
             var expected = new InputData(Enumerable.Repeat(new Measurement(1, "V"), 1), null, DateTimeOffset.Now);
 
-            controller.ExpectAndReturn("ReadStream", expected, s);
+            controller.ReadStream(s).Returns(expected);
 
             var actual = s.Read();
 
-            controller.Verify();
+            controller.Received().ReadStream(s);
         }
 
         [Test]
@@ -338,30 +339,27 @@ namespace Symphony.Core
         public void OutputStreamShouldPropagateOutputConfiguration()
         {
             var s = new DAQOutputStream("test");
-            var device = new DynamicMock(typeof (IExternalDevice));
+            var device = Substitute.For<IExternalDevice>();
 
             DateTimeOffset time = DateTime.Now;
             var config = new List<IPipelineNodeConfiguration>();
-            device.Expect("DidOutputData", new object[] {s, time, TimeSpan.FromSeconds(0.1), config});
 
-            s.Devices.Add(device.MockInstance as IExternalDevice);
+            s.Devices.Add(device);
 
             s.DidOutputData(time, TimeSpan.FromSeconds(0.1), config);
 
-            device.Verify();
+            device.Received().DidOutputData(s, time, TimeSpan.FromSeconds(0.1), config);
         }
 
         [Test]
         public void OutputStreamShouldApplyBackground()
         {
-            var controller = new DynamicMock(typeof (IDAQController));
-            var s = new DAQOutputStream("test", controller.MockInstance as IDAQController);
-
-            controller.Expect("ApplyStreamBackground", s);
+            var controller = Substitute.For<IDAQController>();
+            var s = new DAQOutputStream("test", controller);
 
             s.ApplyBackground();
 
-            controller.Verify();
+            controller.Received().ApplyStreamBackground(s);
         }
     }
 }

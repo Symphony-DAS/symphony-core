@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using NSubstitute;
 using NUnit.Framework;
 using NUnit.Mocks;
 using Symphony.Core;
@@ -691,19 +692,17 @@ namespace Symphony.ExternalDevices
             };
 
 
-            var daq = new DynamicMock(typeof(IDAQController));
-            var s = new DAQOutputStream("test", daq.MockInstance as IDAQController);
-
+            var daq = Substitute.For<IDAQController>();
+            var s = new DAQOutputStream("test", daq);
 
             var mcd = new MultiClampDevice(mc, c, background);
             mcd.BindStream(s);
 
-            daq.ExpectAndReturn("get_IsRunning", false);
-            daq.Expect("ApplyStreamBackground", new object[] {s});
+            daq.IsRunning.Returns(false);
 
             mc.FireParametersChanged(DateTimeOffset.Now, dataVClamp);
 
-            daq.Verify();
+            daq.Received().ApplyStreamBackground(s);
         }
 
         [Test]
@@ -731,19 +730,18 @@ namespace Symphony.ExternalDevices
             };
 
 
-            var daq = new DynamicMock(typeof(IDAQController));
-            var s = new DAQOutputStream("test", daq.MockInstance as IDAQController);
+            var daq = Substitute.For<IDAQController>();
+            var s = new DAQOutputStream("test", daq);
 
 
             var mcd = new MultiClampDevice(mc, c, background);
             mcd.BindStream(s);
 
-            daq.ExpectAndReturn("get_IsRunning", true);
-            daq.ExpectNoCall("ApplyStreamBackground");
+            daq.IsRunning.Returns(true);
 
             mc.FireParametersChanged(DateTimeOffset.Now, dataVClamp);
 
-            daq.Verify();
+            daq.DidNotReceiveWithAnyArgs().ApplyStreamBackground(s);
         }
 
         [Test]
@@ -892,9 +890,9 @@ namespace Symphony.ExternalDevices
 
             var time = DateTimeOffset.MinValue.Add(MultiClampDevice.ParameterStalenessInterval);
 
-            var clock = new DynamicMock(typeof(IClock));
-            clock.SetReturnValue("get_Now", time);
-            var mcd = new MultiClampDevice(mc, c, UNUSED_BACKGROUND_DICTIONARY) { Clock = clock.MockInstance as IClock };
+            var clock = Substitute.For<IClock>();
+            clock.Now.Returns(time);
+            var mcd = new MultiClampDevice(mc, c, UNUSED_BACKGROUND_DICTIONARY) { Clock = clock };
 
             mcd.BindStream(new DAQInputStream(UNUSED_NAME));
 
@@ -914,9 +912,9 @@ namespace Symphony.ExternalDevices
 
             var time = DateTimeOffset.MinValue.Add(MultiClampDevice.ParameterStalenessInterval);
 
-            var clock = new DynamicMock(typeof(IClock));
-            clock.SetReturnValue("get_Now", time);
-            var mcd = new MultiClampDevice(mc, c, UNUSED_BACKGROUND_DICTIONARY) { Clock = clock.MockInstance as IClock };
+            var clock = Substitute.For<IClock>();
+            clock.Now.Returns(time);
+            var mcd = new MultiClampDevice(mc, c, UNUSED_BACKGROUND_DICTIONARY) { Clock = clock };
 
             mcd.BindStream(new DAQOutputStream(UNUSED_NAME));
 

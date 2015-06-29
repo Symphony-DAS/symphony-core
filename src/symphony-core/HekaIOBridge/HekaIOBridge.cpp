@@ -136,11 +136,11 @@ namespace Heka {
 
 		long err;
 
-		if(output->Values->Count > maxOutputs) {
+		if((unsigned) output->Values->Count > maxOutputs) {
 			throw gcnew HekaDAQException("Output stream number exceeds output stream availability.");
 		}
 
-		if(input->Count > maxInputs) {
+		if((unsigned) input->Count > maxInputs) {
 			throw gcnew HekaDAQException("Input stream count exceeds input stream availability.");
 		}
 
@@ -266,7 +266,7 @@ namespace Heka {
 
 		for(int i=0; i < input->Count; i++) {
 			array<itcsample_t>^ inData = gcnew array<itcsample_t>(input[i].Samples);
-			for(unsigned int j=0; j < input[i].Samples; j++) {
+			for(unsigned int j=0; j < (unsigned) input[i].Samples; j++) {
 				itcsample_t s = inputSamples[i][j];  
 				inData[j] = s;
 			}
