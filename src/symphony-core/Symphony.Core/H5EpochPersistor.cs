@@ -22,8 +22,9 @@ namespace Symphony.Core
         private const uint PersistenceVersion = 2;
 
         private readonly H5File _file;
-        private readonly H5PersistentExperiment _experiment;
-        private readonly Stack<H5PersistentEpochGroup> _openEpochGroups;
+
+        private H5PersistentExperiment _experiment;
+        private Stack<H5PersistentEpochGroup> _openEpochGroups;
 
         public static H5EpochPersistor Create(string filename, string purpose)
         {
@@ -118,7 +119,11 @@ namespace Symphony.Core
             {
                 EndEpochGroup(endTime);
             }
-            _experiment.SetEndTime(endTime);
+            if (_experiment != null)
+            {
+                _experiment.SetEndTime(endTime);
+                _experiment = null;
+            }
             
             CloseDocument();
         }

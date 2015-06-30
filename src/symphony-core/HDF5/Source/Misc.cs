@@ -11,6 +11,7 @@ namespace HDF5
         }
     }
 
+    // "Extensions" for H5O
     internal static class H5Ox
     {
         public static H5ObjectWithAttributes open(H5FileId id, string path)
@@ -44,6 +45,7 @@ namespace HDF5
         }
     }
 
+    // "Extensions" for H5T
     internal static class H5Tx
     {
         public static H5DataTypeId getNativeType(Type systemType)

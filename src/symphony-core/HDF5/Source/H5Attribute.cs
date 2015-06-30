@@ -7,15 +7,15 @@ namespace HDF5
 {
     public class H5Attribute : H5Object
     {
-        private readonly string name;
+        private readonly string _name;
 
-        public override string Name { get { return name; } }
+        public override string Name { get { return _name; } }
 
         internal object Value { get; private set; }
 
         internal H5Attribute(H5File file, string path, string name) : base(file, path)
         {
-            this.name = name;
+            _name = name;
         }
 
         public H5Attribute(object value) : this(null, null, null)
@@ -72,7 +72,7 @@ namespace HDF5
             try
             {
                 oid = H5Ox.open(File.Fid, Path);
-                aid = H5A.open(oid, name);
+                aid = H5A.open(oid, _name);
 
                 tmpid = H5A.getType(aid);
                 tid = H5T.getNativeType(tmpid, H5T.Direction.DEFAULT);

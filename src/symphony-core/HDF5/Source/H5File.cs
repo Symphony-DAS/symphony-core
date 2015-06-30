@@ -31,14 +31,14 @@ namespace HDF5
             GC.SuppressFinalize(this);
         }
 
-        private bool disposed = false;
+        private bool _disposed = false;
 
         private void Dispose(bool disposing)
         {
-            if (disposed)
+            if (_disposed)
                 return;
             Close();
-            disposed = true;
+            _disposed = true;
         }
 
         public void Close()

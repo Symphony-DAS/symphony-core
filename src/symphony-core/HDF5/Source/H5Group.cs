@@ -10,11 +10,11 @@ namespace HDF5
         {
         }
 
-        private H5AttributeManager attributes;
+        private H5AttributeManager _attributes;
 
         public H5AttributeManager Attributes
         {
-            get { return attributes ?? (attributes = new H5AttributeManager(File, Path)); }
+            get { return _attributes ?? (_attributes = new H5AttributeManager(File, Path)); }
         }
 
         public IEnumerable<H5Group> Groups { get { return GetObjects<H5Group>(); } }
