@@ -1,4 +1,5 @@
 ﻿using System.Linq;
+using HDF5DotNet;
 
 namespace HDF5
 {
@@ -16,6 +17,11 @@ namespace HDF5
         {
             File = file;
             Path = path;
+        }
+
+        public void Flush()
+        {
+            H5F.flush(File.Fid, H5F.Scope.LOCAL);
         }
 
         public override bool Equals(object obj)

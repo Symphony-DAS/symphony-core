@@ -43,7 +43,7 @@ namespace HDF5
 
         public void Close()
         {
-            if (Fid == null || Fid.Id <= 0) 
+            if (Fid == null || Fid.Id <= 0)
                 return;
             H5F.close(Fid);
             Fid = null;

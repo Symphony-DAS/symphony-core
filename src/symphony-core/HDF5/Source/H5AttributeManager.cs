@@ -36,6 +36,9 @@ namespace HDF5
 
         public bool Remove(string key)
         {
+            if (!ContainsKey(key))
+                return false;
+
             H5ObjectWithAttributes oid = null;
             try
             {

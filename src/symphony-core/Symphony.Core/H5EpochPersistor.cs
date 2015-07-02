@@ -166,6 +166,7 @@ namespace Symphony.Core
             var epochGroup = CurrentEpochGroup == null
                        ? _experiment.InsertEpochGroup(label, (H5PersistentSource) source, startTime)
                        : CurrentEpochGroup.InsertEpochGroup(label, (H5PersistentSource) source, startTime);
+
             _openEpochGroups.Push(epochGroup);
             return epochGroup;
         }
@@ -181,6 +182,7 @@ namespace Symphony.Core
                 throw new InvalidOperationException("There are no open epoch groups");
             if (CurrentEpochBlock != null)
                 throw new InvalidOperationException("There is an open epoch block");
+            
             CurrentEpochGroup.SetEndTime(endTime);
             return _openEpochGroups.Pop();
         }
@@ -193,6 +195,7 @@ namespace Symphony.Core
                 throw new InvalidOperationException("There are no open epoch groups");
             if (CurrentEpochBlock != null)
                 throw new InvalidOperationException("There is an open epoch block");
+            
             CurrentEpochBlock = CurrentEpochGroup.InsertEpochBlock(protocolID, startTime);
             return CurrentEpochBlock;
         }
@@ -201,9 +204,11 @@ namespace Symphony.Core
         {
             if (CurrentEpochBlock == null)
                 throw new InvalidOperationException("There is no open epoch block");
+
             var block = CurrentEpochBlock;
             block.SetEndTime(endTime);
             CurrentEpochBlock = null;
+
             return block;
         }
 
@@ -211,6 +216,7 @@ namespace Symphony.Core
         {
             if (CurrentEpochBlock == null)
                 throw new InvalidOperationException("There is no open epoch block");
+
             return CurrentEpochBlock.InsertEpoch(epoch);
         }
 
@@ -222,6 +228,7 @@ namespace Symphony.Core
                 throw new InvalidOperationException("You cannot delete an open epoch group");
             if (entity.Equals(CurrentEpochBlock))
                 throw new InvalidOperationException("You cannot delete an open epoch block");
+
             ((H5PersistentEntity) entity).Delete();
         }
     }
@@ -316,12 +323,20 @@ namespace Symphony.Core
             {
                 _propertiesGroup = Group.AddGroup(PropertiesGroupName);
             }
+
             _propertiesGroup.Attributes[key] = new H5Attribute(value);
+            TryFlush();
         }
 
         public bool RemoveProperty(string key)
         {
-            return _propertiesGroup != null && _propertiesGroup.Attributes.Remove(key);
+            if (_propertiesGroup == null)
+                return false;
+
+            bool removed = _propertiesGroup.Attributes.Remove(key);
+            TryFlush();
+
+            return removed;
         }
 
         public IEnumerable<string> Keywords
@@ -338,22 +353,30 @@ namespace Symphony.Core
         {
             var newKeywords = new HashSet<string>(Keywords);
             newKeywords.Add(keyword);
+
             Group.Attributes[KeywordsKey] = string.Join(",", newKeywords);
+            TryFlush();
         }
 
         public bool RemoveKeyword(string keyword)
         {
+            if (!Keywords.Contains(keyword))
+                return false;
+
             var newKeywords = new HashSet<string>(Keywords);
-            newKeywords.Remove(keyword);
-            if (!newKeywords.Any())
-            {
-                Group.Attributes.Remove(KeywordsKey);
-            }
-            else
+            bool removed = newKeywords.Remove(keyword);
+
+            if (newKeywords.Any())
             {
                 Group.Attributes[KeywordsKey] = string.Join(",", newKeywords);
             }
-            return !Keywords.Contains(keyword);
+            else
+            {
+                Group.Attributes.Remove(KeywordsKey);
+            }
+            TryFlush();
+
+            return removed;
         }
 
         public IEnumerable<INote> Notes
@@ -377,6 +400,7 @@ namespace Symphony.Core
             {
                 _notesDataset = Group.AddDataset(NotesDatasetName, H5Map.GetNoteType(Group.File), new[] {0L}, new[] {-1L}, new[] {64L});
             }
+
             long n = _notesDataset.NumberOfElements;
             _notesDataset.Extend(new[] {n + 1});
             var nt = H5Map.Convert(note);
@@ -388,7 +412,21 @@ namespace Symphony.Core
             {
                 H5Map.Free(nt);
             }
+            TryFlush();
+
             return note;
+        }
+
+        protected void TryFlush()
+        {
+            try
+            {
+                Group.Flush();
+            }
+            catch (Exception x)
+            {
+                H5EpochPersistor.Log.WarnFormat("Unable to flush buffers to disk: {0}", x.Message);
+            }
         }
     }
 
@@ -490,7 +528,10 @@ namespace Symphony.Core
 
         public H5PersistentSource InsertSource(string label)
         {
-            return InsertSource(_sourcesGroup, Experiment, label);
+            var source = InsertSource(_sourcesGroup, Experiment, label);
+            TryFlush();
+
+            return source;
         }
 
         public IEnumerable<IPersistentEpochGroup> EpochGroups
@@ -508,9 +549,14 @@ namespace Symphony.Core
             _epochGroupsGroup.AddHardLink(epochGroup.Group.Name, epochGroup.Group);
         }
 
-        public void RemoveEpochGroup(H5PersistentEpochGroup epochGroup)
+        public bool RemoveEpochGroup(H5PersistentEpochGroup epochGroup)
         {
-            _epochGroupsGroup.Groups.First(g => g.Name == epochGroup.Group.Name).Delete();
+            var eg = _epochGroupsGroup.Groups.FirstOrDefault(g => g.Name == epochGroup.Group.Name);
+            if (eg == null)
+                return false;
+
+            eg.Delete();
+            return true;
         }
     }
 
@@ -572,6 +618,8 @@ namespace Symphony.Core
         {
             Group.Attributes[EndTimeTicksKey] = time.Ticks;
             Group.Attributes[EndTimeOffsetHoursKey] = time.Offset.TotalHours;
+            TryFlush();
+            
             EndTime = time;
         }
     }
@@ -633,7 +681,11 @@ namespace Symphony.Core
         {
             if (Devices.Any(d => d.Name == name && d.Manufacturer == manufacturer))
                 throw new ArgumentException("Device already exists");
-            return H5PersistentDevice.InsertDevice(_devicesGroup, this, name, manufacturer);
+            
+            var device = H5PersistentDevice.InsertDevice(_devicesGroup, this, name, manufacturer);
+            TryFlush();
+
+            return device;
         }
 
         public IEnumerable<IPersistentSource> Sources
@@ -643,7 +695,10 @@ namespace Symphony.Core
 
         public H5PersistentSource InsertSource(string label)
         {
-            return H5PersistentSource.InsertSource(_sourcesGroup, this, label);
+            var source = H5PersistentSource.InsertSource(_sourcesGroup, this, label);
+            TryFlush();
+
+            return source;
         }
 
         public IEnumerable<IPersistentEpochGroup> EpochGroups
@@ -653,7 +708,10 @@ namespace Symphony.Core
 
         public H5PersistentEpochGroup InsertEpochGroup(string label, H5PersistentSource source, DateTimeOffset startTime)
         {
-            return H5PersistentEpochGroup.InsertEpochGroup(_epochGroupsGroup, this, label, source, startTime);
+            var group = H5PersistentEpochGroup.InsertEpochGroup(_epochGroupsGroup, this, label, source, startTime);
+            TryFlush();
+
+            return group;
         }
     }
 
@@ -675,7 +733,7 @@ namespace Symphony.Core
             if (source == null)
                 throw new ArgumentException("Epoch group source cannot be null");
 
-            H5PersistentEpochGroup epochGroup;
+            H5PersistentEpochGroup epochGroup = null;
 
             var group = InsertTimelineEntityGroup(parent, label, startTime);
             try
@@ -691,9 +749,11 @@ namespace Symphony.Core
             }
             catch (Exception x)
             {
+                source.RemoveEpochGroup(epochGroup);
                 group.Delete();
                 throw new PersistanceException(x.Message);
             }
+            
             return epochGroup;
         }
 
@@ -730,7 +790,10 @@ namespace Symphony.Core
 
         public H5PersistentEpochGroup InsertEpochGroup(string label, H5PersistentSource source, DateTimeOffset startTime)
         {
-            return InsertEpochGroup(_epochGroupsGroup, Experiment, label, source, startTime);
+            var group = InsertEpochGroup(_epochGroupsGroup, Experiment, label, source, startTime);
+            TryFlush();
+
+            return group;
         }
 
         public IEnumerable<IPersistentEpochBlock> EpochBlocks
@@ -740,7 +803,10 @@ namespace Symphony.Core
 
         public H5PersistentEpochBlock InsertEpochBlock(string protocolID, DateTimeOffset startTime)
         {
-            return H5PersistentEpochBlock.InsertEpochBlock(_epochBlocksGroup, this, protocolID, startTime);
+            var block = H5PersistentEpochBlock.InsertEpochBlock(_epochBlocksGroup, this, protocolID, startTime);
+            TryFlush();
+
+            return block;
         }
     }
 
@@ -793,7 +859,11 @@ namespace Symphony.Core
         {
             if (epoch.ProtocolID != ProtocolID)
                 throw new ArgumentException("Epoch protocol id does not match epoch block protocol id");
-            return H5PersistentEpoch.InsertEpoch(_epochsGroup, this, epoch);
+            
+            var pEpoch = H5PersistentEpoch.InsertEpoch(_epochsGroup, this, epoch);
+            TryFlush();
+
+            return pEpoch;
         }
     }
 
