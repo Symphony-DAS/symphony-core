@@ -294,8 +294,6 @@ namespace Symphony.Core
     /// </summary>
     public interface IPersistentEpoch : ITimelinePersistentEntity
     {
-        IEnumerable<IPersistentBackground> Backgrounds { get; } 
-
         /// <summary>
         /// The protocol parameters describing this Epoch.
         /// </summary>
@@ -310,6 +308,11 @@ namespace Symphony.Core
         /// The Stimuli presented during this Epoch.
         /// </summary>
         IEnumerable<IPersistentStimulus> Stimuli { get; }
+
+        /// <summary>
+        /// The Background values presented in the absence of a Stimulus.
+        /// </summary>
+        IEnumerable<IPersistentBackground> Backgrounds { get; } 
     }
 
 
