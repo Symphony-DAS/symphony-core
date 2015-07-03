@@ -1,6 +1,7 @@
 ﻿/* Copyright (c) 2012 Physion Consulting, LLC */
 
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics.Contracts;
 
@@ -139,6 +140,54 @@ namespace Symphony.Core
         public TimeSpanOption(bool b) : base(b) { }
 
         public TimeSpanOption(TimeSpan span) : base(true, span) { }
+    }
+
+    /// <summary>
+    /// Strangely an IEnumerable may not expose its interface to Matlab. This is a workaround. 
+    /// </summary>
+    public static class EnumerableExtensions
+    {
+        public static EnumerableWrapper Wrap(this IEnumerable source)
+        {
+            return new EnumerableWrapper(source);
+        }
+    }
+
+    public class EnumerableWrapper : IEnumerable
+    {
+        private readonly IEnumerable _source;
+
+        public EnumerableWrapper(IEnumerable source)
+        {
+            _source = source;
+        }
+
+        public IEnumerator GetEnumerator()
+        {
+            return new EnumeratorWrapper(_source.GetEnumerator());
+        }
+    }
+
+    public class EnumeratorWrapper : IEnumerator
+    {
+        private readonly IEnumerator _source;
+
+        public EnumeratorWrapper(IEnumerator source)
+        {
+            _source = source;
+        }
+
+        public bool MoveNext()
+        {
+            return _source.MoveNext();
+        }
+
+        public void Reset()
+        {
+            _source.Reset();
+        }
+
+        public object Current { get { return _source.Current; } }
     }
 
     /// <summary>
