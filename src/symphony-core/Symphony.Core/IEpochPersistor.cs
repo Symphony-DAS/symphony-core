@@ -175,6 +175,11 @@ namespace Symphony.Core
         /// The manufacturer of this Device.
         /// </summary>
         string Manufacturer { get; }
+
+        /// <summary>
+        /// The Experiment that contains this Device.
+        /// </summary>
+        IPersistentExperiment Experiment { get; }
     }
 
     /// <summary>
@@ -200,7 +205,17 @@ namespace Symphony.Core
         /// <summary>
         /// All Epoch Groups associated with this Source and all its children.
         /// </summary>
-        IEnumerable<IPersistentEpochGroup> AllEpochGroups { get; } 
+        IEnumerable<IPersistentEpochGroup> AllEpochGroups { get; }
+
+        /// <summary>
+        /// The parent Source for this Source or null if this Source has no parent.
+        /// </summary>
+        IPersistentSource Parent { get; }
+
+        /// <summary>
+        /// The Experiment that contains this Source.
+        /// </summary>
+        IPersistentExperiment Experiment { get; }
     }
 
     /// <summary>
@@ -270,7 +285,17 @@ namespace Symphony.Core
         /// <summary>
         /// The Epoch Blocks contained within this Epoch Group.
         /// </summary>
-        IEnumerable<IPersistentEpochBlock> EpochBlocks { get; } 
+        IEnumerable<IPersistentEpochBlock> EpochBlocks { get; }
+
+        /// <summary>
+        /// The parent Epoch Group for this Epoch Group or null if this Epoch Group has no parent.
+        /// </summary>
+        IPersistentEpochGroup Parent { get; }
+
+        /// <summary>
+        /// The Experiment that contains this Epoch Group.
+        /// </summary>
+        IPersistentExperiment Experiment { get; }
     }
 
     /// <summary>
@@ -286,7 +311,12 @@ namespace Symphony.Core
         /// <summary>
         /// The Epochs contained within this Epoch Block.
         /// </summary>
-        IEnumerable<IPersistentEpoch> Epochs { get; } 
+        IEnumerable<IPersistentEpoch> Epochs { get; }
+
+        /// <summary>
+        /// The Epoch Group that contains this Epoch Block.
+        /// </summary>
+        IPersistentEpochGroup EpochGroup { get; }
     }
 
     /// <summary>
@@ -312,7 +342,12 @@ namespace Symphony.Core
         /// <summary>
         /// The Background values presented in the absence of a Stimulus.
         /// </summary>
-        IEnumerable<IPersistentBackground> Backgrounds { get; } 
+        IEnumerable<IPersistentBackground> Backgrounds { get; }
+
+        /// <summary>
+        /// The Epoch Block that contains this Epoch.
+        /// </summary>
+        IPersistentEpochBlock EpochBlock { get; }
     }
 
 
@@ -407,7 +442,7 @@ namespace Symphony.Core
         /// <summary>
         /// The Measurements presented by this Stimulus. None if data is not persisted.
         /// </summary>
-        Option<IEnumerable<IMeasurement>> Data { get; } 
+        Option<IEnumerable<IMeasurement>> Data { get; }
     }
 
     /// <summary>

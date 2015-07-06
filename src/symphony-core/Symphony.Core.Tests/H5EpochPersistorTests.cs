@@ -147,6 +147,7 @@ namespace Symphony.Core
 
             Assert.AreEqual(name, dev.Name);
             Assert.AreEqual(manufacturer, dev.Manufacturer);
+            Assert.AreEqual(persistor.Experiment, dev.Experiment);
 
             CollectionAssert.AreEquivalent(new[] {dev}, persistor.Experiment.Devices);
         }
@@ -177,6 +178,8 @@ namespace Symphony.Core
             Assert.AreEqual(label, src.Label);
             Assert.AreEqual(0, src.Sources.Count());
             Assert.AreEqual(0, src.EpochGroups.Count());
+            Assert.IsNull(src.Parent);
+            Assert.AreEqual(persistor.Experiment, src.Experiment);
 
             CollectionAssert.AreEquivalent(new[] {src}, persistor.Experiment.Sources);
         }
@@ -198,8 +201,12 @@ namespace Symphony.Core
             var mid2 = persistor.AddSource("mid2", top);
 
             CollectionAssert.AreEquivalent(new[] {top}, persistor.Experiment.Sources);
+            Assert.IsNull(top.Parent);
             CollectionAssert.AreEquivalent(new[] {mid1, mid2}, top.Sources);
+            Assert.AreEqual(top, mid1.Parent);
+            Assert.AreEqual(top, mid2.Parent);
             CollectionAssert.AreEquivalent(new[] {btm}, mid1.Sources);
+            Assert.AreEqual(mid1, btm.Parent);
             Assert.AreEqual(0, mid2.Sources.Count());
         }
 
@@ -254,6 +261,8 @@ namespace Symphony.Core
             Assert.IsNull(grp.EndTime);
             Assert.AreEqual(0, grp.EpochGroups.Count());
             Assert.AreEqual(0, grp.EpochBlocks.Count());
+            Assert.IsNull(grp.Parent);
+            Assert.AreEqual(persistor.Experiment, grp.Experiment);
 
             CollectionAssert.AreEquivalent(new[] {grp}, persistor.Experiment.EpochGroups);
         }
@@ -314,8 +323,12 @@ namespace Symphony.Core
             var mid2 = persistor.BeginEpochGroup("mid2", src);
 
             CollectionAssert.AreEquivalent(new[] {top}, persistor.Experiment.EpochGroups);
+            Assert.IsNull(top.Parent);
             CollectionAssert.AreEquivalent(new[] {mid1, mid2}, top.EpochGroups);
+            Assert.AreEqual(top, mid1.Parent);
+            Assert.AreEqual(top, mid2.Parent);
             CollectionAssert.AreEquivalent(new[] {btm}, mid1.EpochGroups);
+            Assert.AreEqual(mid1, btm.Parent);
             Assert.AreEqual(0, mid2.EpochGroups.Count());
         }
 
@@ -332,6 +345,7 @@ namespace Symphony.Core
             Assert.AreEqual(time, blk.StartTime);
             Assert.IsNull(blk.EndTime);
             Assert.AreEqual(0, blk.Epochs.Count());
+            Assert.AreEqual(grp, blk.EpochGroup);
 
             CollectionAssert.AreEquivalent(new[] {blk}, grp.EpochBlocks);
         }
@@ -383,6 +397,7 @@ namespace Symphony.Core
             var persistedEpoch = persistor.Serialize(epoch);
 
             PersistentEpochAssert.AssertEpochsEqual(epoch, persistedEpoch);
+            Assert.AreEqual(blk, persistedEpoch.EpochBlock);
         }
 
         [Test]
