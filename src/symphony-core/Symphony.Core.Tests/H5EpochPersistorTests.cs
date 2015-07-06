@@ -256,11 +256,14 @@ namespace Symphony.Core
         [Test]
         public void ShouldBeginEpochGroup()
         {
+            Assert.IsNull(persistor.CurrentEpochGroup);
+
             var label = "group";
             var time = DateTimeOffset.Now;
             var src = persistor.AddSource("label", null);
             var grp = persistor.BeginEpochGroup(label, src, time);
 
+            Assert.AreEqual(grp, persistor.CurrentEpochGroup);
             Assert.AreEqual(label, grp.Label);
             Assert.AreEqual(src, grp.Source);
             Assert.AreEqual(time, grp.StartTime);
@@ -341,12 +344,15 @@ namespace Symphony.Core
         [Test]
         public void ShouldBeginEpochBlock()
         {
+            Assert.IsNull(persistor.CurrentEpochBlock);
+
             var id = "protocol.id.here";
             var time = DateTimeOffset.Now;
             var src = persistor.AddSource("label", null);
             var grp = persistor.BeginEpochGroup("group", src, time);
             var blk = persistor.BeginEpochBlock(id, time);
 
+            Assert.AreEqual(blk, persistor.CurrentEpochBlock);
             Assert.AreEqual(id, blk.ProtocolID);
             Assert.AreEqual(time, blk.StartTime);
             Assert.IsNull(blk.EndTime);

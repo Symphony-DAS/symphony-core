@@ -46,6 +46,8 @@ namespace Symphony.Core
             return null;
         }
 
+        public IPersistentEpochGroup CurrentEpochGroup { get; private set; }
+
         public IPersistentEpochBlock BeginEpochBlock(string protocolID, DateTimeOffset startTime)
         {
             return null;
@@ -55,6 +57,8 @@ namespace Symphony.Core
         {
             return null;
         }
+
+        public IPersistentEpochBlock CurrentEpochBlock { get; private set; }
 
         public void Delete(IPersistentEntity entity)
         {

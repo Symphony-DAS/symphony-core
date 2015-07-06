@@ -151,11 +151,6 @@ namespace Symphony.Core
                        : ((H5PersistentSource) parent).InsertSource(label);
         }
 
-        private H5PersistentEpochGroup CurrentEpochGroup
-        {
-            get { return _openEpochGroups.Count == 0 ? null : _openEpochGroups.Peek(); }
-        }
-
         public IPersistentEpochGroup BeginEpochGroup(string label, IPersistentSource source)
         {
             return BeginEpochGroup(label, source, DateTimeOffset.Now);
@@ -165,7 +160,7 @@ namespace Symphony.Core
         {
             var epochGroup = CurrentEpochGroup == null
                        ? _experiment.InsertEpochGroup(label, (H5PersistentSource) source, startTime)
-                       : CurrentEpochGroup.InsertEpochGroup(label, (H5PersistentSource) source, startTime);
+                       : ((H5PersistentEpochGroup) CurrentEpochGroup).InsertEpochGroup(label, (H5PersistentSource) source, startTime);
 
             _openEpochGroups.Push(epochGroup);
             return epochGroup;
@@ -183,11 +178,14 @@ namespace Symphony.Core
             if (CurrentEpochBlock != null)
                 throw new InvalidOperationException("There is an open epoch block");
             
-            CurrentEpochGroup.SetEndTime(endTime);
+            ((H5PersistentEpochGroup) CurrentEpochGroup).SetEndTime(endTime);
             return _openEpochGroups.Pop();
         }
 
-        private H5PersistentEpochBlock CurrentEpochBlock { get; set; }
+        public IPersistentEpochGroup CurrentEpochGroup
+        {
+            get { return _openEpochGroups.Count == 0 ? null : _openEpochGroups.Peek(); }
+        }
 
         public IPersistentEpochBlock BeginEpochBlock(string protocolID, DateTimeOffset startTime)
         {
@@ -196,7 +194,7 @@ namespace Symphony.Core
             if (CurrentEpochBlock != null)
                 throw new InvalidOperationException("There is an open epoch block");
             
-            CurrentEpochBlock = CurrentEpochGroup.InsertEpochBlock(protocolID, startTime);
+            CurrentEpochBlock = ((H5PersistentEpochGroup) CurrentEpochGroup).InsertEpochBlock(protocolID, startTime);
             return CurrentEpochBlock;
         }
 
@@ -205,19 +203,21 @@ namespace Symphony.Core
             if (CurrentEpochBlock == null)
                 throw new InvalidOperationException("There is no open epoch block");
 
-            var block = CurrentEpochBlock;
+            var block = (H5PersistentEpochBlock) CurrentEpochBlock;
             block.SetEndTime(endTime);
             CurrentEpochBlock = null;
 
             return block;
         }
 
+        public IPersistentEpochBlock CurrentEpochBlock { get; set; }
+
         public IPersistentEpoch Serialize(Epoch epoch)
         {
             if (CurrentEpochBlock == null)
                 throw new InvalidOperationException("There is no open epoch block");
 
-            return CurrentEpochBlock.InsertEpoch(epoch);
+            return ((H5PersistentEpochBlock) CurrentEpochBlock).InsertEpoch(epoch);
         }
 
         public void Delete(IPersistentEntity entity)

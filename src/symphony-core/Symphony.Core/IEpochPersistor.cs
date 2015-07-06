@@ -71,6 +71,11 @@ namespace Symphony.Core
         IPersistentEpochGroup EndEpochGroup();
 
         /// <summary>
+        /// The currently open Epoch Group or null if there is no open Epoch Group.
+        /// </summary>
+        IPersistentEpochGroup CurrentEpochGroup { get; }
+
+        /// <summary>
         /// Begins a new Epoch Block, a logical group of consecutive Epochs produced by a single protocol run.
         /// </summary>
         /// <param name="protocolID">Protocol ID of the protocol that produced the block</param>
@@ -84,6 +89,11 @@ namespace Symphony.Core
         /// <param name="endTime">End time of the Epoch Block</param>
         /// <returns>The Epoch Block that was ended</returns>
         IPersistentEpochBlock EndEpochBlock(DateTimeOffset endTime);
+
+        /// <summary>
+        /// The currently open Epoch Block or null if there is no open Epoch Block.
+        /// </summary>
+        IPersistentEpochBlock CurrentEpochBlock { get; }
 
         /// <summary>
         /// Serializes an Epoch instance to some kind of persistent medium (file/database/etc).
