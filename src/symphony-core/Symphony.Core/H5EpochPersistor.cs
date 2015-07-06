@@ -544,6 +544,11 @@ namespace Symphony.Core
             get { return _sourcesGroup.Groups.Select(g => new H5PersistentSource(g)); }
         }
 
+        public IEnumerable<IPersistentSource> AllSources
+        {
+            get { return Sources.Aggregate(Sources, (current, source) => current.Concat(source.AllSources)); }
+        }
+
         public H5PersistentSource InsertSource(string label)
         {
             var source = InsertSource(_sourcesGroup, this, (H5PersistentExperiment) Experiment, label);
@@ -719,6 +724,11 @@ namespace Symphony.Core
         public IEnumerable<IPersistentSource> Sources
         {
             get { return _sourcesGroup.Groups.Select(g => new H5PersistentSource(g)); }
+        }
+
+        public IEnumerable<IPersistentSource> AllSources
+        {
+            get { return Sources.Aggregate(Sources, (current, source) => current.Concat(source.AllSources)); }
         }
 
         public H5PersistentSource InsertSource(string label)

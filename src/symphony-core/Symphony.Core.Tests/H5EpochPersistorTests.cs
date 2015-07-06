@@ -46,6 +46,7 @@ namespace Symphony.Core
             Assert.IsNull(experiment.EndTime);
             Assert.AreEqual(0, experiment.Devices.Count());
             Assert.AreEqual(0, experiment.Sources.Count());
+            Assert.AreEqual(0, experiment.AllSources.Count());
             Assert.AreEqual(0, experiment.EpochGroups.Count());
         }
 
@@ -177,7 +178,9 @@ namespace Symphony.Core
 
             Assert.AreEqual(label, src.Label);
             Assert.AreEqual(0, src.Sources.Count());
+            Assert.AreEqual(0, src.AllSources.Count());
             Assert.AreEqual(0, src.EpochGroups.Count());
+            Assert.AreEqual(0, src.AllEpochGroups.Count());
             Assert.IsNull(src.Parent);
             Assert.AreEqual(persistor.Experiment, src.Experiment);
 
@@ -203,11 +206,14 @@ namespace Symphony.Core
             CollectionAssert.AreEquivalent(new[] {top}, persistor.Experiment.Sources);
             Assert.IsNull(top.Parent);
             CollectionAssert.AreEquivalent(new[] {mid1, mid2}, top.Sources);
+            CollectionAssert.AreEquivalent(new[] {mid1, mid2, btm}, top.AllSources);
             Assert.AreEqual(top, mid1.Parent);
             Assert.AreEqual(top, mid2.Parent);
             CollectionAssert.AreEquivalent(new[] {btm}, mid1.Sources);
+            CollectionAssert.AreEquivalent(new[] {btm}, mid1.AllSources);
             Assert.AreEqual(mid1, btm.Parent);
             Assert.AreEqual(0, mid2.Sources.Count());
+            CollectionAssert.AreEquivalent(new[] {top, mid1, mid2, btm}, persistor.Experiment.AllSources);
         }
 
         [Test]

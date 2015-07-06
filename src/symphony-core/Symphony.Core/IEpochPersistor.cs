@@ -198,6 +198,11 @@ namespace Symphony.Core
         IEnumerable<IPersistentSource> Sources { get; }
 
         /// <summary>
+        /// All child Source of this Source and all its children.
+        /// </summary>
+        IEnumerable<IPersistentSource> AllSources { get; }
+
+        /// <summary>
         /// The top-level Epoch Groups associated with this Source.
         /// </summary>
         IEnumerable<IPersistentEpochGroup> EpochGroups { get; }
@@ -255,6 +260,11 @@ namespace Symphony.Core
         /// The top-level Sources contained within this Experiment.
         /// </summary>
         IEnumerable<IPersistentSource> Sources { get; }
+
+        /// <summary>
+        /// All Sources contained within this Experiment.
+        /// </summary>
+        IEnumerable<IPersistentSource> AllSources { get; }
 
         /// <summary>
         /// The top-level Epoch Groups contained within this Experiment.
