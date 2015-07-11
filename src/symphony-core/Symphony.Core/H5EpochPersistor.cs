@@ -251,10 +251,10 @@ namespace Symphony.Core
         private H5Group _propertiesGroup;
         private H5Dataset _notesDataset;
 
-        protected static H5Group InsertEntityGroup(H5Group container, string name)
+        protected static H5Group InsertEntityGroup(H5Group container, string prefix)
         {
             var uuid = Guid.NewGuid();
-            var group = container.AddGroup(name + "-" + uuid);
+            var group = container.AddGroup(prefix + "-" + uuid);
             try
             {
                 group.Attributes[UUIDKey] = uuid.ToString();
@@ -316,6 +316,10 @@ namespace Symphony.Core
 
         public void AddProperty(string key, object value)
         {
+            if (string.IsNullOrEmpty(key))
+                throw new ArgumentException("Key cannot be empty");
+            if (value == null || (value is string && ((string) value).Length == 0))
+                throw new ArgumentException("Value cannot be empty");
             if (!H5AttributeManager.IsSupportedType(value.GetType()))
                 throw new ArgumentException(string.Format("Value ({0} : {1}) is of unsupported type", key, value));
 
@@ -351,6 +355,9 @@ namespace Symphony.Core
 
         public void AddKeyword(string keyword)
         {
+            if (string.IsNullOrEmpty(keyword))
+                throw new ArgumentException("Keyword cannot be empty");
+
             var newKeywords = new HashSet<string>(Keywords);
             newKeywords.Add(keyword);
 
@@ -396,6 +403,9 @@ namespace Symphony.Core
 
         public INote AddNote(INote note)
         {
+            if (note == null)
+                throw new ArgumentException("Note cannot be null");
+
             if (_notesDataset == null)
             {
                 _notesDataset = Group.AddDataset(NotesDatasetName, H5Map.GetNoteType(Group.File), new[] {0L}, new[] {-1L}, new[] {64L});
@@ -441,9 +451,9 @@ namespace Symphony.Core
         public static H5PersistentDevice InsertDevice(H5Group container, H5PersistentExperiment experiment, string name, string manufacturer)
         {
             if (string.IsNullOrEmpty(name))
-                throw new ArgumentException("Device name cannot be null or empty");
+                throw new ArgumentException("Device name cannot be empty");
             if (string.IsNullOrEmpty(manufacturer))
-                throw new ArgumentException("Device manufacturer cannot be null or empty");
+                throw new ArgumentException("Device manufacturer cannot be empty");
 
             var group = InsertEntityGroup(container, name);
             try
@@ -495,7 +505,7 @@ namespace Symphony.Core
         public static H5PersistentSource InsertSource(H5Group container, H5PersistentSource parent, H5PersistentExperiment experiment, string label)
         {
             if (string.IsNullOrEmpty(label))
-                throw new ArgumentException("Source label cannot be null or empty");
+                throw new ArgumentException("Source label cannot be empty");
 
             var group = InsertEntityGroup(container, label);
             try
@@ -670,6 +680,9 @@ namespace Symphony.Core
 
         public static H5PersistentExperiment InsertExperiment(H5Group container, string purpose, DateTimeOffset startTime)
         {
+            if (string.IsNullOrEmpty(purpose))
+                throw new ArgumentException("Purpose cannot be empty");
+
             var group = InsertTimelineEntityGroup(container, "experiment", startTime);
             try
             {
@@ -771,7 +784,7 @@ namespace Symphony.Core
         public static H5PersistentEpochGroup InsertEpochGroup(H5Group container, H5PersistentEpochGroup parent, H5PersistentExperiment experiment, string label, H5PersistentSource source, DateTimeOffset startTime)
         {
             if (string.IsNullOrEmpty(label))
-                throw new ArgumentException("Epoch group label cannot be null or empty");
+                throw new ArgumentException("Epoch group label cannot be empty");
             if (source == null)
                 throw new ArgumentException("Epoch group source cannot be null");
 
@@ -879,7 +892,7 @@ namespace Symphony.Core
         public static H5PersistentEpochBlock InsertEpochBlock(H5Group container, H5PersistentEpochGroup epochGroup, string protocolID, DateTimeOffset startTime)
         {
             if (string.IsNullOrEmpty(protocolID))
-                throw new ArgumentException("Epoch block protocol id cannot be null or empty");
+                throw new ArgumentException("Epoch block protocol id cannot be empty");
 
             var group = InsertTimelineEntityGroup(container, protocolID, startTime);
             try
