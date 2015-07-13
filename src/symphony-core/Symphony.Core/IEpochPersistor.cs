@@ -147,7 +147,8 @@ namespace Symphony.Core
         /// Adds a keyword tag to this entity.
         /// </summary>
         /// <param name="keyword">The keyword to add</param>
-        void AddKeyword(string keyword);
+        /// <returns>True if the keyword was successfully added</returns>
+        bool AddKeyword(string keyword);
 
         /// <summary>
         /// Removes a keyword tag from this entity.

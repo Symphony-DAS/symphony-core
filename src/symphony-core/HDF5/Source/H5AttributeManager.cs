@@ -89,13 +89,13 @@ namespace HDF5
             {
                 oid = H5Ox.open(File.Fid, Path);
 
-                if (value is string)
+                if (value is string || value is char)
                 {
                     tid = H5T.copy(H5T.H5Type.C_S1);
-                    H5T.setSize(tid, ((string) value).Length);
+                    H5T.setSize(tid, value.ToString().Length);
                     sid = H5S.create(H5S.H5SClass.SCALAR);
                     aid = H5A.create(oid, name, tid, sid);
-                    H5A.write(aid, tid, new H5Array<byte>(Encoding.ASCII.GetBytes((string)value)));
+                    H5A.write(aid, tid, new H5Array<byte>(Encoding.ASCII.GetBytes(value.ToString())));
                 }
                 else
                 {

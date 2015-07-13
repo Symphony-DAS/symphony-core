@@ -353,16 +353,18 @@ namespace Symphony.Core
             }
         }
 
-        public void AddKeyword(string keyword)
+        public bool AddKeyword(string keyword)
         {
             if (string.IsNullOrEmpty(keyword))
                 throw new ArgumentException("Keyword cannot be empty");
 
             var newKeywords = new HashSet<string>(Keywords);
-            newKeywords.Add(keyword);
+            bool added = newKeywords.Add(keyword);
 
             Group.Attributes[KeywordsKey] = string.Join(",", newKeywords);
             TryFlush();
+
+            return added;
         }
 
         public bool RemoveKeyword(string keyword)
