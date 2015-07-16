@@ -309,6 +309,16 @@ namespace Symphony.Core
             return UUID.GetHashCode();
         }
 
+        public static bool operator ==(H5PersistentEntity lhs, H5PersistentEntity rhs)
+        {
+            return (object)lhs != null && lhs.Equals(rhs);
+        }
+
+        public static bool operator !=(H5PersistentEntity lhs, H5PersistentEntity rhs)
+        {
+            return !(lhs == rhs);
+        }
+
         public IEnumerable<KeyValuePair<string, object>> Properties 
         { 
             get
