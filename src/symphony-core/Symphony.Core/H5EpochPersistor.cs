@@ -846,7 +846,7 @@ namespace Symphony.Core
 
         public override void Delete()
         {
-            foreach (var g in EpochGroups)
+            foreach (var g in EpochGroups.ToList())
             {
                 ((H5PersistentEpochGroup)g).Delete();
             }

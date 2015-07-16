@@ -344,6 +344,22 @@ namespace Symphony.Core
         }
 
         [Test]
+        public void ShouldDeleteNestedEpochGroups()
+        {
+            var src = persistor.AddSource("label", null);
+
+            var top = persistor.BeginEpochGroup("top", src);
+            var mid1 = persistor.BeginEpochGroup("mid1", src);
+            persistor.EndEpochGroup();
+            var mid2 = persistor.BeginEpochGroup("mid2", src);
+            persistor.EndEpochGroup();
+            persistor.EndEpochGroup();
+
+            persistor.Delete(top);
+            Assert.AreEqual(0, persistor.Experiment.EpochGroups.Count());
+        }
+
+        [Test]
         public void ShouldBeginEpochBlock()
         {
             Assert.IsNull(persistor.CurrentEpochBlock);
