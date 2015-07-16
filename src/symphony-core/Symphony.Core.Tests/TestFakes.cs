@@ -24,6 +24,8 @@ namespace Symphony.Core
         {
         }
 
+        public bool IsClosed { get; private set; }
+
         public IPersistentExperiment Experiment { get; private set; }
 
         public IPersistentDevice AddDevice(string name, string manufacturer)

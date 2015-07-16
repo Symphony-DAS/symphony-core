@@ -76,6 +76,8 @@ namespace Symphony.Core
 
             _experiment = new H5PersistentExperiment(_file.Groups.First());
             _openEpochGroups = new Stack<H5PersistentEpochGroup>();
+
+            IsClosed = false;
         }
 
         ~H5EpochPersistor()
@@ -124,14 +126,17 @@ namespace Symphony.Core
                 _experiment.SetEndTime(endTime);
                 _experiment = null;
             }
-            
+
             CloseDocument();
         }
 
         public void CloseDocument()
         {
             _file.Close();
+            IsClosed = true;
         }
+
+        public bool IsClosed { get; private set; }
 
         internal static ILog Log = LogManager.GetLogger(typeof(H5EpochPersistor));
 

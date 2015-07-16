@@ -30,6 +30,11 @@ namespace Symphony.Core
         void Close();
 
         /// <summary>
+        /// Indicates if this persistor has been closed.
+        /// </summary>
+        bool IsClosed { get; }
+
+        /// <summary>
         /// An Experiment is the root of the persistent hierarchy and is automatically created when a persistor
         /// is instantiated. A persistor will always have one Experiment. All persisted entities can be accessed 
         /// by tranversing the persistent hierarchy starting at the Experiment entity.
