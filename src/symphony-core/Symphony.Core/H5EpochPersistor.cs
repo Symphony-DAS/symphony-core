@@ -293,15 +293,8 @@ namespace Symphony.Core
 
         public override bool Equals(object obj)
         {
-            if (ReferenceEquals(null, obj)) return false;
-            if (ReferenceEquals(this, obj)) return true;
-            if (obj.GetType() != GetType()) return false;
-            return Equals((H5PersistentEntity) obj);
-        }
-
-        protected bool Equals(H5PersistentEntity other)
-        {
-            return UUID.Equals(other.UUID);
+            var e = obj as H5PersistentEntity;
+            return e != null && UUID.Equals(e.UUID);
         }
 
         public override int GetHashCode()
@@ -311,7 +304,11 @@ namespace Symphony.Core
 
         public static bool operator ==(H5PersistentEntity lhs, H5PersistentEntity rhs)
         {
-            return (object)lhs != null && lhs.Equals(rhs);
+            if (!Equals(lhs, null) && !Equals(rhs, null))
+            {
+                return lhs.Equals(rhs);
+            }
+            return !Equals(lhs, null) ^ Equals(rhs, null);
         }
 
         public static bool operator !=(H5PersistentEntity lhs, H5PersistentEntity rhs)
@@ -849,6 +846,10 @@ namespace Symphony.Core
 
         public override void Delete()
         {
+            foreach (var g in EpochGroups)
+            {
+                ((H5PersistentEpochGroup)g).Delete();
+            }
             ((H5PersistentSource) Source).RemoveEpochGroup(this);
             base.Delete();
         }

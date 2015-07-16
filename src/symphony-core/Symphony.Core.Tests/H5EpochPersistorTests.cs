@@ -245,10 +245,12 @@ namespace Symphony.Core
         public void ShouldAllowDeletingSourceWithDeletedEpochGroup()
         {
             var src = persistor.AddSource("source", null);
-            var grp = persistor.BeginEpochGroup("group", src, DateTimeOffset.Now);
-            persistor.EndEpochGroup(DateTimeOffset.Now);
+            var grp1 = persistor.BeginEpochGroup("group1", src);
+            var grp2 = persistor.BeginEpochGroup("group2", src);
+            persistor.EndEpochGroup();
+            persistor.EndEpochGroup();
 
-            persistor.Delete(grp);
+            persistor.Delete(grp1);
             persistor.Delete(src);
             Assert.AreEqual(0, persistor.Experiment.Sources.Count());
         }

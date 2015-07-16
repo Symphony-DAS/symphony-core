@@ -26,15 +26,12 @@ namespace HDF5
 
         public override bool Equals(object obj)
         {
-            if (ReferenceEquals(null, obj)) return false;
-            if (ReferenceEquals(this, obj)) return true;
-            if (obj.GetType() != GetType()) return false;
-            return Equals((H5Object) obj);
-        }
-
-        protected bool Equals(H5Object other)
-        {
-            return Equals(File, other.File) && string.Equals(Path, other.Path);
+            var o = obj as H5Object;
+            if (o != null)
+            {
+                return Equals(File, o.File) && string.Equals(Path, o.Path);
+            }
+            return false;
         }
 
         public override int GetHashCode()
@@ -43,6 +40,20 @@ namespace HDF5
             {
                 return ((File != null ? File.GetHashCode() : 0) * 397) ^ (Path != null ? Path.GetHashCode() : 0);
             }
+        }
+
+        public static bool operator ==(H5Object lhs, H5Object rhs)
+        {
+            if (!Equals(lhs, null) && !Equals(rhs, null))
+            {
+                return lhs.Equals(rhs);
+            }
+            return !Equals(lhs, null) ^ Equals(rhs, null);
+        }
+
+        public static bool operator !=(H5Object lhs, H5Object rhs)
+        {
+            return !(lhs == rhs);
         }
     }
 }
