@@ -238,6 +238,11 @@ namespace Symphony.Core
         }
     }
 
+    // FIXME: H5PersistentEntity properties will not compare with == as expected. You would expect a property
+    // to return the same object if called repeatedly (i.e. == would be true). This implementation generally returns
+    // a new object on each property call (i.e. == will be false). We cannot override == on IPersistentEntity because
+    // you cannot define static methods for interfaces. We need to implement something like an entity cache to fix this.
+
     /// <summary>
     /// An H5PersistentEntity is stored as a group in the H5 file. The group uses attributes, datasets, and subgroups
     /// to store fields of the entity. 

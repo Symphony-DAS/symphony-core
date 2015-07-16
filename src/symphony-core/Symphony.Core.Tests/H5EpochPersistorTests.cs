@@ -492,7 +492,7 @@ namespace Symphony.Core
             var src2 = persistor.Experiment.Sources.First();
             var src3 = persistor.Experiment.Sources.First();
             bool t = src2 == src3;
-            Assert.IsTrue(src2 == src3);
+            Assert.IsTrue(src1 == src2 && src2 == src3);
         }
 
         private static Epoch CreateTestEpoch(out ExternalDeviceBase dev1, out ExternalDeviceBase dev2)
