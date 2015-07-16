@@ -257,6 +257,18 @@ namespace HDF5.Tests
         }
 
         [Test]
+        public void PropertyShouldReturnSameObject()
+        {
+            using (var file = new H5File(TEST_FILE))
+            {
+                var g1 = file.AddGroup("group");
+                var g2 = file.Groups.First();
+                var g3 = file.Groups.First();
+                Assert.IsTrue(g1 == g2 && g2 == g3);
+            }
+        }
+
+        [Test]
         public void ObjectsWithSamePathShouldBeEqual()
         {
             using (var file = new H5File(TEST_FILE))

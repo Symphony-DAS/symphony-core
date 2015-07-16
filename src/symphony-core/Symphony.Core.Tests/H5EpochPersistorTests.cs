@@ -485,6 +485,16 @@ namespace Symphony.Core
             Assert.AreEqual(endTime, blk.EndTime);
         }
 
+        [Test]
+        public void ShouldReturnSameObjectFromProperty()
+        {
+            var src1 = persistor.AddSource("label", null);
+            var src2 = persistor.Experiment.Sources.First();
+            var src3 = persistor.Experiment.Sources.First();
+            bool t = src2 == src3;
+            Assert.IsTrue(src2 == src3);
+        }
+
         private static Epoch CreateTestEpoch(out ExternalDeviceBase dev1, out ExternalDeviceBase dev2)
         {
             dev1 = new UnitConvertingExternalDevice("dev1", "man1", new Measurement(0, "V"));
