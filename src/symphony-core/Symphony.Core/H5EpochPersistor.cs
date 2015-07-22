@@ -323,10 +323,10 @@ namespace Symphony.Core
 
         public void AddProperty(string key, object value)
         {
-            if (string.IsNullOrEmpty(key))
-                throw new ArgumentException("Key cannot be empty");
-            if (value == null || (value is string && ((string) value).Length == 0))
-                throw new ArgumentException("Value cannot be empty");
+            if (key == null)
+                throw new ArgumentNullException("key");
+            if (value == null)
+                throw new ArgumentNullException("value");
             if (!H5AttributeManager.IsSupportedType(value.GetType()))
                 throw new ArgumentException(string.Format("Value ({0} : {1}) is of unsupported type", key, value));
 
@@ -413,7 +413,7 @@ namespace Symphony.Core
         public INote AddNote(INote note)
         {
             if (note == null)
-                throw new ArgumentException("Note cannot be null");
+                throw new ArgumentNullException("note");
 
             if (_notesDataset == null)
             {
@@ -459,12 +459,7 @@ namespace Symphony.Core
 
         public static H5PersistentDevice InsertDevice(H5Group container, H5PersistentEntityFactory factory, H5PersistentExperiment experiment, string name, string manufacturer)
         {
-            if (string.IsNullOrEmpty(name))
-                throw new ArgumentException("Device name cannot be empty");
-            if (string.IsNullOrEmpty(manufacturer))
-                throw new ArgumentException("Device manufacturer cannot be empty");
-
-            var group = InsertEntityGroup(container, "device");
+            var group = InsertEntityGroup(container, name);
             try
             {
                 group.Attributes[NameKey] = name;
@@ -516,9 +511,6 @@ namespace Symphony.Core
 
         public static H5PersistentSource InsertSource(H5Group container, H5PersistentEntityFactory factory, H5PersistentSource parent, H5PersistentExperiment experiment, string label)
         {
-            if (string.IsNullOrEmpty(label))
-                throw new ArgumentException("Source label cannot be empty");
-
             var group = InsertEntityGroup(container, "source");
             try
             {
@@ -565,9 +557,6 @@ namespace Symphony.Core
             get { return _label; }
             set
             {
-                if (string.IsNullOrEmpty(value))
-                    throw new ArgumentException("Label cannot be empty");
-
                 Group.Attributes[LabelKey] = value;
                 _label = value;
             }
@@ -708,9 +697,6 @@ namespace Symphony.Core
 
         public static H5PersistentExperiment InsertExperiment(H5Group container, H5PersistentEntityFactory factory, string purpose, DateTimeOffset startTime)
         {
-            if (string.IsNullOrEmpty(purpose))
-                throw new ArgumentException("Purpose cannot be empty");
-
             var group = InsertTimelineEntityGroup(container, "experiment", startTime);
             try
             {
@@ -744,9 +730,6 @@ namespace Symphony.Core
             get { return _purpose; }
             set
             {
-                if (string.IsNullOrEmpty(value))
-                    throw new ArgumentException("Purpose cannot be empty");
-
                 Group.Attributes[PurposeKey] = value;
                 _purpose = value;
             }
@@ -825,14 +808,12 @@ namespace Symphony.Core
 
         public static H5PersistentEpochGroup InsertEpochGroup(H5Group container, H5PersistentEntityFactory factory, H5PersistentEpochGroup parent, H5PersistentExperiment experiment, string label, H5PersistentSource source, DateTimeOffset startTime)
         {
-            if (string.IsNullOrEmpty(label))
-                throw new ArgumentException("Epoch group label cannot be empty");
             if (source == null)
-                throw new ArgumentException("Epoch group source cannot be null");
+                throw new ArgumentNullException("source");
 
             H5PersistentEpochGroup epochGroup = null;
 
-            var group = InsertTimelineEntityGroup(container, label, startTime);
+            var group = InsertTimelineEntityGroup(container, "epochGroup", startTime);
             try
             {
                 group.Attributes[LabelKey] = label;
@@ -887,9 +868,6 @@ namespace Symphony.Core
             get { return _label; } 
             set
             {
-                if (string.IsNullOrEmpty(value))
-                    throw new ArgumentException("Label cannot be empty");
-
                 Group.Attributes[LabelKey] = value;
                 _label = value;
             }
@@ -948,9 +926,6 @@ namespace Symphony.Core
 
         public static H5PersistentEpochBlock InsertEpochBlock(H5Group container, H5PersistentEntityFactory factory, H5PersistentEpochGroup epochGroup, string protocolID, DateTimeOffset startTime)
         {
-            if (string.IsNullOrEmpty(protocolID))
-                throw new ArgumentException("Epoch block protocol id cannot be empty");
-
             var group = InsertTimelineEntityGroup(container, protocolID, startTime);
             try
             {
@@ -1017,8 +992,6 @@ namespace Symphony.Core
 
         public static H5PersistentEpoch InsertEpoch(H5Group container, H5PersistentEntityFactory factory, H5PersistentEpochBlock block, Epoch epoch)
         {
-            H5PersistentEpoch persistentEpoch;
-
             var group = InsertTimelineEntityGroup(container, "epoch", epoch.StartTime, (DateTimeOffset)epoch.StartTime + epoch.Duration);
             try
             {
@@ -1030,7 +1003,7 @@ namespace Symphony.Core
 
                 var experiment = (H5PersistentExperiment)block.EpochGroup.Experiment;
 
-                persistentEpoch = factory.Create<H5PersistentEpoch>(group);
+                var persistentEpoch = factory.Create<H5PersistentEpoch>(group);
 
                 // ToList() everything before enumerating to guard against external collection modification
                 // causing exceptions during serialization

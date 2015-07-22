@@ -154,16 +154,6 @@ namespace Symphony.Core
         }
 
         [Test]
-        public void ShouldNotAddInvalidDevice()
-        {
-            Assert.Throws(typeof (ArgumentException), () => persistor.AddDevice(null, null));
-            Assert.Throws(typeof (ArgumentException), () => persistor.AddDevice("", ""));
-            Assert.Throws(typeof (ArgumentException), () => persistor.AddDevice("dev", null));
-            Assert.Throws(typeof (ArgumentException), () => persistor.AddDevice(null, "man"));
-            Assert.AreEqual(0, persistor.Experiment.Devices.Count());
-        }
-
-        [Test]
         public void ShouldNotAllowAddingDuplicateDevices()
         {
             persistor.AddDevice("device", "manufacturer");
@@ -185,14 +175,6 @@ namespace Symphony.Core
             Assert.AreEqual(persistor.Experiment, src.Experiment);
 
             CollectionAssert.AreEquivalent(new[] {src}, persistor.Experiment.Sources);
-        }
-
-        [Test]
-        public void ShouldNotAddInvalidSource()
-        {
-            Assert.Throws(typeof(ArgumentException), () => persistor.AddSource(null, null));
-            Assert.Throws(typeof(ArgumentException), () => persistor.AddSource("", null));
-            Assert.AreEqual(0, persistor.Experiment.Sources.Count());
         }
 
         [Test]
@@ -282,9 +264,7 @@ namespace Symphony.Core
         public void ShouldNotBeginInvalidEpochGroup()
         {
             var src = persistor.AddSource("label", null);
-            Assert.Throws(typeof(ArgumentException), () => persistor.BeginEpochGroup("group", null));
-            Assert.Throws(typeof(ArgumentException), () => persistor.BeginEpochGroup(null, src));
-            Assert.Throws(typeof(ArgumentException), () => persistor.BeginEpochGroup("", src));
+            Assert.Throws(typeof(ArgumentNullException), () => persistor.BeginEpochGroup("group", null));
             Assert.AreEqual(0, persistor.Experiment.EpochGroups.Count());
         }
 
@@ -378,16 +358,6 @@ namespace Symphony.Core
             Assert.AreEqual(grp, blk.EpochGroup);
 
             CollectionAssert.AreEquivalent(new[] {blk}, grp.EpochBlocks);
-        }
-
-        [Test]
-        public void ShouldNotBeginInvalidEpochBlock()
-        {
-            var src = persistor.AddSource("label", null);
-            var grp = persistor.BeginEpochGroup("group", src);
-            Assert.Throws(typeof(ArgumentException), () => persistor.BeginEpochBlock(null, DateTimeOffset.Now));
-            Assert.Throws(typeof(ArgumentException), () => persistor.BeginEpochBlock("", DateTimeOffset.Now));
-            Assert.AreEqual(0, grp.EpochBlocks.Count());
         }
 
         [Test]

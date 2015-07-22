@@ -118,12 +118,22 @@ namespace HDF5.Tests
         }
 
         [Test]
+        public void ShouldAddEmptyStringAttribute()
+        {
+            using (var file = new H5File(TEST_FILE))
+            {
+                file.Attributes["attr"] = "";
+                Assert.AreEqual("", file.Attributes["attr"].GetValue());
+            }
+        }
+
+        [Test]
         public void ShouldOverwriteAttribute()
         {
             using (var file = new H5File(TEST_FILE))
             {
-                file.Attributes["attr"] = new H5Attribute("banana");
-                file.Attributes["attr"] = new H5Attribute(123);
+                file.Attributes["attr"] = "banana";
+                file.Attributes["attr"] = 123;
 
                 var attr = file.Attributes.First();
                 Assert.AreEqual("attr", attr.Name);
@@ -136,7 +146,7 @@ namespace HDF5.Tests
         {
             using (var file = new H5File(TEST_FILE))
             {
-                file.Attributes["attr"] = new H5Attribute("wowow");
+                file.Attributes["attr"] = "wowow";
                 file.Attributes.Remove("attr");
 
                 Assert.AreEqual(0, file.Attributes.Count());

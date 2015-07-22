@@ -23,6 +23,8 @@ namespace HDF5
             }
             set
             {
+                if (value == null)
+                    throw new ArgumentNullException();
                 if (ContainsKey(key))
                     Remove(key);
                 CreateAttribute(key, value.Value);
@@ -91,11 +93,21 @@ namespace HDF5
 
                 if (value is string || value is char)
                 {
-                    tid = H5T.copy(H5T.H5Type.C_S1);
-                    H5T.setSize(tid, value.ToString().Length);
-                    sid = H5S.create(H5S.H5SClass.SCALAR);
-                    aid = H5A.create(oid, name, tid, sid);
-                    H5A.write(aid, tid, new H5Array<byte>(Encoding.ASCII.GetBytes(value.ToString())));
+                    string svalue = value.ToString();
+                    if (svalue.Length == 0)
+                    {
+                        tid = H5T.copy(H5T.H5Type.C_S1);
+                        sid = H5S.create(H5S.H5SClass.NULLSPACE);
+                        aid = H5A.create(oid, name, tid, sid);
+                    }
+                    else
+                    {
+                        tid = H5T.copy(H5T.H5Type.C_S1);
+                        H5T.setSize(tid, svalue.Length);
+                        sid = H5S.create(H5S.H5SClass.SCALAR);
+                        aid = H5A.create(oid, name, tid, sid);
+                        H5A.write(aid, tid, new H5Array<byte>(Encoding.ASCII.GetBytes(svalue)));
+                    }
                 }
                 else
                 {
@@ -124,11 +136,11 @@ namespace HDF5
 
                     aid = H5A.create(oid, name, tid, sid);
 
-                    //H5Array<elementType> buffer = new H5Array<elementType>(data);
+                    // Equivalent to: H5Array<elementType> buffer = new H5Array<elementType>(data);
                     var bufferType = typeof(H5Array<>).MakeGenericType(new[] { elementType });
                     var buffer = Activator.CreateInstance(bufferType, new object[] { data });
 
-                    //H5A.write(attributeId, typeId, buffer);
+                    // Equivalent to: H5A.write(attributeId, typeId, buffer);
                     var methodInfo = typeof(H5A).GetMethod("write").MakeGenericMethod(new[] { elementType });
                     methodInfo.Invoke(null, new[] { aid, tid, buffer });
                 }

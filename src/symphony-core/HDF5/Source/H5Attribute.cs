@@ -68,11 +68,13 @@ namespace HDF5
             H5ObjectWithAttributes oid = null;
             H5DataTypeId tmpid = null;
             H5DataTypeId tid = null;
+            H5DataSpaceId sid = null;
             H5AttributeId aid = null;
             try
             {
                 oid = H5Ox.open(File.Fid, Path);
                 aid = H5A.open(oid, _name);
+                sid = H5A.getSpace(aid);
 
                 tmpid = H5A.getType(aid);
                 tid = H5T.getNativeType(tmpid, H5T.Direction.DEFAULT);
@@ -80,17 +82,22 @@ namespace HDF5
                 object value;
                 if (H5T.getClass(tid) == H5T.H5TClass.STRING)
                 {
-                    var buffer = new byte[H5T.getSize(tid)];
-                    H5A.read(aid, tid, new H5Array<byte>(buffer));
-                    value = Encoding.ASCII.GetString(buffer);
+                    if (H5S.get_simple_extent_type(sid) == H5S.H5SClass.NULLSPACE)
+                    {
+                        value = string.Empty;
+                    }
+                    else
+                    {
+                        var buffer = new byte[H5T.getSize(tid)];
+                        H5A.read(aid, tid, new H5Array<byte>(buffer));
+                        value = Encoding.ASCII.GetString(buffer);
+                    }
                 }
                 else
                 {
                     Type elementType = H5Tx.getSystemType(tid);
 
-                    H5DataSpaceId spaceId = H5A.getSpace(aid);
-                    long[] dims = H5S.getSimpleExtentDims(spaceId);
-                    H5S.close(spaceId);
+                    long[] dims = H5S.getSimpleExtentDims(sid);
 
                     Array data = Array.CreateInstance(elementType, dims.Any() ? dims : new long[] { 1 });
 
@@ -111,6 +118,8 @@ namespace HDF5
             {
                 if (aid != null && aid.Id > 0)
                     H5A.close(aid);
+                if (sid != null && sid.Id > 0)
+                    H5S.close(sid);
                 if (tmpid != null && tmpid.Id > 0)
                     H5T.close(tmpid);
                 if (tid != null && tid.Id > 0)
