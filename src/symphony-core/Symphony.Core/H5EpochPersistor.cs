@@ -23,9 +23,9 @@ namespace Symphony.Core
 
         private readonly H5File _file;
 
-        private H5PersistentEntityFactory _entityFactory;
-        private H5PersistentExperiment _experiment;
-        private Stack<H5PersistentEpochGroup> _openEpochGroups;
+        private readonly H5PersistentExperiment _experiment;
+        private readonly H5PersistentEntityFactory _entityFactory;
+        private readonly Stack<H5PersistentEpochGroup> _openEpochGroups;
 
         public static H5EpochPersistor Create(string filename, string purpose)
         {
@@ -77,6 +77,7 @@ namespace Symphony.Core
 
             _entityFactory = new H5PersistentEntityFactory();
             _experiment = _entityFactory.Create<H5PersistentExperiment>(_file.Groups.First());
+
             _openEpochGroups = new Stack<H5PersistentEpochGroup>();
 
             IsClosed = false;
@@ -123,11 +124,7 @@ namespace Symphony.Core
             {
                 EndEpochGroup(endTime);
             }
-            if (_experiment != null)
-            {
-                _experiment.SetEndTime(endTime);
-                _experiment = null;
-            }
+            _experiment.SetEndTime(endTime);
 
             CloseDocument();
         }
@@ -265,13 +262,14 @@ namespace Symphony.Core
             try
             {
                 group.Attributes[UUIDKey] = uuid.ToString();
+
+                return group;
             }
             catch (Exception x)
             {
                 group.Delete();
                 throw new PersistanceException(x.Message);
             }
-            return group;
         }
 
         protected H5PersistentEntity(H5Group group, H5PersistentEntityFactory factory)
@@ -466,20 +464,21 @@ namespace Symphony.Core
             if (string.IsNullOrEmpty(manufacturer))
                 throw new ArgumentException("Device manufacturer cannot be empty");
 
-            var group = InsertEntityGroup(container, name);
+            var group = InsertEntityGroup(container, "device");
             try
             {
                 group.Attributes[NameKey] = name;
                 group.Attributes[ManufacturerKey] = manufacturer;
 
                 group.AddHardLink(ExperimentGroupName, experiment.Group);
+
+                return factory.Create<H5PersistentDevice>(group);
             }
             catch (Exception x)
             {
                 group.Delete();
                 throw new PersistanceException(x.Message);
             }
-            return factory.Create<H5PersistentDevice>(group);
         }
 
         public H5PersistentDevice(H5Group group, H5PersistentEntityFactory factory) : base(group, factory)
@@ -508,6 +507,8 @@ namespace Symphony.Core
         private const string ParentGroupName = "parent";
         private const string ExperimentGroupName = "experiment";
 
+        private string _label;
+
         private readonly H5Group _sourcesGroup;
         private readonly H5Group _epochGroupsGroup;
         private readonly H5Group _parentGroup;
@@ -518,7 +519,7 @@ namespace Symphony.Core
             if (string.IsNullOrEmpty(label))
                 throw new ArgumentException("Source label cannot be empty");
 
-            var group = InsertEntityGroup(container, label);
+            var group = InsertEntityGroup(container, "source");
             try
             {
                 group.Attributes[LabelKey] = label;
@@ -531,19 +532,20 @@ namespace Symphony.Core
                 {
                     group.AddHardLink(ParentGroupName, parent.Group);
                 }
+
+                return factory.Create<H5PersistentSource>(group);
             }
             catch (Exception x)
             {
                 group.Delete();
                 throw new PersistanceException(x.Message);
             }
-            return factory.Create<H5PersistentSource>(group);
         }
 
         public H5PersistentSource(H5Group group, H5PersistentEntityFactory factory) : base(group, factory)
         {
-            Label = group.Attributes[LabelKey];
-            
+            _label = group.Attributes[LabelKey];
+
             var subGroups = Group.Groups.ToList();
             _sourcesGroup = subGroups.First(g => g.Name == SourcesGroupName);
             _epochGroupsGroup = subGroups.First(g => g.Name == EpochGroupsGroupName);
@@ -558,7 +560,18 @@ namespace Symphony.Core
             base.Delete();
         }
 
-        public string Label { get; private set; }
+        public string Label
+        {
+            get { return _label; }
+            set
+            {
+                if (string.IsNullOrEmpty(value))
+                    throw new ArgumentException("Label cannot be empty");
+
+                Group.Attributes[LabelKey] = value;
+                _label = value;
+            }
+        }
 
         public IEnumerable<IPersistentSource> Sources
         {
@@ -628,13 +641,14 @@ namespace Symphony.Core
             {
                 group.Attributes[StartTimeTicksKey] = startTime.Ticks;
                 group.Attributes[StartTimeOffsetHoursKey] = startTime.Offset.TotalHours;
+
+                return group;
             }
             catch (Exception x)
             {
                 group.Delete();
                 throw new PersistanceException(x.Message);
             }
-            return group;
         }
 
         protected static H5Group InsertTimelineEntityGroup(H5Group container, string prefix, DateTimeOffset startTime,
@@ -645,13 +659,14 @@ namespace Symphony.Core
             {
                 group.Attributes[EndTimeTicksKey] = endTime.Ticks;
                 group.Attributes[EndTimeOffsetHoursKey] = endTime.Offset.TotalHours;
+
+                return group;
             }
             catch (Exception x)
             {
                 group.Delete();
                 throw new PersistanceException(x.Message);
             }
-            return group;
         }
 
         protected H5TimelinePersistentEntity(H5Group group, H5PersistentEntityFactory factory) : base(group, factory)
@@ -685,6 +700,8 @@ namespace Symphony.Core
         private const string SourcesGroupName = "sources";
         private const string EpochGroupsGroupName = "epochGroups";
 
+        private string _purpose;
+
         private readonly H5Group _devicesGroup;
         private readonly H5Group _sourcesGroup;
         private readonly H5Group _epochGroupsGroup;
@@ -702,18 +719,19 @@ namespace Symphony.Core
                 group.AddGroup(DevicesGroupName);
                 group.AddGroup(SourcesGroupName);
                 group.AddGroup(EpochGroupsGroupName);
+
+                return factory.Create<H5PersistentExperiment>(group);
             }
             catch (Exception x)
             {
                 group.Delete();
                 throw new PersistanceException(x.Message);
             }
-            return factory.Create<H5PersistentExperiment>(group);
         }
 
         public H5PersistentExperiment(H5Group group, H5PersistentEntityFactory factory) : base(group, factory)
         {
-            Purpose = group.Attributes[PurposeKey];
+            _purpose = group.Attributes[PurposeKey];
 
             var subGroups = group.Groups.ToList();
             _devicesGroup = subGroups.First(g => g.Name == DevicesGroupName);
@@ -721,7 +739,18 @@ namespace Symphony.Core
             _epochGroupsGroup = subGroups.First(g => g.Name == EpochGroupsGroupName);
         }
 
-        public string Purpose { get; private set; }
+        public string Purpose
+        {
+            get { return _purpose; }
+            set
+            {
+                if (string.IsNullOrEmpty(value))
+                    throw new ArgumentException("Purpose cannot be empty");
+
+                Group.Attributes[PurposeKey] = value;
+                _purpose = value;
+            }
+        }
 
         public IEnumerable<IPersistentDevice> Devices
         {
@@ -785,7 +814,9 @@ namespace Symphony.Core
         private const string EpochBlocksGroupName = "epochBlocks";
         private const string ParentGroupName = "parent";
         private const string ExperimentGroupName = "experiment";
-        
+
+        private string _label;
+
         private readonly H5Group _sourceGroup;
         private readonly H5Group _epochGroupsGroup;
         private readonly H5Group _epochBlocksGroup;
@@ -818,6 +849,8 @@ namespace Symphony.Core
 
                 epochGroup = factory.Create<H5PersistentEpochGroup>(group);
                 source.AddEpochGroup(epochGroup);
+
+                return epochGroup;
             }
             catch (Exception x)
             {
@@ -825,13 +858,11 @@ namespace Symphony.Core
                 group.Delete();
                 throw new PersistanceException(x.Message);
             }
-            
-            return epochGroup;
         }
 
         public H5PersistentEpochGroup(H5Group group, H5PersistentEntityFactory factory) : base(group, factory)
         {
-            Label = group.Attributes[LabelKey];
+            _label = group.Attributes[LabelKey];
 
             var subGroups = group.Groups.ToList();
             _sourceGroup = subGroups.First(g => g.Name == SourceGroupName);
@@ -851,7 +882,18 @@ namespace Symphony.Core
             base.Delete();
         }
 
-        public string Label { get; private set; }
+        public string Label
+        {
+            get { return _label; } 
+            set
+            {
+                if (string.IsNullOrEmpty(value))
+                    throw new ArgumentException("Label cannot be empty");
+
+                Group.Attributes[LabelKey] = value;
+                _label = value;
+            }
+        }
 
         public IPersistentSource Source
         {
@@ -916,13 +958,14 @@ namespace Symphony.Core
 
                 group.AddGroup(EpochsGroupName);
                 group.AddHardLink(EpochGroupGroupName, epochGroup.Group);
+
+                return factory.Create<H5PersistentEpochBlock>(group);
             }
             catch (Exception x)
             {
                 group.Delete();
                 throw new PersistanceException(x.Message);
             }
-            return factory.Create<H5PersistentEpochBlock>(group);
         }
 
         public H5PersistentEpochBlock(H5Group group, H5PersistentEntityFactory factory) : base(group, factory)
@@ -1027,13 +1070,14 @@ namespace Symphony.Core
                 {
                     persistentEpoch.AddKeyword(keyword);
                 }
+
+                return persistentEpoch;
             }
             catch (Exception x)
             {
                 group.Delete();
                 throw new PersistanceException(x.Message);
             }
-            return persistentEpoch;
         }
 
         public H5PersistentEpoch(H5Group group, H5PersistentEntityFactory factory) : base(group, factory)
@@ -1093,13 +1137,14 @@ namespace Symphony.Core
                 group.Attributes[SampleRateUnitsKey] = background.SampleRate.BaseUnit;
 
                 group.AddHardLink(DeviceGroupName, device.Group);
+
+                return factory.Create<H5PersistentBackground>(group);
             }
             catch (Exception x)
             {
                 group.Delete();
                 throw new PersistanceException(x.Message);
             }
-            return factory.Create<H5PersistentBackground>(group);
         }
 
         public H5PersistentBackground(H5Group group, H5PersistentEntityFactory factory) : base(group, factory)
@@ -1182,13 +1227,14 @@ namespace Symphony.Core
 
                     i++;
                 }
+
+                return group;
             }
             catch (Exception x)
             {
                 group.Delete();
                 throw new PersistanceException(x.Message);
             }
-            return group;
         }
 
         protected H5PersistentIOBase(H5Group group, H5PersistentEntityFactory factory) : base(group, factory)
@@ -1248,13 +1294,14 @@ namespace Symphony.Core
                 group.Attributes[InputTimeOffsetHoursKey] = response.InputTime.Offset.TotalHours;
 
                 group.AddDataset(DataDatasetName, H5Map.GetMeasurementType(container.File), response.Data.Select(H5Map.Convert).ToArray());
+
+                return factory.Create<H5PersistentResponse>(group);
             }
             catch (Exception x)
             {
                 group.Delete();
                 throw new PersistanceException(x.Message);
             }
-            return factory.Create<H5PersistentResponse>(group);
         }
 
         public H5PersistentResponse(H5Group group, H5PersistentEntityFactory factory) : base(group, factory)
@@ -1328,13 +1375,14 @@ namespace Symphony.Core
                     IEnumerable<IMeasurement> data = stimulus.Data.Get();
                     group.AddDataset(DataDatasetName, H5Map.GetMeasurementType(container.File), data.Select(H5Map.Convert).ToArray());
                 }
+
+                return factory.Create<H5PersistentStimulus>(group);
             }
             catch (Exception x)
             {
                 group.Delete();
                 throw new PersistanceException(x.Message);
             }
-            return factory.Create<H5PersistentStimulus>(group);
         }
 
         public H5PersistentStimulus(H5Group group, H5PersistentEntityFactory factory) : base(group, factory)

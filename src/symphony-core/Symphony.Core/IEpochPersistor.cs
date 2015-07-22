@@ -206,7 +206,7 @@ namespace Symphony.Core
         /// <summary>
         /// The label of this Source.
         /// </summary>
-        string Label { get; }
+        string Label { get; set; }
 
         /// <summary>
         /// The child Sources of this Source.
@@ -265,7 +265,7 @@ namespace Symphony.Core
         /// <summary>
         /// The purpose of this Experiment.
         /// </summary>
-        string Purpose { get; }
+        string Purpose { get; set; }
 
         /// <summary>
         /// The Devices contained within this Experiment.
@@ -296,7 +296,7 @@ namespace Symphony.Core
         /// <summary>
         /// The label of this Epoch Group.
         /// </summary>
-        string Label { get; }
+        string Label { get; set; }
 
         /// <summary>
         /// The Source associated with this Epoch Group.
