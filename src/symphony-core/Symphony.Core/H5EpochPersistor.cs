@@ -27,19 +27,18 @@ namespace Symphony.Core
         private readonly H5PersistentEntityFactory _entityFactory;
         private readonly Stack<H5PersistentEpochGroup> _openEpochGroups;
 
-        public static H5EpochPersistor Create(string filename, string purpose)
+        public static H5EpochPersistor Create(string filename)
         {
-            return Create(filename, purpose, DateTimeOffset.Now);
+            return Create(filename, DateTimeOffset.Now);
         }
 
         /// <summary>
         /// Creates a new H5EpochPersistor with a new HDF5 file.
         /// </summary>
         /// <param name="filename">Desired HDF5 path</param>
-        /// <param name="purpose">Purpose for the root Experiment entity</param>
         /// <param name="startTime">Start time for the root Experiment entity</param>
         /// <returns>The new Epoch Persistor</returns>
-        public static H5EpochPersistor Create(string filename, string purpose, DateTimeOffset startTime)
+        public static H5EpochPersistor Create(string filename, DateTimeOffset startTime)
         {
             if (File.Exists(filename))
                 throw new IOException("File already exists");
@@ -49,7 +48,7 @@ namespace Symphony.Core
                 file.Attributes[VersionKey] = PersistenceVersion;
 
                 H5Map.InsertTypes(file);
-                H5PersistentExperiment.InsertExperiment(file, new H5PersistentEntityFactory(), purpose, startTime);
+                H5PersistentExperiment.InsertExperiment(file, new H5PersistentEntityFactory(), "", startTime);
             }
 
             return new H5EpochPersistor(filename);

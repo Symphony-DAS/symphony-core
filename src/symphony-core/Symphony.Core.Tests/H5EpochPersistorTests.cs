@@ -8,7 +8,6 @@ namespace Symphony.Core
     class H5EpochPersistorTests
     {
         const string TEST_FILE = "test_experiment.h5";
-        const string TEST_PURPOSE = "the test purpose here";
 
         private H5EpochPersistor persistor;
         private DateTimeOffset startTime;
@@ -20,7 +19,7 @@ namespace Symphony.Core
                 System.IO.File.Delete(TEST_FILE);
 
             startTime = DateTimeOffset.Now;
-            persistor = H5EpochPersistor.Create(TEST_FILE, TEST_PURPOSE, startTime);
+            persistor = H5EpochPersistor.Create(TEST_FILE, startTime);
         }
 
         [TearDown]
@@ -41,7 +40,7 @@ namespace Symphony.Core
         public void ShouldContainExperiment()
         {
             var experiment = persistor.Experiment;
-            Assert.AreEqual(TEST_PURPOSE, experiment.Purpose);
+            Assert.AreEqual(string.Empty, experiment.Purpose);
             Assert.AreEqual(startTime, experiment.StartTime);
             Assert.IsNull(experiment.EndTime);
             Assert.AreEqual(0, experiment.Devices.Count());
