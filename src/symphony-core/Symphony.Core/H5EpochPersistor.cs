@@ -115,6 +115,9 @@ namespace Symphony.Core
 
         public void Close(DateTimeOffset endTime)
         {
+            if (IsClosed)
+                return;
+
             if (CurrentEpochBlock != null)
             {
                 EndEpochBlock(endTime);
@@ -126,12 +129,12 @@ namespace Symphony.Core
             _experiment.SetEndTime(endTime);
 
             CloseDocument();
+            IsClosed = true;
         }
 
         public void CloseDocument()
         {
             _file.Close();
-            IsClosed = true;
         }
 
         public bool IsClosed { get; private set; }
