@@ -163,9 +163,31 @@ namespace Symphony.Core
         bool RemoveKeyword(string keyword);
 
         /// <summary>
+        /// Adds an external resource such as an image, movie, data file, etc.
+        /// </summary>
+        /// <param name="uti">The Uniform Type Identifier of the resource data</param>
+        /// <param name="name">The name of the resource</param>
+        /// <param name="data">The raw byte data of the resource</param>
+        /// <returns></returns>
+        IPersistentResource AddResource(string uti, string name, byte[] data);
+
+        /// <summary>
+        /// Gets a Resource by name.
+        /// </summary>
+        /// <param name="name"></param>
+        /// <returns></returns>
+        IPersistentResource GetResource(string name);
+
+        /// <summary>
+        /// Gets all Resource names associated with this entity.
+        /// </summary>
+        /// <returns></returns>
+        IEnumerable<string> GetResourceNames();
+
+        /// <summary>
         /// Notes associated with this entity.
         /// </summary>
-        IEnumerable<INote> Notes { get; }
+        IEnumerable<IPersistentNote> Notes { get; }
 
         /// <summary>
         /// Adds a note to this entity.
@@ -173,7 +195,7 @@ namespace Symphony.Core
         /// <param name="time">Time to associate with the note</param>
         /// <param name="text">Text of the note</param>
         /// <returns>The added note</returns>
-        INote AddNote(DateTimeOffset time, string text);
+        IPersistentNote AddNote(DateTimeOffset time, string text);
     }
 
     /// <summary>
@@ -472,9 +494,30 @@ namespace Symphony.Core
     }
 
     /// <summary>
+    /// Represents an external resource such as an image, movie, data file, etc.
+    /// </summary>
+    public interface IPersistentResource : IPersistentEntity
+    {
+        /// <summary>
+        /// The Uniform Type Identifier of this resource's data.
+        /// </summary>
+        string UTI { get; }
+
+        /// <summary>
+        /// The name of this Resource.
+        /// </summary>
+        string Name { get; }
+
+        /// <summary>
+        /// The raw data bytes of this Resource.
+        /// </summary>
+        byte[] Data { get; }
+    }
+
+    /// <summary>
     /// Represents a timestamped text note that annotate an entity.
     /// </summary>
-    public interface INote
+    public interface IPersistentNote
     {
         /// <summary>
         /// The timestamp of this Note.

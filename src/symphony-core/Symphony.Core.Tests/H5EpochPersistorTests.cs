@@ -110,9 +110,38 @@ namespace Symphony.Core
         }
 
         [Test]
+        public void ShouldAddResources()
+        {
+            var resources = new List<IPersistentResource>();
+
+            var experiment = persistor.Experiment;
+
+            for (int i = 0; i < 10; i++)
+            {
+                string uti = "public.data";
+                string name = "my resource " + i;
+                var data = new byte[] {1, 0, 1, 1, 0, 0, 1, 0}; 
+
+                var r = experiment.AddResource(uti, name, data);
+
+                Assert.AreEqual(uti, r.UTI);
+                Assert.AreEqual(name, r.Name);
+                Assert.AreEqual(data, r.Data);
+
+                resources.Add(r);
+            }
+
+            foreach (var expected in resources)
+            {
+                var actual = experiment.GetResource(expected.Name);
+                Assert.AreEqual(expected, actual);
+            }
+        }
+
+        [Test]
         public void ShouldAddNotes()
         {
-            var expected = new List<INote>();
+            var expected = new List<IPersistentNote>();
 
             var experiment = persistor.Experiment;
 

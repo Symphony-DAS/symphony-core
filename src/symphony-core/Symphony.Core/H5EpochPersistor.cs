@@ -252,9 +252,11 @@ namespace Symphony.Core
         private const string UUIDKey = "uuid";
         private const string KeywordsKey = "keywords";
         private const string PropertiesGroupName = "properties";
+        private const string ResourcesGroupName = "resources";
         private const string NotesDatasetName = "notes";
 
         private H5Group _propertiesGroup;
+        private H5Group _resourcesGroup;
         private H5Dataset _notesDataset;
 
         protected static H5Group InsertEntityGroup(H5Group container, string prefix)
@@ -281,7 +283,9 @@ namespace Symphony.Core
 
             UUID = GetUUID(group);
 
-            _propertiesGroup = group.Groups.FirstOrDefault(g => g.Name == PropertiesGroupName);
+            var subGroups = Group.Groups.ToList();
+            _propertiesGroup = subGroups.FirstOrDefault(g => g.Name == PropertiesGroupName);
+            _resourcesGroup = subGroups.FirstOrDefault(g => g.Name == ResourcesGroupName);
             _notesDataset = group.Datasets.FirstOrDefault(ds => ds.Name == NotesDatasetName);
         }
 
@@ -397,22 +401,52 @@ namespace Symphony.Core
             return removed;
         }
 
-        public IEnumerable<INote> Notes
+        public IPersistentResource AddResource(string uti, string name, byte[] data)
+        {
+            if (_resourcesGroup == null)
+            {
+                _resourcesGroup = Group.AddGroup(ResourcesGroupName);
+            }
+
+            return H5PersistentResource.InsertResource(_resourcesGroup, EntityFactory, uti, name, data);
+        }
+
+        public IPersistentResource GetResource(string name)
+        {
+            return Resources.FirstOrDefault(r => r.Name == name);
+        }
+
+        public IEnumerable<string> GetResourceNames()
+        {
+            return Resources.Select(r => r.Name);
+        }
+
+        public IEnumerable<IPersistentResource> Resources
+        {
+            get 
+            { 
+                return _resourcesGroup == null 
+                    ? Enumerable.Empty<IPersistentResource>()
+                    : _resourcesGroup.Groups.Select(g => EntityFactory.Create<H5PersistentResource>(g)); 
+            }
+        } 
+
+        public IEnumerable<IPersistentNote> Notes
         {
             get
             {
                 return _notesDataset == null
-                           ? Enumerable.Empty<INote>()
+                           ? Enumerable.Empty<IPersistentNote>()
                            : _notesDataset.GetData<H5Map.NoteT>().Select(H5Map.Convert);
             }
         }
 
-        public INote AddNote(DateTimeOffset time, string text)
+        public IPersistentNote AddNote(DateTimeOffset time, string text)
         {
-            return AddNote(new H5Note(time, text));
+            return AddNote(new H5PersistentNote(time, text));
         }
 
-        public INote AddNote(INote note)
+        public IPersistentNote AddNote(IPersistentNote note)
         {
             if (note == null)
                 throw new ArgumentNullException("note");
@@ -1401,9 +1435,54 @@ namespace Symphony.Core
         }
     }
 
-    class H5Note : INote
+    class H5PersistentResource : H5PersistentEntity, IPersistentResource
     {
-        public H5Note(DateTimeOffset time, string text)
+        private const string UTIKey = "uti";
+        private const string NameKey = "name";
+        private const string DataDatasetName = "data";
+
+        private readonly H5Dataset _dataDataset;
+
+        public static H5PersistentResource InsertResource(H5Group container, H5PersistentEntityFactory factory, string uti, string name, byte[] data)
+        {
+            var group = InsertEntityGroup(container, name);
+            try
+            {
+                group.Attributes[UTIKey] = uti;
+                group.Attributes[NameKey] = name;
+
+                group.AddDataset(DataDatasetName, new H5Datatype(H5T.H5Type.NATIVE_UCHAR), data);
+
+                return factory.Create<H5PersistentResource>(group);
+            }
+            catch (Exception x)
+            {
+                group.Delete();
+                throw new PersistanceException(x.Message);
+            }
+        }
+
+        public H5PersistentResource(H5Group group, H5PersistentEntityFactory factory) : base(group, factory)
+        {
+            UTI = group.Attributes[UTIKey];
+            Name = group.Attributes[NameKey];
+
+            _dataDataset = group.Datasets.First(ds => ds.Name == DataDatasetName);
+        }
+
+        public string UTI { get; private set; }
+
+        public string Name { get; private set; }
+
+        public byte[] Data
+        {
+            get { return _dataDataset.GetData<byte>(); }
+        }
+    }
+
+    class H5PersistentNote : IPersistentNote
+    {
+        public H5PersistentNote(DateTimeOffset time, string text)
         {
             Time = time;
             Text = text;
@@ -1418,10 +1497,10 @@ namespace Symphony.Core
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
             if (obj.GetType() != GetType()) return false;
-            return Equals((H5Note) obj);
+            return Equals((H5PersistentNote) obj);
         }
 
-        protected bool Equals(H5Note other)
+        protected bool Equals(H5PersistentNote other)
         {
             return Time.Equals(other.Time) && string.Equals(Text, other.Text);
         }
@@ -1452,6 +1531,7 @@ namespace Symphony.Core
             Constructor<H5PersistentBackground>.Func = (g, f) => new H5PersistentBackground(g, f);
             Constructor<H5PersistentResponse>.Func = (g, f) => new H5PersistentResponse(g, f);
             Constructor<H5PersistentStimulus>.Func = (g, f) => new H5PersistentStimulus(g, f);
+            Constructor<H5PersistentResource>.Func = (g, f) => new H5PersistentResource(g, f);
         }
 
         public T Create<T>(H5Group group) where T : H5PersistentEntity
@@ -1546,7 +1626,7 @@ namespace Symphony.Core
         }
 
         // The returned NoteT must be freed using Free() when it is no longer in use.
-        public static NoteT Convert(INote n)
+        public static NoteT Convert(IPersistentNote n)
         {
             var nt = new NoteT
             {
@@ -1572,7 +1652,7 @@ namespace Symphony.Core
             }
         }
 
-        public static INote Convert(NoteT nt)
+        public static IPersistentNote Convert(NoteT nt)
         {
             long ticks = nt.time.ticks;
             double offset = nt.time.offset;
@@ -1582,7 +1662,7 @@ namespace Symphony.Core
             {
                 text = Marshal.PtrToStringAnsi((IntPtr) nt.text);
             }
-            return new H5Note(time, text);
+            return new H5PersistentNote(time, text);
         }
 
         public static MeasurementT Convert(IMeasurement m)
