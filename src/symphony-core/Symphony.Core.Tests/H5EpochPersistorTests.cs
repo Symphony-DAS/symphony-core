@@ -120,7 +120,7 @@ namespace Symphony.Core
             {
                 string uti = "public.data";
                 string name = "my resource " + i;
-                var data = new byte[] {1, 0, 1, 1, 0, 0, 1, 0}; 
+                byte[] data = Enumerable.Range(0, 255).Select(e => (byte) e).ToArray(); 
 
                 var r = experiment.AddResource(uti, name, data);
 

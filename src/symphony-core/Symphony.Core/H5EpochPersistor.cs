@@ -403,6 +403,9 @@ namespace Symphony.Core
 
         public IPersistentResource AddResource(string uti, string name, byte[] data)
         {
+            if (GetResourceNames().Contains(name))
+                throw new ArgumentException(name + " already exists");
+
             if (_resourcesGroup == null)
             {
                 _resourcesGroup = Group.AddGroup(ResourcesGroupName);
@@ -413,7 +416,10 @@ namespace Symphony.Core
 
         public IPersistentResource GetResource(string name)
         {
-            return Resources.FirstOrDefault(r => r.Name == name);
+            var resource = Resources.FirstOrDefault(r => r.Name == name);
+            if (resource == null)
+                throw new KeyNotFoundException(name);
+            return resource;
         }
 
         public IEnumerable<string> GetResourceNames()
