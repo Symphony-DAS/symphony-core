@@ -329,8 +329,8 @@ namespace Symphony.Core
 
         public void AddProperty(string key, object value)
         {
-            if (key == null)
-                throw new ArgumentNullException("key");
+            if (string.IsNullOrEmpty(key))
+                throw new ArgumentException("Key cannot be empty");
             if (value == null)
                 throw new ArgumentNullException("value");
             if (!H5AttributeManager.IsSupportedType(value.GetType()))
