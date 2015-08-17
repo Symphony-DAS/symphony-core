@@ -279,32 +279,34 @@ namespace Heka
             if (!this.HardwareReady)
             {
                 var deviceInfo = OpenDevice();
-                this.DAQStreams.Clear();
-
-                //set-up ADC channels
-                for (ushort i = 0; i < deviceInfo.NumberOfADCs; i++)
+                
+                if (!DAQStreams.Any())
                 {
-                    string name = String.Format("{0}.{1}", "ANALOG_IN", i);
-                    this.DAQStreams.Add(new HekaDAQInputStream(name, StreamType.ANALOG_IN, i, this));
-                }
+                    //set-up ADC channels
+                    for (ushort i = 0; i < deviceInfo.NumberOfADCs; i++)
+                    {
+                        string name = String.Format("{0}.{1}", "ANALOG_IN", i);
+                        this.DAQStreams.Add(new HekaDAQInputStream(name, StreamType.ANALOG_IN, i, this));
+                    }
 
 
-                for (ushort i = 0; i < deviceInfo.NumberOfDACs; i++)
-                {
-                    string name = String.Format("{0}.{1}", "ANALOG_OUT", i);
-                    this.DAQStreams.Add(new HekaDAQOutputStream(name, StreamType.ANALOG_OUT, i, this));
-                }
+                    for (ushort i = 0; i < deviceInfo.NumberOfDACs; i++)
+                    {
+                        string name = String.Format("{0}.{1}", "ANALOG_OUT", i);
+                        this.DAQStreams.Add(new HekaDAQOutputStream(name, StreamType.ANALOG_OUT, i, this));
+                    }
 
-                for (ushort i = 0; i < deviceInfo.NumberOfDIs; i++)
-                {
-                    string name = String.Format("{0}.{1}", "DIGITAL_IN", i);
-                    this.DAQStreams.Add(new HekaDigitalDAQInputStream(name, i, this));
-                }
+                    for (ushort i = 0; i < deviceInfo.NumberOfDIs; i++)
+                    {
+                        string name = String.Format("{0}.{1}", "DIGITAL_IN", i);
+                        this.DAQStreams.Add(new HekaDigitalDAQInputStream(name, i, this));
+                    }
 
-                for (ushort i = 0; i < deviceInfo.NumberOfDOs; i++)
-                {
-                    string name = String.Format("{0}.{1}", "DIGITAL_OUT", i);
-                    this.DAQStreams.Add(new HekaDigitalDAQOutputStream(name, i, this));
+                    for (ushort i = 0; i < deviceInfo.NumberOfDOs; i++)
+                    {
+                        string name = String.Format("{0}.{1}", "DIGITAL_OUT", i);
+                        this.DAQStreams.Add(new HekaDigitalDAQOutputStream(name, i, this));
+                    }
                 }
 
                 this.HardwareReady = true;
