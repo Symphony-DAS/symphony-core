@@ -127,6 +127,9 @@ namespace Symphony.Core
                 if (IsIndefinite)
                     return Option<TimeSpan>.None();
 
+                if (!Stimuli.Any())
+                    return Option<TimeSpan>.Some(TimeSpan.Zero);
+
                 return Option<TimeSpan>.Some(Stimuli
                     .Values
                     .Max(s => (TimeSpan)s.Duration));
