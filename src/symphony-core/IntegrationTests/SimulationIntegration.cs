@@ -64,7 +64,7 @@ namespace IntegrationTests
 
             Epoch e;
 
-            using (var persistor = H5EpochPersistor.Create("SingleH5Persistence.h5", "for testing purposes"))
+            using (var persistor = H5EpochPersistor.Create("SingleH5Persistence.h5"))
             {
                 var time = new DateTimeOffset(2011, 8, 22, 11, 12, 0, 0, TimeSpan.FromHours(-6));
 
@@ -100,7 +100,7 @@ namespace IntegrationTests
             Epoch e1;
             Epoch e2;
 
-            using (var persistor = H5EpochPersistor.Create("AppendToExistingHDF5.h5", "for testing purposes"))
+            using (var persistor = H5EpochPersistor.Create("AppendToExistingHDF5.h5"))
             {
                 var time = new DateTimeOffset(2011, 8, 22, 11, 12, 0, 0, TimeSpan.FromHours(-6));
 
@@ -332,9 +332,6 @@ namespace IntegrationTests
             e.Responses[dev0] = new Response();
             if (nChannels > 1)
                 e.Responses[dev1] = new Response();
-
-            controller.BackgroundDataStreams[dev0] = new BackgroundOutputDataStream(new Background(new Measurement(0, "V"), srate));
-            controller.BackgroundDataStreams[dev1] = new BackgroundOutputDataStream(new Background(new Measurement(0, "V"), srate));
 
             e.Backgrounds[dev0] = new Background(new Measurement(0, "V"), srate);
             e.Backgrounds[dev1] = new Background(new Measurement(0, "V"), srate);

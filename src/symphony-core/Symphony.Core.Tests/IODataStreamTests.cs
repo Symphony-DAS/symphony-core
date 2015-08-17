@@ -101,20 +101,23 @@ namespace Symphony.Core
     }
 
     [TestFixture]
-    class BackgroundOutputDataStreamTests
+    class DeviceBackgroundOutputDataStreamTests
     {
-        Background background;
-        BackgroundOutputDataStream stream;
-        BackgroundOutputDataStream indefiniteStream;
+        IExternalDevice device;
+        DeviceBackgroundOutputDataStream stream;
+        DeviceBackgroundOutputDataStream indefiniteStream;
 
         [SetUp]
         public void SetUp()
         {
-            background = new Background(new Measurement(1, "V"), new Measurement(10000, "Hz"));
+            device = new UnitConvertingExternalDevice("dev", "man", new Measurement(1, "V"))
+                {
+                    OutputSampleRate = new Measurement(10000, "Hz")
+                };
 
-            stream = new BackgroundOutputDataStream(background, Option<TimeSpan>.Some(TimeSpan.FromSeconds(0.97)));
+            stream = new DeviceBackgroundOutputDataStream(device, Option<TimeSpan>.Some(TimeSpan.FromSeconds(0.97)));
 
-            indefiniteStream = new BackgroundOutputDataStream(background);
+            indefiniteStream = new DeviceBackgroundOutputDataStream(device);
         }
 
         [Test]
@@ -130,8 +133,8 @@ namespace Symphony.Core
             var pull3 = stream.PullOutputData(dur3);
 
             var streamDur = stream.Duration.Item2;
-            var samples = streamDur.Samples(background.SampleRate);
-            var data = Enumerable.Range(0, (int) samples).Select(i => background.Value);
+            var samples = streamDur.Samples(device.OutputSampleRate);
+            var data = Enumerable.Range(0, (int) samples).Select(i => device.Background);
 
             var samples1 = (int)dur1.Samples(stream.SampleRate);
             Assert.That(pull1.Data, Is.EqualTo(data.Take(samples1).ToList()));
@@ -148,8 +151,8 @@ namespace Symphony.Core
         {
             var dur = TimeSpan.FromSeconds(0.23);
 
-            var samples = (int) dur.Samples(background.SampleRate);
-            var expected = Enumerable.Range(0, samples).Select(i => background.Value).ToList();
+            var samples = (int) dur.Samples(device.OutputSampleRate);
+            var expected = Enumerable.Range(0, samples).Select(i => device.Background).ToList();
 
             for (int i = 0; i < 100; i++)
             {

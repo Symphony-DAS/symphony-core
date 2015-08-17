@@ -401,7 +401,7 @@ namespace Symphony.Core
     }
 
     /// <summary>
-    /// An output data stream filled with a single Background value.
+    /// An output data stream filled with a single Background.
     /// </summary>
     public class BackgroundOutputDataStream : IOutputDataStream
     {
@@ -410,7 +410,7 @@ namespace Symphony.Core
         /// <summary>
         /// Constructs an output data stream with the given Background, of indefinite duration.
         /// </summary>
-        /// <param name="background">Background to stream</param>
+        /// <param name="background"></param>
         public BackgroundOutputDataStream(Background background)
             : this(background, Option<TimeSpan>.None())
         {
@@ -419,7 +419,7 @@ namespace Symphony.Core
         /// <summary>
         /// Constructs an output data stream with the given Background, of a given duration.
         /// </summary>
-        /// <param name="background">Background to stream</param>
+        /// <param name="background"></param>
         /// <param name="duration">Duration of stream</param>
         public BackgroundOutputDataStream(Background background, Option<TimeSpan> duration)
         {
@@ -442,9 +442,7 @@ namespace Symphony.Core
                 : duration;
 
             var nSamples = (int) dur.Samples(SampleRate);
-            var value = Background.Value;
-
-            var data = Enumerable.Range(0, nSamples).Select(i => value);
+            var data = Enumerable.Range(0, nSamples).Select(i => Background.Value);
 
             Position += dur;
 
@@ -469,6 +467,90 @@ namespace Symphony.Core
         public IMeasurement SampleRate
         {
             get { return Background.SampleRate; }
+        }
+
+        public Option<TimeSpan> Duration { get; private set; }
+
+        public TimeSpan Position { get; private set; }
+
+        public bool IsAtEnd
+        {
+            get { return Duration && Position >= Duration; }
+        }
+    }
+
+    /// <summary>
+    /// An output data stream filled with a Device's background value.
+    /// </summary>
+    public class DeviceBackgroundOutputDataStream : IOutputDataStream
+    {
+        private IExternalDevice Device { get; set; }
+
+        /// <summary>
+        /// Constructs an output data stream with the given Device, of indefinite duration.
+        /// </summary>
+        /// <param name="device"></param>
+        public DeviceBackgroundOutputDataStream(IExternalDevice device)
+            : this(device, Option<TimeSpan>.None())
+        {
+        }
+
+        /// <summary>
+        /// Constructs an output data stream with the given Device, of a given duration.
+        /// </summary>
+        /// <param name="device"></param>
+        /// <param name="duration">Duration of stream</param>
+        public DeviceBackgroundOutputDataStream(IExternalDevice device, Option<TimeSpan> duration)
+        {
+            if (device == null)
+                throw new ArgumentNullException("device");
+
+            if (duration == null)
+                throw new ArgumentNullException("duration");
+
+            Device = device;
+            Duration = duration;
+            Position = TimeSpan.Zero;
+            OutputPosition = TimeSpan.Zero;
+        }
+
+        public IOutputData PullOutputData(TimeSpan duration)
+        {
+            var dur = Duration && duration > Duration - Position 
+                ? Duration - Position 
+                : duration;
+
+            var nSamples = (int) dur.Samples(SampleRate);
+            var data = Enumerable.Range(0, nSamples).Select(i => Background);
+
+            Position += dur;
+
+            return new OutputData(data, SampleRate, IsAtEnd);
+        }
+
+        public void DidOutputData(DateTimeOffset outputTime, TimeSpan timeSpan, IEnumerable<IPipelineNodeConfiguration> configuration)
+        {
+            if (OutputPosition + timeSpan > Position)
+                throw new ArgumentException("Time span would set output position past stream position", "timeSpan");
+
+            OutputPosition += timeSpan;
+        }
+
+        public TimeSpan OutputPosition { get; private set; }
+        
+        public bool IsOutputAtEnd
+        {
+            get { return Duration && OutputPosition >= Position; }
+        }
+
+        public IMeasurement Background
+        {
+            get { return Device.Background; }
+        }
+
+        public IMeasurement SampleRate
+        {
+            get { return Device.OutputSampleRate; }
         }
 
         public Option<TimeSpan> Duration { get; private set; }

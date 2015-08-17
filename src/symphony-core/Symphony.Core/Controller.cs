@@ -147,8 +147,18 @@ namespace Symphony.Core
                 throw new InvalidOperationException("Device with name " + dev.Name + " already exists.");
 
             Devices.Add(dev);
+            BackgroundDataStreams[dev] = new DeviceBackgroundOutputDataStream(dev);
             dev.Controller = this;
             return this;
+        }
+
+        /// <summary>
+        /// Removes all ExternalDevices from the Controller.
+        /// </summary>
+        public void RemoveAllDevices()
+        {
+            Devices.Clear();
+            BackgroundDataStreams.Clear();
         }
 
         /// <summary>
@@ -881,7 +891,7 @@ namespace Symphony.Core
         /// the Controller must have an associated background stream of indefinite duration or the Controller will 
         /// fail to validate.
         /// </summary>
-        public IDictionary<IExternalDevice, IOutputDataStream> BackgroundDataStreams { get; set; }
+        private IDictionary<IExternalDevice, IOutputDataStream> BackgroundDataStreams { get; set; }
 
         private static readonly ILog log = LogManager.GetLogger(typeof(Controller));
 
@@ -899,6 +909,8 @@ namespace Symphony.Core
         /// </summary>
         public void RequestPause()
         {
+            if (!IsRunning)
+                return;
             IsPauseRequested = true;
             OnRequestedPause();
         }
@@ -913,6 +925,8 @@ namespace Symphony.Core
         /// </summary>
         public void RequestStop()
         {
+            if (!IsRunning)
+                return;
             IsStopRequested = true;
             OnRequestedStop();
         }
