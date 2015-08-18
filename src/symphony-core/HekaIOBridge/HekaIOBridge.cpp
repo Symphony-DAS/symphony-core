@@ -194,7 +194,7 @@ namespace Heka {
 			}
 		}
 
-		while(nIn < nsamples) {
+		while((nOut < nsamples && output->Count > 0) || (nIn < nsamples && input->Count > 0)) {
 
 			if(token->IsCancellationRequested)
 			{
@@ -207,58 +207,63 @@ namespace Heka {
 
 			err = ITC_GetDataAvailable(GetDevice(), input->Count, inputData);
 
-			bool blockAvailable = false;
+			bool inBlockAvailable = false;
 			for(int i=0; i < input->Count; i++) {
 				if(inputData[i].Value >= TRANSFER_BLOCK_SAMPLES) {
 					inputData[i].Value = TRANSFER_BLOCK_SAMPLES;
-					blockAvailable = true;
+					inBlockAvailable = true;
 				} else {
 					inputData[i].Value = 0;
 				}
 			}
 
-			if(blockAvailable) {
-				for(int i=0; i < outputStreams->Count; i++) {
-					outputData[i].Value = TRANSFER_BLOCK_SAMPLES;
-					if((int)(nOut + outputData[i].Value) >= output[outputStreams[i]]->Length) {
-						outputData[i].Value = output[outputStreams[i]]->Length - nOut;
-					}
+			if (inBlockAvailable) {
+				for(int i=0; i < input->Count; i++) {
+					inputData[i].DataPointer = inputSamples[i].data() + nIn;
 				}
-			} else {
 
-				continue;
-			}
-
-			for(int i=0; i < input->Count; i++) {
-				inputData[i].DataPointer = inputSamples[i].data() + nIn;
-			}
-
-			for(int i=0; i < outputStreams->Count; i++) {
-				outputData[i].DataPointer = outputSamples[i].data() + nOut;
-			}
-
-			if(nOut < nsamples) {
-				err = ITC_ReadWriteFIFO(GetDevice(), outputStreams->Count, outputData);
+				err = ITC_ReadWriteFIFO(GetDevice(), input->Count, inputData);
 				if(err != ACQ_SUCCESS) {
 					throw gcnew HekaDAQException("ITC_ReadWriteFIFO error", err);
 				}
 
-				nOut += TRANSFER_BLOCK_SAMPLES;
+				nIn += TRANSFER_BLOCK_SAMPLES;
+				for(int i=0; i < input->Count; i++) {
+					ChannelIdentifier c = input[i];
+					c.Samples = c.Samples + inputData[i].Value;
+					input[i] = c;
+				}
 			}
 
-			err = ITC_ReadWriteFIFO(GetDevice(), input->Count, inputData);
-			if(err != ACQ_SUCCESS) {
-				throw gcnew HekaDAQException("ITC_ReadWriteFIFO error", err);
+			err = ITC_GetDataAvailable(GetDevice(), output->Count, outputData);
+
+			bool outBlockAvailable = false;
+			for(int i=0; i < output->Count; i++) {
+				if(outputData[i].Value >= TRANSFER_BLOCK_SAMPLES) {
+					outputData[i].Value = TRANSFER_BLOCK_SAMPLES;
+					if((int)(nOut + outputData[i].Value) >= output[outputStreams[i]]->Length) {
+						outputData[i].Value = output[outputStreams[i]]->Length - nOut;
+					}
+					outBlockAvailable = true;
+				} else {
+					outputData[i].Value = 0;
+				}
 			}
 
-			nIn += TRANSFER_BLOCK_SAMPLES;
-			for(int i=0; i < input->Count; i++) {
-				ChannelIdentifier c = input[i];
-				c.Samples = c.Samples + inputData[i].Value;
-				input[i] = c;
+			if (outBlockAvailable) {
+				for(int i=0; i < outputStreams->Count; i++) {
+					outputData[i].DataPointer = outputSamples[i].data() + nOut;
+				}
+
+				if(nOut < nsamples) {
+					err = ITC_ReadWriteFIFO(GetDevice(), outputStreams->Count, outputData);
+					if(err != ACQ_SUCCESS) {
+						throw gcnew HekaDAQException("ITC_ReadWriteFIFO error", err);
+					}
+
+					nOut += TRANSFER_BLOCK_SAMPLES;
+				}
 			}
-
-
 		}
 
 		IDictionary<ChannelIdentifier, array<itcsample_t>^>^ result = gcnew Dictionary<ChannelIdentifier, array<itcsample_t>^>();

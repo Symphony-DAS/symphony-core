@@ -534,6 +534,9 @@ namespace Heka
                 if (SampleRate.QuantityInBaseUnit <= 0)
                     return Maybe<string>.No("Sample rate must be greater than 0");
 
+                if (!ActiveStreams.Any())
+                    return Maybe<string>.No("Must have at least one active stream (a stream with an associated device)");
+
 
                 // This is a workaround for issue #41 (https://github.com/Symphony-DAS/Symphony/issues/41)
                 foreach (var s in InputStreams)

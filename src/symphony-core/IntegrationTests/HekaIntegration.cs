@@ -268,7 +268,7 @@ namespace IntegrationTests
         }
 
         [Test]
-        [Timeout(30 * 1000)]
+        //[Timeout(30 * 1000)]
         public void ContinuousAcquisition(
             [Values(10000, 20000, 50000)] double sampleRate,
             [Values(20)] int nEpochs)

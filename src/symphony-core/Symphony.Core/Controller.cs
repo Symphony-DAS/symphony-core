@@ -260,9 +260,9 @@ namespace Symphony.Core
         public event EventHandler<TimeStampedEventArgs> Stopped;
 
         /// <summary>
-        /// This controller pulled output data from an output stream.
+        /// This controller is about to pull output data from an output stream.
         /// </summary>
-        private event EventHandler<TimeStampedDeviceDataStreamEventArgs> PulledOutputData;
+        private event EventHandler<TimeStampedDeviceDataStreamEventArgs> PullingOutputData;
 
         /// <summary>
         /// This controller pushed input data to an input stream.
@@ -304,9 +304,9 @@ namespace Symphony.Core
             FireEvent(DiscardedEpoch, epoch, _pipelineEventLock);
         }
 
-        private void OnPulledOutputData(IExternalDevice device, IOutputDataStream stream)
+        private void OnPullingOutputData(IExternalDevice device, IOutputDataStream stream)
         {
-            FireEvent(PulledOutputData, device, stream, _pullLock);
+            FireEvent(PullingOutputData, device, stream, _pullLock);
         }
 
         private void OnPushedInputData(IExternalDevice device, IInputDataStream stream)
@@ -376,6 +376,8 @@ namespace Symphony.Core
 
             while (outData == null || outData.Duration < duration)
             {
+                OnPullingOutputData(device, outStream);
+
                 if (outStream.IsAtEnd)
                 {
                     var msg = "Output stream exhausted for " + device.Name;
@@ -384,10 +386,8 @@ namespace Symphony.Core
                 }
 
                 outData = outData == null
-                    ? outStream.PullOutputData(duration)
-                    : outData.Concat(outStream.PullOutputData(duration - outData.Duration));
-
-                OnPulledOutputData(device, outStream);
+                              ? outStream.PullOutputData(duration)
+                              : outData.Concat(outStream.PullOutputData(duration - outData.Duration));
             }
 
             return outData;
@@ -407,18 +407,14 @@ namespace Symphony.Core
             while (unpushedInData.Duration > TimeSpan.Zero)
             {
                 if (inStream.IsAtEnd)
-                {
-                    var msg = "Input stream exhausted for " + device.Name;
-                    log.Error(msg);
-                    throw new SymphonyControllerException(msg);
-                }
+                    return;
 
-                var dur = (bool)inStream.Duration 
-                    ? inStream.Duration - inStream.Position 
+                var dur = (bool)inStream.Duration
+                    ? inStream.Duration - inStream.Position
                     : unpushedInData.Duration;
 
                 var cons = unpushedInData.SplitData(dur);
-                
+
                 inStream.PushInputData(cons.Head);
                 unpushedInData = cons.Rest;
 
@@ -446,6 +442,11 @@ namespace Symphony.Core
             EpochQueue.Enqueue(e);
 
             log.DebugFormat("Queued epoch: {0}", e.ProtocolID);
+        }
+
+        public int EpochQueueCount
+        {
+            get { return EpochQueue.Count; }
         }
 
         /// <summary>
@@ -679,11 +680,11 @@ namespace Symphony.Core
                     DAQController.RequestStop();
                 };
 
-            EventHandler<TimeStampedDeviceDataStreamEventArgs> outputPulled = (c, args) =>
+            EventHandler<TimeStampedDeviceDataStreamEventArgs> outputPulling = (c, args) =>
                 {
                     var stream = args.Stream;
 
-                    if (stream.IsAtEnd)
+                    while (stream.IsAtEnd)
                     {
                         bool didBufferEpoch = false;
 
@@ -727,7 +728,7 @@ namespace Symphony.Core
                     if (!incompleteEpochs.TryPeek(out currentEpoch))
                         return;
                     
-                    if (currentEpoch.IsComplete)
+                    while (currentEpoch.IsComplete)
                     {
                         log.DebugFormat("Completed Epoch: {0}", currentEpoch.ProtocolID);
 
@@ -755,7 +756,11 @@ namespace Symphony.Core
                         if (incompleteEpochs.IsEmpty)
                         {
                             DAQController.RequestStop();
+                            return;
                         }
+
+                        if (!incompleteEpochs.TryPeek(out currentEpoch))
+                            return;
                     }
                 };
 
@@ -768,7 +773,7 @@ namespace Symphony.Core
             try
             {
                 RequestedStop += stopRequested;
-                PulledOutputData += outputPulled;
+                PullingOutputData += outputPulling;
                 PushedInputData += inputPushed;
                 DAQController.ExceptionalStop += daqExceptionalStop;
 
@@ -802,7 +807,7 @@ namespace Symphony.Core
             finally
             {
                 RequestedStop -= stopRequested;
-                PulledOutputData -= outputPulled;
+                PullingOutputData -= outputPulling;
                 PushedInputData -= inputPushed;
                 DAQController.ExceptionalStop -= daqExceptionalStop;
 
