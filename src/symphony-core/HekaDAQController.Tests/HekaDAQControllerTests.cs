@@ -73,28 +73,48 @@ namespace Heka
         [Test]
         public void SampleRateMustBeGreaterThanZero()
         {
-            var c = new HekaDAQController();
+            foreach (HekaDAQController c in HekaDAQController.AvailableControllers())
+            {
+                try
+                {
+                    FixtureForController(c);
 
-            c.SampleRate = new Measurement(0, "Hz");
-            Assert.False((bool)c.Validate());
+                    c.SampleRate = new Measurement(0, "Hz");
+                    Assert.False((bool)c.Validate());
 
-            c.SampleRate = new Measurement(-.1m, "Hz");
-            Assert.False((bool)c.Validate());
+                    c.SampleRate = new Measurement(-.1m, "Hz");
+                    Assert.False((bool)c.Validate());
 
-            c.SampleRate = new Measurement(1, "Hz");
-            Assert.True((bool)c.Validate());
+                    c.SampleRate = new Measurement(1, "Hz");
+                    Assert.True((bool)c.Validate());
+                }
+                finally
+                {
+                    c.CloseHardware();
+                }
+            }
         }
 
         [Test]
         public void SampleRateMustBeInHz()
         {
-            var c = new HekaDAQController();
+            foreach (HekaDAQController c in HekaDAQController.AvailableControllers())
+            {
+                try
+                {
+                    FixtureForController(c);
 
-            c.SampleRate = new Measurement(1, "barry");
-            Assert.False((bool)c.Validate());
+                    c.SampleRate = new Measurement(1, "barry");
+                    Assert.False((bool)c.Validate());
 
-            c.SampleRate = new Measurement(1, "Hz");
-            Assert.True((bool)c.Validate());
+                    c.SampleRate = new Measurement(1, "Hz");
+                    Assert.True((bool)c.Validate());
+                }
+                finally
+                {
+                    c.CloseHardware();
+                }
+            }
         }
 
         [Test]
