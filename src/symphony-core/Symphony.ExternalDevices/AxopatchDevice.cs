@@ -240,7 +240,7 @@ namespace Symphony.ExternalDevices
                         throw new ArgumentException("Sample units must be in Amps.", "sample");
                     }
 
-                    if (deviceParams.ExternalCommandSensitivityUnits != AxopatchInterop.ExternalCommandSensitivityUnits.A_V)
+                    if (deviceParams.ExternalCommandSensitivityUnits != AxopatchInterop.ExternalCommandSensitivityUnits.A_V && deviceParams.ExternalCommandSensitivityUnits != AxopatchInterop.ExternalCommandSensitivityUnits.OFF)
                     {
                         throw new AxopatchDeviceException("External command units are not A/V as expected for current device mode.");
                     }
