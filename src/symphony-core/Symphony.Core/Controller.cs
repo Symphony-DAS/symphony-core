@@ -260,14 +260,9 @@ namespace Symphony.Core
         public event EventHandler<TimeStampedEventArgs> Stopped;
 
         /// <summary>
-        /// This controller is about to pull output data from an output stream.
+        /// This controller is about to push or pull data from a stream.
         /// </summary>
-        private event EventHandler<TimeStampedDeviceDataStreamEventArgs> PullingOutputData;
-
-        /// <summary>
-        /// This controller pushed input data to an input stream.
-        /// </summary>
-        private event EventHandler<TimeStampedDeviceDataStreamEventArgs> PushedInputData;
+        private event EventHandler<TimeStampedDeviceDataStreamEventArgs> WillPushPullData;
 
         private void OnStarted()
         {
@@ -304,14 +299,9 @@ namespace Symphony.Core
             FireEvent(DiscardedEpoch, epoch, _pipelineEventLock);
         }
 
-        private void OnPullingOutputData(IExternalDevice device, IOutputDataStream stream)
+        private void OnWillPushPullData(IExternalDevice device, IIODataStream stream)
         {
-            FireEvent(PullingOutputData, device, stream, _pullLock);
-        }
-
-        private void OnPushedInputData(IExternalDevice device, IInputDataStream stream)
-        {
-            FireEvent(PushedInputData, device, stream, _pushLock);
+            FireEvent(WillPushPullData, device, stream, _pushPullLock);
         }
 
         private void FireEvent(EventHandler<TimeStampedEpochEventArgs> evt, Epoch epoch, object syncLock)
@@ -357,8 +347,7 @@ namespace Symphony.Core
 
         private readonly object _eventLock = new object();
         private readonly object _pipelineEventLock = new object();
-        private readonly object _pullLock = new object();
-        private readonly object _pushLock = new object();
+        private readonly object _pushPullLock = new object();
 
         /// <summary>
         /// Pulls IOutputData from the output stream for the given device. Result will have 
@@ -376,7 +365,7 @@ namespace Symphony.Core
 
             while (outData == null || outData.Duration < duration)
             {
-                OnPullingOutputData(device, outStream);
+                OnWillPushPullData(device, outStream);
 
                 if (outStream.IsAtEnd)
                 {
@@ -406,8 +395,14 @@ namespace Symphony.Core
 
             while (unpushedInData.Duration > TimeSpan.Zero)
             {
+                OnWillPushPullData(device, inStream);
+
                 if (inStream.IsAtEnd)
-                    return;
+                {
+                    var msg = "Input stream exhausted for " + device.Name;
+                    log.Error(msg);
+                    throw new SymphonyControllerException(msg);
+                }
 
                 var dur = (bool)inStream.Duration
                     ? inStream.Duration - inStream.Position
@@ -417,8 +412,6 @@ namespace Symphony.Core
 
                 inStream.PushInputData(cons.Head);
                 unpushedInData = cons.Rest;
-
-                OnPushedInputData(device, inStream);
             }
         }
 
@@ -680,7 +673,7 @@ namespace Symphony.Core
                     DAQController.RequestStop();
                 };
 
-            EventHandler<TimeStampedDeviceDataStreamEventArgs> outputPulling = (c, args) =>
+            EventHandler<TimeStampedDeviceDataStreamEventArgs> dataWillPushPull = (c, args) =>
                 {
                     var stream = args.Stream;
 
@@ -714,10 +707,7 @@ namespace Symphony.Core
                             log.DebugFormat("Buffered background streams");
                         }
                     }
-                };
 
-            EventHandler<TimeStampedDeviceDataStreamEventArgs> inputPushed = (c, args) =>
-                {
                     // Throw if any previous completed epoch tasks faulted
                     if (CompletedEpochTasks.Any(t => t.IsFaulted))
                     {
@@ -725,10 +715,7 @@ namespace Symphony.Core
                     }
 
                     Epoch currentEpoch;
-                    if (!incompleteEpochs.TryPeek(out currentEpoch))
-                        return;
-                    
-                    while (currentEpoch.IsComplete)
+                    while (incompleteEpochs.TryPeek(out currentEpoch) && currentEpoch.IsComplete)
                     {
                         log.DebugFormat("Completed Epoch: {0}", currentEpoch.ProtocolID);
 
@@ -746,21 +733,17 @@ namespace Symphony.Core
                                     SaveEpoch(persistor, completedEpoch);
                                 }
                             },
-                            CancellationToken.None,
-                            TaskCreationOptions.PreferFairness,
-                            CompletedEpochTaskScheduler);
+                                CancellationToken.None,
+                                TaskCreationOptions.PreferFairness,
+                                CompletedEpochTaskScheduler);
 
                         CompletedEpochTasks = CompletedEpochTasks.Where(t => !t.IsCompleted).ToList();
                         CompletedEpochTasks.Add(completeTask);
+                    }
 
-                        if (incompleteEpochs.IsEmpty)
-                        {
-                            DAQController.RequestStop();
-                            return;
-                        }
-
-                        if (!incompleteEpochs.TryPeek(out currentEpoch))
-                            return;
+                    if (incompleteEpochs.IsEmpty)
+                    {
+                        DAQController.RequestStop();
                     }
                 };
 
@@ -773,8 +756,7 @@ namespace Symphony.Core
             try
             {
                 RequestedStop += stopRequested;
-                PullingOutputData += outputPulling;
-                PushedInputData += inputPushed;
+                WillPushPullData += dataWillPushPull;
                 DAQController.ExceptionalStop += daqExceptionalStop;
 
                 while (!IsPauseRequested && !IsStopRequested)
@@ -807,8 +789,7 @@ namespace Symphony.Core
             finally
             {
                 RequestedStop -= stopRequested;
-                PullingOutputData -= outputPulling;
-                PushedInputData -= inputPushed;
+                WillPushPullData -= dataWillPushPull;
                 DAQController.ExceptionalStop -= daqExceptionalStop;
 
                 try
