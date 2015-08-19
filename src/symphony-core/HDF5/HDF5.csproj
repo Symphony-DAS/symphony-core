@@ -107,6 +107,12 @@
     <Compile Include="Tests\HDF5Tests.cs" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <PropertyGroup>
+    <PostBuildEvent>copy "$(ProjectDir)..\..\..\externals\HDF5DotNet\$(Platform)\hdf5dll.dll" "$(TargetDir)"
+copy "$(ProjectDir)..\..\..\externals\HDF5DotNet\$(Platform)\hdf5_hldll.dll" "$(TargetDir)"
+copy "$(ProjectDir)..\..\..\externals\HDF5DotNet\$(Platform)\szip.dll" "$(TargetDir)"
+copy "$(ProjectDir)..\..\..\externals\HDF5DotNet\$(Platform)\zlib.dll"</PostBuildEvent>
+  </PropertyGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">
