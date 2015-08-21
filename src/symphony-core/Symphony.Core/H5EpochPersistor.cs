@@ -1058,14 +1058,15 @@ namespace Symphony.Core
 
                 foreach (var kv in epoch.ProtocolParameters.ToList())
                 {
-                    if (H5AttributeManager.IsSupportedType(kv.Value.GetType()))
+                    var value = kv.Value ?? "";
+                    if (H5AttributeManager.IsSupportedType(value.GetType()))
                     {
-                        parametersGroup.Attributes[kv.Key] = new H5Attribute(kv.Value);
+                        parametersGroup.Attributes[kv.Key] = new H5Attribute(value);
                     }
                     else
                     {
-                        H5EpochPersistor.Log.WarnFormat("Protocol parameter value ({0} : {1}) is of usupported type. Falling back to string representation.", kv.Key, kv.Value);
-                        parametersGroup.Attributes[kv.Key] = kv.Value.ToString();
+                        H5EpochPersistor.Log.WarnFormat("Protocol parameter value ({0} : {1}) is of usupported type. Falling back to string representation.", kv.Key, value);
+                        parametersGroup.Attributes[kv.Key] = value.ToString();
                     }
                 }
 
@@ -1221,21 +1222,22 @@ namespace Symphony.Core
                         var nodeGroup = spanGroup.AddGroup(node.Name);
                         foreach (var kv in node.Configuration)
                         {
-                            if (H5AttributeManager.IsSupportedType(kv.Value.GetType()))
+                            var value = kv.Value ?? "";
+                            if (H5AttributeManager.IsSupportedType(value.GetType()))
                             {
-                                nodeGroup.Attributes[kv.Key] = new H5Attribute(kv.Value);
+                                nodeGroup.Attributes[kv.Key] = new H5Attribute(value);
                             }
-                            else if (kv.Value is IMeasurement)
+                            else if (value is IMeasurement)
                             {
                                 var m = (IMeasurement) kv.Value;
                                 nodeGroup.Attributes[kv.Key + "_quantity"] = (double) m.Quantity;
-                                nodeGroup.Attributes[kv.Value + "_units"] = m.DisplayUnit;
+                                nodeGroup.Attributes[value + "_units"] = m.DisplayUnit;
                                 nodeGroup.Attributes[kv.Key] = m.ToString();
                             }
                             else
                             {
-                                H5EpochPersistor.Log.WarnFormat("Node configuration value ({0} : {1}) is of usupported type. Falling back to string representation.", kv.Key, kv.Value);
-                                nodeGroup.Attributes[kv.Key] = kv.Value.ToString();
+                                H5EpochPersistor.Log.WarnFormat("Node configuration value ({0} : {1}) is of usupported type. Falling back to string representation.", kv.Key, value);
+                                nodeGroup.Attributes[kv.Key] = value.ToString();
                             }
                         }
                     }
@@ -1373,14 +1375,15 @@ namespace Symphony.Core
 
                 foreach (var kv in stimulus.Parameters.ToList())
                 {
-                    if (H5AttributeManager.IsSupportedType(kv.Value.GetType()))
+                    var value = kv.Value ?? "";
+                    if (H5AttributeManager.IsSupportedType(value.GetType()))
                     {
-                        parametersGroup.Attributes[kv.Key] = new H5Attribute(kv.Value);
+                        parametersGroup.Attributes[kv.Key] = new H5Attribute(value);
                     }
                     else
                     {
-                        H5EpochPersistor.Log.WarnFormat("Stimulus parameter value ({0} : {1}) is of usupported type. Falling back to string representation.", kv.Key, kv.Value);
-                        parametersGroup.Attributes[kv.Key] = kv.Value.ToString();
+                        H5EpochPersistor.Log.WarnFormat("Stimulus parameter value ({0} : {1}) is of usupported type. Falling back to string representation.", kv.Key, value);
+                        parametersGroup.Attributes[kv.Key] = value.ToString();
                     }
                     
                 }
