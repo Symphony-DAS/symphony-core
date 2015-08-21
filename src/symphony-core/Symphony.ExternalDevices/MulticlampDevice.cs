@@ -76,24 +76,6 @@ namespace Symphony.ExternalDevices
         /// </summary>
         /// <param name="serialNumber">MultiClamp serial number</param>
         /// <param name="channel">MultiClamp channel</param>
-        /// <param name="clock">Clock instance defining canonical time</param>
-        /// <param name="c">Controller instance for this device</param>
-        /// <param name="background">Dictionary of background Measurements for each MultiClamp operating mode</param>
-        public MultiClampDevice(uint serialNumber,
-            uint channel,
-            IClock clock,
-            Controller c,
-            IDictionary<MultiClampInterop.OperatingMode, IMeasurement> background)
-            : this(new MultiClampCommander(serialNumber, channel, clock), c, background)
-        {
-            this.Clock = clock;
-        }
-
-        /// <summary>
-        /// Constructs a new MultiClampDevice
-        /// </summary>
-        /// <param name="serialNumber">MultiClamp serial number</param>
-        /// <param name="channel">MultiClamp channel</param>
         /// <param name="clock">Clock instance defining cononical time</param>
         /// <param name="c">Controller instance for this device</param>
         /// <param name="backgroundModes">Enumerable of operating modes</param>
@@ -110,6 +92,7 @@ namespace Symphony.ExternalDevices
             (k, v) => new { Key = k, Value = v })
             .ToDictionary(x => x.Key, x => x.Value))
         {
+            this.Clock = clock;
         }
 
         /// <summary>
