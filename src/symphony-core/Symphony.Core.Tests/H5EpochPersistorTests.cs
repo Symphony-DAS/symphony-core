@@ -373,13 +373,19 @@ namespace Symphony.Core
             Assert.IsNull(persistor.CurrentEpochBlock);
 
             var id = "protocol.id.here";
+            var parameters = new Dictionary<string, object>
+                {
+                    {"one", 1},
+                    {"two", "second"}
+                };
             var time = DateTimeOffset.Now;
             var src = persistor.AddSource("label", null);
             var grp = persistor.BeginEpochGroup("group", src, time);
-            var blk = persistor.BeginEpochBlock(id, time);
+            var blk = persistor.BeginEpochBlock(id, parameters, time);
 
             Assert.AreEqual(blk, persistor.CurrentEpochBlock);
             Assert.AreEqual(id, blk.ProtocolID);
+            Assert.AreEqual(parameters, blk.ProtocolParameters);
             Assert.AreEqual(time, blk.StartTime);
             Assert.IsNull(blk.EndTime);
             Assert.AreEqual(0, blk.Epochs.Count());
@@ -393,10 +399,10 @@ namespace Symphony.Core
         {
             var src = persistor.AddSource("label", null);
             var grp = persistor.BeginEpochGroup("group", src);
-            var blk = persistor.BeginEpochBlock("id", DateTimeOffset.Now);
+            var blk = persistor.BeginEpochBlock("id", new Dictionary<string, object>(),  DateTimeOffset.Now);
 
             Assert.Throws(typeof (InvalidOperationException),
-                          () => persistor.BeginEpochBlock("id", DateTimeOffset.Now));
+                          () => persistor.BeginEpochBlock("id", new Dictionary<string, object>(), DateTimeOffset.Now));
         }
 
         [Test]
@@ -404,7 +410,7 @@ namespace Symphony.Core
         {
             var src = persistor.AddSource("label", null);
             var grp = persistor.BeginEpochGroup("group", src);
-            var blk = persistor.BeginEpochBlock("id", DateTimeOffset.Now);
+            var blk = persistor.BeginEpochBlock("id", new Dictionary<string, object>(),  DateTimeOffset.Now);
 
             var time = DateTimeOffset.Now;
             persistor.EndEpochBlock(time);
@@ -420,7 +426,7 @@ namespace Symphony.Core
 
             var src = persistor.AddSource("label", null);
             var grp = persistor.BeginEpochGroup("group", src);
-            var blk = persistor.BeginEpochBlock(epoch.ProtocolID, epoch.StartTime);
+            var blk = persistor.BeginEpochBlock(epoch.ProtocolID, epoch.ProtocolParameters, epoch.StartTime);
             
             var persistedEpoch = persistor.Serialize(epoch);
 
@@ -437,7 +443,7 @@ namespace Symphony.Core
 
             var src = persistor.AddSource("label", null);
             var grp = persistor.BeginEpochGroup("group", src);
-            var blk = persistor.BeginEpochBlock("different.protocol.id", epoch.StartTime);
+            var blk = persistor.BeginEpochBlock("different.protocol.id", new Dictionary<string, object>(),  epoch.StartTime);
 
             Assert.Throws(typeof (ArgumentException), () => persistor.Serialize(epoch));
         }
@@ -453,7 +459,7 @@ namespace Symphony.Core
 
             var src = persistor.AddSource("label", null);
             var grp = persistor.BeginEpochGroup("group", src);
-            var blk = persistor.BeginEpochBlock(epoch.ProtocolID, DateTimeOffset.Now);
+            var blk = persistor.BeginEpochBlock(epoch.ProtocolID, new Dictionary<string, object>(), DateTimeOffset.Now);
             persistor.EndEpochBlock(DateTimeOffset.Now);
 
             Assert.Throws(typeof(InvalidOperationException), () => persistor.Serialize(epoch));
@@ -466,7 +472,7 @@ namespace Symphony.Core
             var src = persistor.AddSource("label", null);
             var grp1 = persistor.BeginEpochGroup("group1", src);
             var grp2 = persistor.BeginEpochGroup("group2", src);
-            var blk = persistor.BeginEpochBlock("id", startTime);
+            var blk = persistor.BeginEpochBlock("id", new Dictionary<string, object>(),  startTime);
 
             var endTime = startTime.AddHours(1).AddMinutes(2).AddSeconds(55);
             persistor.Close(endTime);
