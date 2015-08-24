@@ -185,7 +185,7 @@ namespace Symphony.Core
 
                 timeSpan -= span;
 
-                if (stream.IsOutputAtEnd)
+                if (stream.IsOutputAtEnd && EndedStreams.Any())
                 {
                     EndedStreams.Dequeue();
                 }
