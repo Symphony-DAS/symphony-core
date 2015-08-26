@@ -747,7 +747,7 @@ namespace Symphony.ExternalDevices
             get
             {
                 if (!HasDeviceInputParameters)
-                    throw new MultiClampDeviceException("No current MultiClamp input parameters. Make sure MultiClamp Commander is open.");
+                    throw new MultiClampDeviceException("No current MultiClamp input parameters. Make sure MultiClamp Commander is open or try toggling the mode.");
 
                 return MostRecentDeviceParameterPreceedingDate(InputParameters, Clock.Now);
             }
@@ -778,7 +778,7 @@ namespace Symphony.ExternalDevices
             get
             {
                 if (!HasDeviceOutputParameters)
-                    throw new MultiClampDeviceException("No current MultiClamp output parameters. Make sure MultiClamp Commander is open.");
+                    throw new MultiClampDeviceException("No current MultiClamp output parameters. Make sure MultiClamp Commander is open or try toggling the mode.");
 
                 return MostRecentDeviceParameterPreceedingDate(OutputParameters, Clock.Now);
             }
