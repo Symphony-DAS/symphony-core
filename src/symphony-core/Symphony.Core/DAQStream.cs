@@ -372,7 +372,7 @@ namespace Symphony.Core
         /// The "background" value to be used when no data is available or upon stopping the 
         /// DAQ device. The value is the sum of OutputBackgrounds of all associated devices.
         /// </summary>
-        public IMeasurement Background
+        public virtual IMeasurement Background
         {
             get
             {

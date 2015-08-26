@@ -141,6 +141,28 @@ namespace Heka
             }
         }
 
+        public override IMeasurement Background
+        {
+            get
+            {
+                IMeasurement background = null;
+                foreach (var ed in Devices)
+                {
+                    var m = Converters.Convert(ed.Background, MeasurementConversionTarget);
+                    if (m.QuantityInBaseUnit != 0 && m.QuantityInBaseUnit != 1)
+                        throw new DAQException(ed.Name + " background must contain a value of 0 or 1");
+
+                    ushort bitPosition = BitPositions[ed];
+                    m = MeasurementPool.GetMeasurement((short)((short)m.QuantityInBaseUnit << bitPosition), 0, m.BaseUnit);
+
+                    background = background == null
+                        ? m
+                        : MeasurementPool.GetMeasurement((short)background.QuantityInBaseUnit | (short)m.QuantityInBaseUnit, 0, background.BaseUnit);
+                }
+                return background;
+            }
+        }
+
         public override IOutputData PullOutputData(TimeSpan duration)
         {
             if (!Devices.Any())

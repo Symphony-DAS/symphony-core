@@ -115,6 +115,26 @@ namespace Heka
     class HekaDigitalDAQOutputStreamTests
     {
         [Test]
+        public void ShouldBitShiftAndMergeBackground()
+        {
+            var controller = new HekaDAQController();
+            var s = new HekaDigitalDAQOutputStream("OUT", 0, controller);
+            controller.SampleRate = new Measurement(10000, 1, "Hz");
+
+            for (ushort bitPosition = 1; bitPosition < 16; bitPosition += 2)
+            {
+                TestDevice dev = new TestDevice {Background = new Measurement(1, Measurement.UNITLESS)};
+                dev.BindStream(s);
+                s.BitPositions[dev] = bitPosition;
+            }
+
+            ushort q = 0xaaaa;
+            var expected = new Measurement((short)q, Measurement.UNITLESS);
+
+            Assert.AreEqual(expected, s.Background);
+        }
+
+        [Test]
         public void ShouldBitShiftAndMergePulledOutputData()
         {
             var controller = new HekaDAQController();

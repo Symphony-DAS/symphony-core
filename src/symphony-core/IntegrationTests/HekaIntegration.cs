@@ -662,7 +662,7 @@ namespace IntegrationTests
                             var source = persistor.Experiment.Sources.First();
 
                             persistor.BeginEpochGroup("label", source, DateTimeOffset.Now);
-                            persistor.BeginEpochBlock(e.ProtocolID, DateTimeOffset.Now);
+                            persistor.BeginEpochBlock(e.ProtocolID, e.ProtocolParameters, DateTimeOffset.Now);
 
                             controller.RunEpoch(e, persistor);
 

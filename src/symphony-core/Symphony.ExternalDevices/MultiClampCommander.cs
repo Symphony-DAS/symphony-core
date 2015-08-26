@@ -187,6 +187,13 @@ namespace Symphony.ExternalDevices
         {
             if (!this._disposed)
             {
+                // Remove references from static Win32Interop class or this object will exist indefinitely
+                UnregisterForWmCopyDataEvents();
+                UnregisterForReconnectEvents();
+
+                UInt32 lParam = MultiClampInterop.MCTG_Pack700BSignalIDs(this.SerialNumber, this.Channel); // Pack the above two into an UInt32
+                int result = Win32Interop.PostMessage(Win32Interop.HWND_BROADCAST, MultiClampInterop.MCTG_CLOSE_MESSAGE, (IntPtr)Win32Interop.MessageEvents.WindowHandle, (IntPtr)lParam);
+
                 if (disposing)
                 {
                     //Handle manage object disposal
@@ -198,13 +205,6 @@ namespace Symphony.ExternalDevices
                     // from executing a second time.
                     GC.SuppressFinalize(this);
                 }
-
-                // Remove references from static Win32Interop class or this object will exist indefinitely
-                UnregisterForWmCopyDataEvents();
-                UnregisterForReconnectEvents();
-
-                UInt32 lParam = MultiClampInterop.MCTG_Pack700BSignalIDs(this.SerialNumber, this.Channel); // Pack the above two into an UInt32
-                int result = Win32Interop.PostMessage(Win32Interop.HWND_BROADCAST, MultiClampInterop.MCTG_CLOSE_MESSAGE, (IntPtr)Win32Interop.MessageEvents.WindowHandle, (IntPtr)lParam);
 
                 // Note disposing has been done.
                 _disposed = true;
