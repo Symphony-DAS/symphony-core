@@ -185,6 +185,7 @@ namespace Symphony.Core
             this.OutputTasks = new List<Task>();
         }
 
+        public bool IsHardwareReady { get; protected set; }
 
         /// <summary>
         /// Flag indicating whether or not the represented hardware device is running

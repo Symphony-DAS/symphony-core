@@ -62,10 +62,19 @@ namespace Symphony.ExternalDevices
 
                         OutputParameters[mdArgs.TimeStamp.ToUniversalTime()] = mdArgs;
 
-                        foreach (var outputStream in OutputStreams.Where(s => s.DAQ != null && s.DAQ.IsRunning == false))
+                        foreach (var outputStream in OutputStreams.Where(s => s.DAQ != null && s.DAQ.IsHardwareReady && !s.DAQ.IsRunning))
                         {
                             log.DebugFormat("Setting new background for stream {0}", outputStream.Name);
-                            outputStream.ApplyBackground();
+                            try
+                            {
+                                outputStream.ApplyBackground();
+                            }
+                            catch (Exception x)
+                            {
+                                log.ErrorFormat("Error applying new background: {0}", x);
+                                throw;
+                            }
+                            
                         }
                     }
                 };

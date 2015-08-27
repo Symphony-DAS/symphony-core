@@ -131,7 +131,7 @@ namespace IntegrationTests
                 }
                 finally
                 {
-                    if (daq.HardwareReady)
+                    if (daq.IsHardwareReady)
                         daq.CloseHardware();
                 }
 
@@ -260,7 +260,7 @@ namespace IntegrationTests
                 }
                 finally
                 {
-                    if (daq.HardwareReady)
+                    if (daq.IsHardwareReady)
                         daq.CloseHardware();
                 }
 
@@ -405,7 +405,7 @@ namespace IntegrationTests
                 }
                 finally
                 {
-                    if (daq.HardwareReady)
+                    if (daq.IsHardwareReady)
                     {
                         daq.CloseHardware();
                     }
@@ -489,7 +489,7 @@ namespace IntegrationTests
                 }
                 finally
                 {
-                    if (daq.HardwareReady)
+                    if (daq.IsHardwareReady)
                         daq.CloseHardware();
                 }
 
@@ -568,7 +568,7 @@ namespace IntegrationTests
                 }
                 finally
                 {
-                    if (daq.HardwareReady)
+                    if (daq.IsHardwareReady)
                         daq.CloseHardware();
                 }
             }
@@ -688,7 +688,7 @@ namespace IntegrationTests
                     if (File.Exists(h5Path))
                         File.Delete(h5Path);
 
-                    if (daq.HardwareReady)
+                    if (daq.IsHardwareReady)
                         daq.CloseHardware();
                 
                 }

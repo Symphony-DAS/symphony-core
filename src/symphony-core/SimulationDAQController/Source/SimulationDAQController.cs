@@ -54,7 +54,8 @@ namespace Symphony.SimulationDAQController
         public SimulationDAQController(TimeSpan simulationTimeStep)
         {
             ProcessInterval = simulationTimeStep;
-            this.Clock = this;
+            Clock = this;
+            IsHardwareReady = true;
         }
 
         /// <summary>

@@ -46,7 +46,7 @@ namespace Heka
                 {
                     controller.Stop();
                 }
-                if (controller.HardwareReady)
+                if (controller.IsHardwareReady)
                 {
                     //controller.CloseHardware();
                 }
@@ -122,17 +122,17 @@ namespace Heka
         {
             foreach (HekaDAQController controller in HekaDAQController.AvailableControllers())
             {
-                Assert.False(controller.HardwareReady);
+                Assert.False(controller.IsHardwareReady);
                 controller.InitHardware();
 
                 try
                 {
-                    Assert.True(controller.HardwareReady);
+                    Assert.True(controller.IsHardwareReady);
                 }
                 finally
                 {
                     controller.CloseHardware();
-                    Assert.False(controller.HardwareReady);
+                    Assert.False(controller.IsHardwareReady);
                 }
             }
 
@@ -143,7 +143,7 @@ namespace Heka
         {
             foreach (HekaDAQController controller in HekaDAQController.AvailableControllers())
             {
-                Assert.False(controller.HardwareReady);
+                Assert.False(controller.IsHardwareReady);
                 controller.InitHardware();
 
                 try
@@ -254,7 +254,7 @@ namespace Heka
                 const decimal srate = 10000;
 
                 daq.InitHardware();
-                Assert.True(daq.HardwareReady);
+                Assert.True(daq.IsHardwareReady);
                 Assert.False(daq.HardwareRunning);
 
                 try
@@ -315,7 +315,7 @@ namespace Heka
                 }
                 finally
                 {
-                    if(daq.HardwareReady)
+                    if(daq.IsHardwareReady)
                         daq.CloseHardware();
                 }
 
@@ -348,7 +348,7 @@ namespace Heka
                 }
                 finally
                 {
-                    if(daq.HardwareReady)
+                    if(daq.IsHardwareReady)
                         daq.CloseHardware();
                 }
         
@@ -387,7 +387,7 @@ namespace Heka
                 }
                 finally
                 {
-                    if(daq.HardwareReady)
+                    if(daq.IsHardwareReady)
                         daq.CloseHardware();    
                 }
                 

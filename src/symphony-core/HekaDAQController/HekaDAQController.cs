@@ -226,7 +226,7 @@ namespace Heka
         {
             this.DeviceType = deviceType;
             this.DeviceNumber = deviceNumber;
-            this.HardwareReady = false;
+            this.IsHardwareReady = false;
             this.ProcessInterval = TimeSpan.FromSeconds(DEFAULT_TRANSFER_BLOCK_SECONDS);
             this.Clock = clock;
         }
@@ -237,7 +237,7 @@ namespace Heka
         public override void BeginSetup()
         {
             base.BeginSetup();
-            if (!HardwareReady)
+            if (!IsHardwareReady)
             {
                 InitHardware();
                 CloseHardware();
@@ -276,7 +276,7 @@ namespace Heka
         /// </summary>
         public void InitHardware()
         {
-            if (!this.HardwareReady)
+            if (!this.IsHardwareReady)
             {
                 var deviceInfo = OpenDevice();
                 
@@ -309,7 +309,7 @@ namespace Heka
                     }
                 }
 
-                this.HardwareReady = true;
+                this.IsHardwareReady = true;
             }
         }
 
@@ -317,7 +317,7 @@ namespace Heka
         {
             ITCMM.GlobalDeviceInfo deviceInfo;
             this.Device = QueuedHekaHardwareDevice.OpenDevice(DeviceType, DeviceNumber, out deviceInfo);
-            HardwareReady = true;
+            IsHardwareReady = true;
             return deviceInfo;
         }
 
@@ -328,16 +328,15 @@ namespace Heka
         {
             try
             {
-                if(HardwareReady)
+                if (IsHardwareReady)
+                {
+                    IsHardwareReady = false;
                     Device.CloseDevice();
+                }   
             }
             catch (HekaDAQException)
             {
                 //pass
-            }
-            finally
-            {
-                HardwareReady = false;
             }
         }
 
@@ -348,11 +347,6 @@ namespace Heka
             OpenDevice();
             SetStreamsBackground();
         }
-
-        /// <summary>
-        /// Indicates whether the ITC hardware is initialized and ready for acquisition.
-        /// </summary>
-        public bool HardwareReady { get; private set; }
 
         protected override void StartHardware(bool waitForTrigger)
         {
@@ -393,7 +387,7 @@ namespace Heka
 
         public override void Start(bool waitForTrigger)
         {
-            if (!HardwareReady)
+            if (!IsHardwareReady)
                 OpenDevice();
 
             Device.ConfigureChannels(this.ActiveStreams.Cast<HekaDAQStream>());

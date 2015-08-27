@@ -697,6 +697,7 @@ namespace Symphony.ExternalDevices
             var mcd = new MultiClampDevice(mc, c, background);
             mcd.BindStream(s);
 
+            daq.IsHardwareReady.Returns(true);
             daq.IsRunning.Returns(false);
 
             mc.FireParametersChanged(DateTimeOffset.Now, dataVClamp);
