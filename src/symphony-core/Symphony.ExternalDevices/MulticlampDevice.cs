@@ -69,6 +69,7 @@ namespace Symphony.ExternalDevices
                         }
                     }
                 };
+            Commander.RequestTelegraphValue();
 
             Backgrounds = background;
         }
