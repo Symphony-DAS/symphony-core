@@ -52,18 +52,20 @@ namespace Symphony.ExternalDevices
                             mdArgs.Data.ExternalCommandSensitivityUnits,
                             mdArgs.TimeStamp);
 
-                        if (HasBoundInputStream)
-                            InputParameters[mdArgs.TimeStamp.ToUniversalTime()] = mdArgs;
+                        if (!HasBoundInputStream)
+                            InputParameters.Clear();
+                            
+                        InputParameters[mdArgs.TimeStamp.ToUniversalTime()] = mdArgs;
 
-                        if (HasBoundOutputStream)
+                        if (!HasBoundOutputStream)
+                            OutputParameters.Clear();
+
+                        OutputParameters[mdArgs.TimeStamp.ToUniversalTime()] = mdArgs;
+
+                        foreach (var outputStream in OutputStreams.Where(s => s.DAQ != null && s.DAQ.IsRunning == false))
                         {
-                            OutputParameters[mdArgs.TimeStamp.ToUniversalTime()] = mdArgs;
-
-                            foreach (var outputStream in OutputStreams.Where(s => s.DAQ != null && s.DAQ.IsRunning == false))
-                            {
-                                log.DebugFormat("Setting new background for stream {0}", outputStream.Name);
-                                outputStream.ApplyBackground();
-                            }
+                            log.DebugFormat("Setting new background for stream {0}", outputStream.Name);
+                            outputStream.ApplyBackground();
                         }
                     }
                 };
@@ -641,7 +643,7 @@ namespace Symphony.ExternalDevices
         {
             try
             {
-                var deviceParameters = DeviceParametersForInput(Clock.Now.UtcDateTime).Data;
+                var deviceParameters = DeviceParametersForInput(inData.InputTime.UtcDateTime).Data;
 
                 IInputData convertedData = inData.DataWithConversion(
                     m => ConvertInput(m, deviceParameters)
