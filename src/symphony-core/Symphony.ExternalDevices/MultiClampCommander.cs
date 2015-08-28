@@ -67,7 +67,6 @@ namespace Symphony.ExternalDevices
             RegisterForReconnectEvents();
             
             OpenMultiClampConversation(lParam);
-            RequestTelegraphValue(lParam);
         }
 
         private uint DeviceLParam()
@@ -173,9 +172,10 @@ namespace Symphony.ExternalDevices
         {
             lock (_eventLock)
             {
-                if (ParametersChanged != null)
+                var temp = ParametersChanged;
+                if (temp != null)
                 {
-                    ParametersChanged(this, new MultiClampParametersChangedArgs(Clock, data));
+                    temp(this, new MultiClampParametersChangedArgs(Clock, data));
                 }
             }
         }
