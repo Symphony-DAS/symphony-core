@@ -437,9 +437,22 @@ namespace Symphony.Core
             log.DebugFormat("Queued epoch: {0}", e.ProtocolID);
         }
 
-        public int EpochQueueCount
+        public Option<TimeSpan> EpochQueueDuration
         {
-            get { return EpochQueue.Count; }
+            get
+            {
+                Option<TimeSpan> duration;
+                if (EpochQueue.Any(e => e.IsIndefinite))
+                {
+                    duration = Option<TimeSpan>.None();
+                }
+                else
+                {
+                    var totalSpan = new TimeSpan(EpochQueue.Select(e => ((TimeSpan)e.Duration).Ticks).Sum());
+                    duration = Option<TimeSpan>.Some(totalSpan);
+                }
+                return duration;
+            }
         }
 
         /// <summary>
