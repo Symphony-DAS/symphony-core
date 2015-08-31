@@ -1221,7 +1221,7 @@ namespace Symphony.Core
         private readonly H5Group _deviceGroup;
         private readonly H5Group _dataConfigurationSpansGroup;
 
-        public static H5Group InsertIOBaseGroup(H5Group container, H5PersistentEpoch epoch, H5PersistentDevice device, IEnumerable<IConfigurationSpan> configSpans)
+        protected static H5Group InsertIOBaseGroup(H5Group container, H5PersistentEpoch epoch, H5PersistentDevice device, IEnumerable<IConfigurationSpan> configSpans)
         {
             var group = InsertEntityGroup(container, device.Name);
             try
@@ -1231,7 +1231,7 @@ namespace Symphony.Core
 
                 uint i = 0;
                 var totalTime = TimeSpan.Zero;
-                foreach (var span in configSpans)
+                foreach (var span in configSpans.ToList())
                 {
                     var spanGroup = spansGroup.AddGroup(SpanGroupPrefix + i);
                     spanGroup.Attributes[SpanIndexKey] = i;
@@ -1240,10 +1240,10 @@ namespace Symphony.Core
                     totalTime += span.Time;
 
                     spanGroup.Attributes[SpanDurationKey] = span.Time.TotalSeconds;
-                    foreach (var node in span.Nodes)
+                    foreach (var node in span.Nodes.ToList())
                     {
                         var nodeGroup = spanGroup.AddGroup(node.Name);
-                        foreach (var kv in node.Configuration)
+                        foreach (var kv in node.Configuration.ToList())
                         {
                             var value = kv.Value ?? "";
                             if (H5AttributeManager.IsSupportedType(value.GetType()))
