@@ -164,6 +164,9 @@ namespace Symphony.Core
 
         public IPersistentEpochGroup BeginEpochGroup(string label, IPersistentSource source, DateTimeOffset startTime)
         {
+            if (CurrentEpochBlock != null)
+                throw new InvalidOperationException("There is an open epoch block");
+
             var epochGroup = CurrentEpochGroup == null
                        ? _experiment.InsertEpochGroup(label, (H5PersistentSource) source, startTime)
                        : ((H5PersistentEpochGroup) CurrentEpochGroup).InsertEpochGroup(label, (H5PersistentSource) source, startTime);
