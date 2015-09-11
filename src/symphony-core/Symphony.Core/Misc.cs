@@ -199,6 +199,16 @@ namespace Symphony.Core
     /// <returns>The result of the conversion</returns>
     public delegate IMeasurement ConvertProc(IMeasurement input);
 
+    /// <summary>
+    /// Conversion functions for use in Matlab.
+    /// </summary>
+    public static class ConvertProcs
+    {
+        public static ConvertProc Scale(double factor, string baseUnit)
+        {
+            return m => MeasurementPool.GetMeasurement(m.QuantityInBaseUnit * (decimal)factor, 0, baseUnit);
+        }
+    }
 
     /// <summary>
     /// Convenient extensions for the TimeSpan class to convert between TimeSpan and number of samples
