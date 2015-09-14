@@ -31,12 +31,6 @@ namespace Symphony.ExternalDevices
             : base("Axopatch", "Molecular Devices", c)
         {
             Axopatch = axopatch;
-
-            c.Started += (sender, args) =>
-                {
-                    DeviceParameters = ReadDeviceParameters();
-                };
-
             Backgrounds = background;
         }
 
@@ -82,6 +76,30 @@ namespace Symphony.ExternalDevices
                        }),
                    backgroundMeasurements)
         {
+        }
+
+        private Controller _controller;
+
+        public override Controller Controller
+        {
+            get { return _controller; }
+            set
+            {
+                if (_controller != null)
+                {
+                    _controller.Started -= OnControllerStarted;
+                }
+                _controller = value;
+                if (value != null)
+                {
+                    value.Started += OnControllerStarted;
+                }
+            }
+        }
+
+        private void OnControllerStarted(object sender, TimeStampedEventArgs args)
+        {
+            DeviceParameters = ReadDeviceParameters();
         }
 
         private readonly IDictionary<IDAQInputStream, IList<IInputData>> _queues = new Dictionary<IDAQInputStream, IList<IInputData>>();
@@ -320,6 +338,36 @@ namespace Symphony.ExternalDevices
                 log.DebugFormat("Error pushing data to controller: {0} ({1})", ex.Message, ex);
                 throw;
             }
+        }
+
+        /// <summary>
+        /// Verify that everything is hooked up correctly
+        /// </summary>
+        /// <returns></returns>
+        public override Maybe<string> Validate()
+        {
+            if (InputStreams.Any() &&
+                (!Streams.ContainsKey(SCALED_OUTPUT_STREAM_NAME) ||
+                 !(Streams[SCALED_OUTPUT_STREAM_NAME] is IDAQInputStream)))
+            {
+                return Maybe<string>.No(Name + " must have a bound input stream named " + SCALED_OUTPUT_STREAM_NAME);
+            }
+
+            if (Streams.Any() && 
+                (!Streams.ContainsKey(GAIN_TELEGRAPH_STREAM_NAME) ||
+                !(Streams[GAIN_TELEGRAPH_STREAM_NAME] is IDAQInputStream)))
+            {
+                return Maybe<string>.No(Name + " must have a bound input stream named " + GAIN_TELEGRAPH_STREAM_NAME);
+            }
+
+            if (Streams.Any() &&
+                (!Streams.ContainsKey(MODE_TELEGRAPH_STREAM_NAME) ||
+                !(Streams[MODE_TELEGRAPH_STREAM_NAME] is IDAQInputStream)))
+            {
+                return Maybe<string>.No(Name + " must have a bound input stream named " + MODE_TELEGRAPH_STREAM_NAME);
+            }
+
+            return base.Validate();
         }
 
     }

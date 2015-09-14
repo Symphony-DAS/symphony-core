@@ -431,7 +431,7 @@ namespace Symphony.Core
         /// <summary>
         /// The Controller we're connected up to.
         /// </summary>
-        public Controller Controller { get; set; }
+        public virtual Controller Controller { get; set; }
 
         /// <summary>
         /// What are the parameters of this device's configuration (i.e. a representation of the hardware settings of the device).
