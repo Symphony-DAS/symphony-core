@@ -238,10 +238,6 @@ namespace Symphony.Core
         {
             if (!IsRunning)
             {
-                IsRunning = true;
-                IsStopRequested = false;
-                OnStarted();
-
                 Process(waitForTrigger);
             }
         }
@@ -272,6 +268,10 @@ namespace Symphony.Core
             // pushing the results back through the input pipeline
             try
             {
+                IsRunning = true;
+                IsStopRequested = false;
+                OnStarted();
+
                 OutputTasks.Clear();
                 InputTasks.Clear();
 

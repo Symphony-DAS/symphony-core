@@ -78,30 +78,6 @@ namespace Symphony.ExternalDevices
         {
         }
 
-        private Controller _controller;
-
-        public override Controller Controller
-        {
-            get { return _controller; }
-            set
-            {
-                if (_controller != null)
-                {
-                    _controller.Started -= OnControllerStarted;
-                }
-                _controller = value;
-                if (value != null)
-                {
-                    value.Started += OnControllerStarted;
-                }
-            }
-        }
-
-        private void OnControllerStarted(object sender, TimeStampedEventArgs args)
-        {
-            DeviceParameters = ReadDeviceParameters();
-        }
-
         private readonly IDictionary<IDAQInputStream, IList<IInputData>> _queues = new Dictionary<IDAQInputStream, IList<IInputData>>();
 
         public override ExternalDeviceBase BindStream(string name, IDAQInputStream inputStream)

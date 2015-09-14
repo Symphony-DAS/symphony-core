@@ -582,12 +582,6 @@ namespace Symphony.Core
             if (!ValidateEpoch(e))
                 throw new ArgumentException(ValidateEpoch(e));
             
-            IsRunning = true;
-            IsPauseRequested = false;
-            IsStopRequested = false;
-
-            OnStarted();
-            
             EventHandler<TimeStampedEpochEventArgs> epochCompleted = (c, args) => RequestStop();
 
             try
@@ -626,12 +620,6 @@ namespace Symphony.Core
             if (!Validate())
                 throw new ValidationException(Validate());
 
-            IsRunning = true;
-            IsPauseRequested = false;
-            IsStopRequested = false;
-
-            OnStarted();
-
             return Task.Factory.StartNew(() => Process(EpochQueue, persistor), TaskCreationOptions.LongRunning);
         }
 
@@ -646,6 +634,12 @@ namespace Symphony.Core
         {
             try
             {
+                IsRunning = true;
+                IsPauseRequested = false;
+                IsStopRequested = false;
+
+                OnStarted();
+
                 CompletedEpochTasks.Clear();
 
                 ProcessLoop(epochQueue, persistor);
