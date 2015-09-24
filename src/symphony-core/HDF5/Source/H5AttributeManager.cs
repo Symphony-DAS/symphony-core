@@ -136,13 +136,16 @@ namespace HDF5
 
                     aid = H5A.create(oid, name, tid, sid);
 
-                    // Equivalent to: H5Array<elementType> buffer = new H5Array<elementType>(data);
-                    var bufferType = typeof(H5Array<>).MakeGenericType(new[] { elementType });
-                    var buffer = Activator.CreateInstance(bufferType, new object[] { data });
+                    if (!valueType.IsArray || ((Array) value).Length > 0)
+                    {
+                        // Equivalent to: H5Array<elementType> buffer = new H5Array<elementType>(data);
+                        var bufferType = typeof(H5Array<>).MakeGenericType(new[] { elementType });
+                        var buffer = Activator.CreateInstance(bufferType, new object[] { data });
 
-                    // Equivalent to: H5A.write(attributeId, typeId, buffer);
-                    var methodInfo = typeof(H5A).GetMethod("write").MakeGenericMethod(new[] { elementType });
-                    methodInfo.Invoke(null, new[] { aid, tid, buffer });
+                        // Equivalent to: H5A.write(attributeId, typeId, buffer);
+                        var methodInfo = typeof(H5A).GetMethod("write").MakeGenericMethod(new[] { elementType });
+                        methodInfo.Invoke(null, new[] { aid, tid, buffer });
+                    }
                 }
 
                 return new H5Attribute(File, Path, name);

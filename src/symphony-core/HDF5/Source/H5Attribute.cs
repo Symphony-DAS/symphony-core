@@ -101,13 +101,16 @@ namespace HDF5
 
                     Array data = Array.CreateInstance(elementType, dims.Any() ? dims : new long[] { 1 });
 
-                    //H5Array<type> buffer = new H5Array<type>(data);
-                    var bufferType = typeof(H5Array<>).MakeGenericType(new[] { elementType });
-                    var buffer = Activator.CreateInstance(bufferType, new object[] { data });
+                    if (data.Length > 0)
+                    {
+                        //H5Array<type> buffer = new H5Array<type>(data);
+                        var bufferType = typeof(H5Array<>).MakeGenericType(new[] { elementType });
+                        var buffer = Activator.CreateInstance(bufferType, new object[] { data });
 
-                    //H5A.read(attributeId, typeId, buffer);
-                    var methodInfo = typeof(H5A).GetMethod("read").MakeGenericMethod(new[] { elementType });
-                    methodInfo.Invoke(null, new[] { aid, tid, buffer });
+                        //H5A.read(attributeId, typeId, buffer);
+                        var methodInfo = typeof(H5A).GetMethod("read").MakeGenericMethod(new[] { elementType });
+                        methodInfo.Invoke(null, new[] { aid, tid, buffer });
+                    }
 
                     value = dims.Any() ? data : data.GetValue(0);
                 }
