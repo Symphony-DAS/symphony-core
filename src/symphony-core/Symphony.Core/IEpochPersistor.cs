@@ -309,6 +309,11 @@ namespace Symphony.Core
         /// The top-level Epoch Groups contained within this Experiment.
         /// </summary>
         IEnumerable<IPersistentEpochGroup> EpochGroups { get; }
+
+        /// <summary>
+        /// All Epoch Groups contained within this Experiment.
+        /// </summary>
+        IEnumerable<IPersistentEpochGroup> AllEpochGroups { get; }
     }
 
     /// <summary>
@@ -330,6 +335,11 @@ namespace Symphony.Core
         /// The child Epoch Groups of this Epoch Group.
         /// </summary>
         IEnumerable<IPersistentEpochGroup> EpochGroups { get; }
+
+        /// <summary>
+        /// All child Epoch Groups of this Epoch Group and all its children.
+        /// </summary>
+        IEnumerable<IPersistentEpochGroup> AllEpochGroups { get; }
 
         /// <summary>
         /// The Epoch Blocks contained within this Epoch Group.

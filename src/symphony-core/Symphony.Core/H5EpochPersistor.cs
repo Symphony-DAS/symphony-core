@@ -825,6 +825,11 @@ namespace Symphony.Core
             get { return _epochGroupsGroup.Groups.Select(g => EntityFactory.Create<H5PersistentEpochGroup>(g)); }
         }
 
+        public IEnumerable<IPersistentEpochGroup> AllEpochGroups
+        {
+            get { return EpochGroups.Aggregate(EpochGroups, (current, group) => current.Concat(group.AllEpochGroups)); }
+        }
+
         public H5PersistentEpochGroup InsertEpochGroup(string label, H5PersistentSource source, DateTimeOffset startTime)
         {
             var group = H5PersistentEpochGroup.InsertEpochGroup(_epochGroupsGroup, EntityFactory, null, this, label, source, startTime);
@@ -926,6 +931,11 @@ namespace Symphony.Core
         public IEnumerable<IPersistentEpochGroup> EpochGroups
         {
             get { return _epochGroupsGroup.Groups.Select(g => EntityFactory.Create<H5PersistentEpochGroup>(g)); }
+        }
+
+        public IEnumerable<IPersistentEpochGroup> AllEpochGroups
+        {
+            get { return EpochGroups.Aggregate(EpochGroups, (current, group) => current.Concat(group.AllEpochGroups)); }
         }
 
         public H5PersistentEpochGroup InsertEpochGroup(string label, H5PersistentSource source, DateTimeOffset startTime)
