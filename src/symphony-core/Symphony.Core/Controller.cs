@@ -581,19 +581,23 @@ namespace Symphony.Core
 
             if (!ValidateEpoch(e))
                 throw new ArgumentException(ValidateEpoch(e));
-            
+
             EventHandler<TimeStampedEpochEventArgs> epochCompleted = (c, args) => RequestStop();
+
+            IsRunning = true;
+            IsPauseRequested = false;
+            IsStopRequested = false;
 
             try
             {
+                OnStarted();
                 CompletedEpoch += epochCompleted;
-
-                var singleEpochQueue = new ConcurrentQueue<Epoch>(new[] { e });
-                Process(singleEpochQueue, persistor);
+                ProcessLoop(new ConcurrentQueue<Epoch>(new[] {e}), persistor);
             }
             finally
             {
                 CompletedEpoch -= epochCompleted;
+                Stop();
             }
         }
         
@@ -620,36 +624,20 @@ namespace Symphony.Core
             if (!Validate())
                 throw new ValidationException(Validate());
 
-            return Task.Factory.StartNew(() => Process(EpochQueue, persistor), TaskCreationOptions.LongRunning);
-        }
+            IsRunning = true;
+            IsPauseRequested = false;
+            IsStopRequested = false;
 
-        /// <summary>
-        /// Spins in a loop buffering Epochs from the given Epoch queue as required to satisfy PullOutputData
-        /// requests from the output pipeline. When the queue is exhausted, the Controller's BackgroundStreams
-        /// will be used to feed the pipeline, ensuring that the pipeline is never starved.
-        /// </summary>
-        /// <param name="epochQueue">Epoch queue to process</param>
-        /// <param name="persistor">Epoch persistor for saving data</param>
-        private void Process(ConcurrentQueue<Epoch> epochQueue, IEpochPersistor persistor)
-        {
             try
             {
-                IsRunning = true;
-                IsPauseRequested = false;
-                IsStopRequested = false;
-
                 OnStarted();
-
-                CompletedEpochTasks.Clear();
-
-                ProcessLoop(epochQueue, persistor);
+                return Task.Factory.StartNew(() => ProcessLoop(EpochQueue, persistor), TaskCreationOptions.LongRunning)
+                    .ContinueWith((t) => Stop());
             }
-            finally
+            catch(Exception) 
             {
-                if (IsRunning)
-                {
-                    Stop();
-                }
+                Stop();
+                throw;
             }
         }
 
@@ -666,11 +654,19 @@ namespace Symphony.Core
             }
             finally
             {
+                CompletedEpochTasks.Clear();
                 IsRunning = false;
                 OnStopped();
             }
         }
 
+        /// <summary>
+        /// Spins in a loop buffering Epochs from the given Epoch queue as required to satisfy PullOutputData
+        /// requests from the output pipeline. When the queue is exhausted, the Controller's BackgroundStreams
+        /// will be used to feed the pipeline, ensuring that the pipeline is never starved.
+        /// </summary>
+        /// <param name="epochQueue">Epoch queue to process</param>
+        /// <param name="persistor">Epoch persistor for saving data</param>
         private void ProcessLoop(ConcurrentQueue<Epoch> epochQueue, IEpochPersistor persistor)
         {
             var incompleteEpochs = new ConcurrentQueue<Epoch>();
