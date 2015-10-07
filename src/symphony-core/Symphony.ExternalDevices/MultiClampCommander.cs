@@ -62,11 +62,9 @@ namespace Symphony.ExternalDevices
             Clock = clock;
 
             var lParam = DeviceLParam();
-
+            OpenMultiClampConversation(lParam);
             RegisterForWmCopyDataEvents();
             RegisterForReconnectEvents();
-            
-            OpenMultiClampConversation(lParam);
         }
 
         private uint DeviceLParam()
