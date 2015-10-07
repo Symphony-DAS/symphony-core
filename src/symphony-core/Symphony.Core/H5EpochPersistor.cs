@@ -19,6 +19,7 @@ namespace Symphony.Core
     public class H5EpochPersistor : IEpochPersistor, IDisposable
     {
         private const string VersionKey = "version";
+        private const string CompressionKey = "compression";
         private const uint PersistenceVersion = 2;
 
         private readonly H5File _file;
@@ -37,8 +38,9 @@ namespace Symphony.Core
         /// </summary>
         /// <param name="filename">Desired HDF5 path</param>
         /// <param name="startTime">Start time for the root Experiment entity</param>
+        /// <param name="compression">Automatically numeric data compression (0 = none, 9 = maximum)</param>
         /// <returns>The new Epoch Persistor</returns>
-        public static H5EpochPersistor Create(string filename, DateTimeOffset startTime)
+        public static H5EpochPersistor Create(string filename, DateTimeOffset startTime, uint compression = 9)
         {
             if (File.Exists(filename))
                 throw new IOException("File already exists");
@@ -46,6 +48,7 @@ namespace Symphony.Core
             using (var file = new H5File(filename))
             {
                 file.Attributes[VersionKey] = PersistenceVersion;
+                file.Attributes[CompressionKey] = compression;
 
                 H5Map.InsertTypes(file);
                 H5PersistentExperiment.InsertExperiment(file, new H5PersistentEntityFactory(), "", startTime);
@@ -70,6 +73,8 @@ namespace Symphony.Core
             Version = _file.Attributes[VersionKey];
             if (Version != PersistenceVersion)
                 throw new FileLoadException("Version mismatch. This file may have been produced by an older version.");
+
+            NumericDataCompression = _file.Attributes[CompressionKey];
 
             if (_file.Groups.Count() != 1)
                 throw new FileLoadException("Expected a single top-level group. Are you sure this is a Symphony file?");
@@ -142,6 +147,8 @@ namespace Symphony.Core
         internal static ILog Log = LogManager.GetLogger(typeof(H5EpochPersistor));
 
         public uint Version { get; private set; }
+
+        public uint NumericDataCompression { get; private set; }
 
         public IPersistentExperiment Experiment { get { return _experiment; } }
 
@@ -226,7 +233,7 @@ namespace Symphony.Core
             if (CurrentEpochBlock == null)
                 throw new InvalidOperationException("There is no open epoch block");
 
-            return ((H5PersistentEpochBlock) CurrentEpochBlock).InsertEpoch(epoch);
+            return ((H5PersistentEpochBlock) CurrentEpochBlock).InsertEpoch(epoch, NumericDataCompression);
         }
 
         public void Delete(IPersistentEntity entity)
@@ -1037,12 +1044,12 @@ namespace Symphony.Core
             get { return _epochsGroup.Groups.Select(g => EntityFactory.Create<H5PersistentEpoch>(g)); }
         }
 
-        public H5PersistentEpoch InsertEpoch(Epoch epoch)
+        public H5PersistentEpoch InsertEpoch(Epoch epoch, uint compression)
         {
             if (epoch.ProtocolID != ProtocolID)
                 throw new ArgumentException("Epoch protocol id does not match epoch block protocol id");
             
-            var pEpoch = H5PersistentEpoch.InsertEpoch(_epochsGroup, EntityFactory, this, epoch);
+            var pEpoch = H5PersistentEpoch.InsertEpoch(_epochsGroup, EntityFactory, this, epoch, compression);
             TryFlush();
 
             return pEpoch;
@@ -1068,7 +1075,7 @@ namespace Symphony.Core
         private readonly H5Group _stimuliGroup;
         private readonly H5Group _epochBlockGroup;
 
-        public static H5PersistentEpoch InsertEpoch(H5Group container, H5PersistentEntityFactory factory, H5PersistentEpochBlock block, Epoch epoch)
+        public static H5PersistentEpoch InsertEpoch(H5Group container, H5PersistentEntityFactory factory, H5PersistentEpochBlock block, Epoch epoch, uint compression)
         {
             var group = InsertTimelineEntityGroup(container, "epoch", epoch.StartTime, (DateTimeOffset)epoch.StartTime + epoch.Duration);
             try
@@ -1109,13 +1116,13 @@ namespace Symphony.Core
                 foreach (var kv in epoch.Responses.ToList())
                 {
                     var device = experiment.Device(kv.Key.Name, kv.Key.Manufacturer);
-                    H5PersistentResponse.InsertResponse(responsesGroup, factory, persistentEpoch, device, kv.Value);
+                    H5PersistentResponse.InsertResponse(responsesGroup, factory, persistentEpoch, device, kv.Value, compression);
                 }
 
                 foreach (var kv in epoch.Stimuli.ToList())
                 {
                     var device = experiment.Device(kv.Key.Name, kv.Key.Manufacturer);
-                    H5PersistentStimulus.InsertStimulus(stimuliGroup, factory, persistentEpoch, device, kv.Value);
+                    H5PersistentStimulus.InsertStimulus(stimuliGroup, factory, persistentEpoch, device, kv.Value, compression);
                 }
 
                 foreach (var keyword in epoch.Keywords.ToList())
@@ -1336,7 +1343,7 @@ namespace Symphony.Core
 
         private readonly H5Dataset _dataDataset;
 
-        public static H5PersistentResponse InsertResponse(H5Group container, H5PersistentEntityFactory factory, H5PersistentEpoch epoch, H5PersistentDevice device, Response response)
+        public static H5PersistentResponse InsertResponse(H5Group container, H5PersistentEntityFactory factory, H5PersistentEpoch epoch, H5PersistentDevice device, Response response, uint compression)
         {
             var group = InsertIOBaseGroup(container, epoch, device, response.DataConfigurationSpans);
             try
@@ -1346,7 +1353,7 @@ namespace Symphony.Core
                 group.Attributes[InputTimeTicksKey] = response.InputTime.Ticks;
                 group.Attributes[InputTimeOffsetHoursKey] = response.InputTime.Offset.TotalHours;
 
-                group.AddDataset(DataDatasetName, H5Map.GetMeasurementType(container.File), response.Data.Select(H5Map.Convert).ToArray());
+                group.AddDataset(DataDatasetName, H5Map.GetMeasurementType(container.File), response.Data.Select(H5Map.Convert).ToArray(), compression);
 
                 return factory.Create<H5PersistentResponse>(group);
             }
@@ -1393,7 +1400,7 @@ namespace Symphony.Core
         private readonly H5Group _parametersGroup;
         private readonly H5Dataset _dataDataset;
 
-        public static H5PersistentStimulus InsertStimulus(H5Group container, H5PersistentEntityFactory factory, H5PersistentEpoch epoch, H5PersistentDevice device, IStimulus stimulus)
+        public static H5PersistentStimulus InsertStimulus(H5Group container, H5PersistentEntityFactory factory, H5PersistentEpoch epoch, H5PersistentDevice device, IStimulus stimulus, uint compression)
         {
             var group = InsertIOBaseGroup(container, epoch, device, stimulus.OutputConfigurationSpans);
             try
@@ -1427,7 +1434,7 @@ namespace Symphony.Core
                 if (stimulus.Data.IsSome())
                 {
                     IEnumerable<IMeasurement> data = stimulus.Data.Get();
-                    group.AddDataset(DataDatasetName, H5Map.GetMeasurementType(container.File), data.Select(H5Map.Convert).ToArray());
+                    group.AddDataset(DataDatasetName, H5Map.GetMeasurementType(container.File), data.Select(H5Map.Convert).ToArray(), compression);
                 }
 
                 return factory.Create<H5PersistentStimulus>(group);

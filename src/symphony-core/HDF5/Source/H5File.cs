@@ -130,7 +130,7 @@ namespace HDF5
             return new H5Datatype(this, name);
         }
 
-        public H5Dataset CreateDataset(string path, H5Datatype type, long[] dims, long[] maxDims, long[] chunks)
+        public H5Dataset CreateDataset(string path, H5Datatype type, long[] dims, long[] maxDims, long[] chunks, uint compression)
         {
             H5DataTypeId tid = null;
             H5DataSpaceId sid = null;
@@ -142,6 +142,7 @@ namespace HDF5
                 int rank = dims.Length;
                 sid = maxDims == null ? H5S.create_simple(rank, dims) : H5S.create_simple(rank, dims, maxDims);
                 pid = H5P.create(H5P.PropertyListClass.DATASET_CREATE);
+                //H5P.setDeflate(pid, compression);
 
                 bool isExtentable = false;
                 if (maxDims != null)
@@ -185,9 +186,9 @@ namespace HDF5
             return new H5Dataset(this, path);
         }
 
-        public H5Dataset CreateDataset<T>(string path, H5Datatype type, T[] data)
+        public H5Dataset CreateDataset<T>(string path, H5Datatype type, T[] data, uint compression)
         {
-            var dataset = CreateDataset(path, type, new long[] {data.Length}, null, null);
+            var dataset = CreateDataset(path, type, new long[] {data.Length}, null, null, compression);
             dataset.SetData(data);
             return dataset;
         }

@@ -29,16 +29,16 @@ namespace HDF5
 
         public IEnumerable<H5Dataset> Datasets { get { return GetObjects<H5Dataset>(); } } 
 
-        public H5Dataset AddDataset(string name, H5Datatype type, long[] dims, long[] maxDims = null, long[] chunks = null)
+        public H5Dataset AddDataset(string name, H5Datatype type, long[] dims, long[] maxDims = null, long[] chunks = null, uint compression = 0)
         {
             string path = Combine(Path, name);
-            return File.CreateDataset(path, type, dims, maxDims, chunks);
+            return File.CreateDataset(path, type, dims, maxDims, chunks, compression);
         }
 
-        public H5Dataset AddDataset<T>(string name, H5Datatype type, T[] data)
+        public H5Dataset AddDataset<T>(string name, H5Datatype type, T[] data, uint compression = 0)
         {
             string path = Combine(Path, name);
-            return File.CreateDataset(path, type, data);
+            return File.CreateDataset(path, type, data, compression);
         }
 
         public H5Link AddHardLink(string name, H5Object obj)
