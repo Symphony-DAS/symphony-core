@@ -632,7 +632,12 @@ namespace Symphony.Core
             {
                 OnStarted();
                 return Task.Factory.StartNew(() => ProcessLoop(EpochQueue, persistor), TaskCreationOptions.LongRunning)
-                    .ContinueWith((t) => Stop());
+                    .ContinueWith((t) =>
+                        {
+                            Stop();
+                            if (!t.IsCanceled && t.IsFaulted && t.Exception != null)
+                                throw t.Exception.Flatten().InnerExceptions.FirstOrDefault() ?? t.Exception;
+                        });
             }
             catch(Exception) 
             {
