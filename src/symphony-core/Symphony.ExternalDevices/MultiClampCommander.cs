@@ -76,15 +76,20 @@ namespace Symphony.ExternalDevices
 
         private void ReceiveReconnectEvent(object sender, Win32Interop.MessageReceivedEventArgs evtArgs)
         {
+            var lParam = DeviceLParam();
+            if (evtArgs.Message.LParam != (IntPtr) lParam)
+                return;
+
             log.DebugFormat("Received MCTG_RECONNECT_MESSAGE: {0}", evtArgs.Message);
 
-            var lParam = DeviceLParam();
-            if ((IntPtr) lParam == evtArgs.Message.LParam)
-            {
-                OpenMultiClampConversation(lParam);
-                RegisterForWmCopyDataEvents();
-                RequestTelegraphValue((uint) lParam);
-            }            
+            UnregisterForWmCopyDataEvents();
+            UnregisterForReconnectEvents();
+
+            OpenMultiClampConversation(lParam);
+            RegisterForWmCopyDataEvents();
+            RegisterForReconnectEvents();
+                
+            RequestTelegraphValue((uint) lParam);        
         }
 
         private void RegisterForReconnectEvents()
@@ -133,10 +138,10 @@ namespace Symphony.ExternalDevices
             // lpData -- MC_TELEGRAPH_DATA*
             try
             {
-                if (cds.lpData == IntPtr.Zero || cds.cbData != Marshal.SizeOf(typeof(MultiClampInterop.MC_TELEGRAPH_DATA))) 
+                if (cds.lpData == IntPtr.Zero || cds.cbData != Marshal.SizeOf(typeof(MultiClampInterop.MC_TELEGRAPH_DATA)) || cds.dwData.ToInt64() != MultiClampInterop.MCTG_REQUEST_MESSAGE) 
                     return;
 
-                var mtd = (MultiClampInterop.MC_TELEGRAPH_DATA) Marshal.PtrToStructure(cds.lpData, typeof (MultiClampInterop.MC_TELEGRAPH_DATA));
+                var mtd = (MultiClampInterop.MC_TELEGRAPH_DATA)Marshal.PtrToStructure(cds.lpData, typeof(MultiClampInterop.MC_TELEGRAPH_DATA));
                 if (mtd.uChannelID == Channel)
                 {
                     var md = new MultiClampInterop.MulticlampData(mtd);
@@ -189,8 +194,7 @@ namespace Symphony.ExternalDevices
                 UnregisterForWmCopyDataEvents();
                 UnregisterForReconnectEvents();
 
-                UInt32 lParam = MultiClampInterop.MCTG_Pack700BSignalIDs(this.SerialNumber, this.Channel); // Pack the above two into an UInt32
-                int result = Win32Interop.PostMessage(Win32Interop.HWND_BROADCAST, MultiClampInterop.MCTG_CLOSE_MESSAGE, (IntPtr)Win32Interop.MessageEvents.WindowHandle, (IntPtr)lParam);
+                int result = Win32Interop.PostMessage(Win32Interop.HWND_BROADCAST, MultiClampInterop.MCTG_CLOSE_MESSAGE, (IntPtr)Win32Interop.MessageEvents.WindowHandle, (IntPtr)DeviceLParam());
 
                 if (disposing)
                 {
