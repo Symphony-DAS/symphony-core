@@ -100,7 +100,7 @@ namespace Heka
                                                   Value =
                                                       (short)
                                                       Converters.Convert(streamValue, HekaDAQOutputStream.DAQCountUnits)
-                                                          .QuantityInBaseUnit
+                                                          .QuantityInBaseUnits
                                               }
                                       };
 

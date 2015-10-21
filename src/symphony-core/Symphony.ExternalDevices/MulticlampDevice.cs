@@ -183,7 +183,7 @@ namespace Symphony.ExternalDevices
 
                 var bg = Backgrounds[parameters.Data.OperatingMode];
 
-                log.DebugFormat("Desired background value: {0} ({1} {2})", bg, bg.Quantity, bg.DisplayUnit);
+                log.DebugFormat("Desired background value: {0} ({1} {2})", bg, bg.Quantity, bg.DisplayUnits);
                 log.DebugFormat("  Current parameters:");
                 log.DebugFormat("     Mode: {0}", parameters.Data.OperatingMode);
                 log.DebugFormat("     ExtCmdSensitivity: {0}", parameters.Data.ExternalCommandSensitivity);
@@ -215,7 +215,7 @@ namespace Symphony.ExternalDevices
 
                 var parameters = CurrentDeviceOutputParameters;
 
-                log.DebugFormat("Output background value: {0} ({1} {2})", bg, bg.Quantity, bg.DisplayUnit);
+                log.DebugFormat("Output background value: {0} ({1} {2})", bg, bg.Quantity, bg.DisplayUnits);
                 log.DebugFormat("  Current parameters:");
                 log.DebugFormat("     Mode: {0}", parameters.Data.OperatingMode);
                 log.DebugFormat("     ExtCmdSensitivity: {0}", parameters.Data.ExternalCommandSensitivity);
@@ -410,7 +410,7 @@ namespace Symphony.ExternalDevices
                                                        );
 
             return MeasurementPool.GetMeasurement(
-                    (sample.QuantityInBaseUnit/(decimal) deviceParams.ScaleFactor/(decimal) deviceParams.Alpha)*
+                    (sample.QuantityInBaseUnits/(decimal) deviceParams.ScaleFactor/(decimal) deviceParams.Alpha)*
                     desiredUnitsMultiplier,
                     DesiredUnitsExponentForScaleFactorUnits(deviceParams.ScaleFactorUnits),
                     UnitsForScaleFactorUnits(deviceParams.ScaleFactorUnits));
@@ -467,7 +467,7 @@ namespace Symphony.ExternalDevices
                 //Output cmd in Volts
                 case MultiClampInterop.OperatingMode.VClamp:
 
-                    if (string.Compare(sample.BaseUnit, "V", false) != 0) //output
+                    if (string.Compare(sample.BaseUnits, "V", false) != 0) //output
                     {
                         throw new ArgumentException("Sample units must be in Volts.", "sample.BaseUnit");
                     }
@@ -487,7 +487,7 @@ namespace Symphony.ExternalDevices
                     }
 
 
-                    if (string.Compare(sample.BaseUnit, "A", false) != 0) //output
+                    if (string.Compare(sample.BaseUnits, "A", false) != 0) //output
                     {
                         throw new ArgumentException("Sample units must be in Amps.", "sample.BaseUnit");
                     }
@@ -502,7 +502,7 @@ namespace Symphony.ExternalDevices
                         throw new MultiClampDeviceException("External command units " + deviceParams.ExternalCommandSensitivityUnits + " are not A/V as expected for current deivce mode.");
                     }
 
-                    if (string.Compare(sample.BaseUnit, "A", false) != 0) //output
+                    if (string.Compare(sample.BaseUnits, "A", false) != 0) //output
                     {
                         throw new ArgumentException("Sample units must be in Amps.", "sample.BaseUnit");
                     }

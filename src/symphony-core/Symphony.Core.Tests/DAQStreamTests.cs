@@ -107,9 +107,9 @@ namespace Symphony.Core
 
 
             DAQOutputStream s = new DAQOutputStream("OUT");
-            s.MeasurementConversionTarget = measurements.First().BaseUnit;
+            s.MeasurementConversionTarget = measurements.First().BaseUnits;
 
-            s.SampleRate = new Measurement(sampleRate.QuantityInBaseUnit * 2, "Hz");
+            s.SampleRate = new Measurement(sampleRate.QuantityInBaseUnits * 2, "Hz");
 
             var outData = new Dictionary<IDAQOutputStream, Queue<IOutputData>>(1);
             outData[s] = new Queue<IOutputData>(data);
@@ -163,7 +163,7 @@ namespace Symphony.Core
             
             foreach (IOutputData d in data)
             {
-                var measurements = Measurement.FromArray(d.Data.Select(m => m.QuantityInBaseUnit*numDevices).ToArray(), d.Data.BaseUnits());
+                var measurements = Measurement.FromArray(d.Data.Select(m => m.QuantityInBaseUnits*numDevices).ToArray(), d.Data.BaseUnits());
                 var expected = new OutputData(measurements, d.SampleRate, d.IsLast);
 
                 var actual = s.PullOutputData(TimeSpan.FromSeconds(1));
@@ -189,7 +189,7 @@ namespace Symphony.Core
             var stream = new DAQOutputStream(UNUSED_NAME);
             stream.Devices.Add(dev);
 
-            Assert.AreEqual(background.QuantityInBaseUnit, stream.Background.QuantityInBaseUnit);
+            Assert.AreEqual(background.QuantityInBaseUnits, stream.Background.QuantityInBaseUnits);
         }
 
         private static void OutputStreamFixture(out IList<IOutputData> data, out DAQOutputStream s, int numData)
@@ -212,7 +212,7 @@ namespace Symphony.Core
 
             s = new DAQOutputStream("OUT")
                     {
-                        MeasurementConversionTarget = measurements.First().BaseUnit,
+                        MeasurementConversionTarget = measurements.First().BaseUnits,
                         SampleRate = sampleRate
                     };
 

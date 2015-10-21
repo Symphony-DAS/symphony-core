@@ -251,7 +251,7 @@ namespace Symphony.Core
         {
             TimeSpan dur = stream.Duration;
             var srate = new Measurement(10000, "Hz");
-            IList<IMeasurement> list = Enumerable.Range(0, (int)((double)srate.QuantityInBaseUnit * dur.TotalSeconds)).Select(i => new Measurement(i, "V") as IMeasurement).ToList();
+            IList<IMeasurement> list = Enumerable.Range(0, (int)((double)srate.QuantityInBaseUnits * dur.TotalSeconds)).Select(i => new Measurement(i, "V") as IMeasurement).ToList();
 
             var now = DateTime.Now;
 
@@ -294,7 +294,7 @@ namespace Symphony.Core
         {
             var dur = new TimeSpan(stream.Duration.Item2.Ticks / 2);
             var srate = new Measurement(10000, "Hz");
-            IList<IMeasurement> list = Enumerable.Range(0, (int)((double)srate.QuantityInBaseUnit * dur.TotalSeconds)).Select(i => new Measurement(i, "V") as IMeasurement).ToList();
+            IList<IMeasurement> list = Enumerable.Range(0, (int)((double)srate.QuantityInBaseUnits * dur.TotalSeconds)).Select(i => new Measurement(i, "V") as IMeasurement).ToList();
             var push1 = new InputData(list, srate, DateTime.Now);
             var push2 = new InputData(list, srate, DateTime.Now);
 
@@ -331,7 +331,7 @@ namespace Symphony.Core
         {
             var dur = seqStream.Duration.Item2;
             var srate = new Measurement(10000, "Hz");
-            IList<IMeasurement> list = Enumerable.Range(0, (int)((double)srate.QuantityInBaseUnit * dur.TotalSeconds)).Select(i => new Measurement(i, "V") as IMeasurement).ToList();
+            IList<IMeasurement> list = Enumerable.Range(0, (int)((double)srate.QuantityInBaseUnits * dur.TotalSeconds)).Select(i => new Measurement(i, "V") as IMeasurement).ToList();
 
             var dur1 = TimeSpan.FromTicks(dur.Ticks / 4);
             var samples1 = (int)dur1.Samples(srate);

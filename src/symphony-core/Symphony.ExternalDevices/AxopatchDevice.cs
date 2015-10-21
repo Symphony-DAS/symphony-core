@@ -168,7 +168,7 @@ namespace Symphony.ExternalDevices
         public static IMeasurement ConvertInput(IMeasurement sample, AxopatchInterop.AxopatchData deviceParams)
         {
             return MeasurementPool.GetMeasurement(
-                (sample.QuantityInBaseUnit/(decimal) deviceParams.Gain) * 1000m,
+                (sample.QuantityInBaseUnits/(decimal) deviceParams.Gain) * 1000m,
                 InputUnitsExponentForMode(deviceParams.OperatingMode),
                 InputUnitsForMode(deviceParams.OperatingMode));
         }
@@ -216,7 +216,7 @@ namespace Symphony.ExternalDevices
             {
                 case AxopatchInterop.OperatingMode.Track:
                 case AxopatchInterop.OperatingMode.VClamp:
-                    if (String.CompareOrdinal(sample.BaseUnit, "V") != 0)
+                    if (String.CompareOrdinal(sample.BaseUnits, "V") != 0)
                     {
                         throw new ArgumentException("Sample units must be in Volts.", "sample");
                     }
@@ -229,7 +229,7 @@ namespace Symphony.ExternalDevices
                 case AxopatchInterop.OperatingMode.I0:
                 case AxopatchInterop.OperatingMode.IClampNormal:
                 case AxopatchInterop.OperatingMode.IClampFast:
-                    if (String.CompareOrdinal(sample.BaseUnit, "A") != 0)
+                    if (String.CompareOrdinal(sample.BaseUnits, "A") != 0)
                     {
                         throw new ArgumentException("Sample units must be in Amps.", "sample");
                     }

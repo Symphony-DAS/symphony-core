@@ -294,7 +294,7 @@ namespace Symphony.Core
             get { return _inputSampleRate; }
             set
             {
-                if (value.Quantity < 0 || value.BaseUnit.ToLower() != "hz")
+                if (value.Quantity < 0 || value.BaseUnits.ToLower() != "hz")
                 {
                     throw new ArgumentException("Illegal SampleRate");
                 }
@@ -310,7 +310,7 @@ namespace Symphony.Core
             get { return _outputSampleRate; }
             set
             {
-                if (value.Quantity < 0 || value.BaseUnit.ToLower() != "hz")
+                if (value.Quantity < 0 || value.BaseUnits.ToLower() != "hz")
                 {
                     throw new ArgumentException("Illegal SampleRate");
                 }
@@ -708,7 +708,7 @@ namespace Symphony.Core
                 quantity = y0 * (sample.Quantity - x1) / (x0 - x1) + y1 * (sample.Quantity - x0) / (x1 - x0);
             }
 
-            return MeasurementPool.GetMeasurement(quantity, sample.Exponent, sample.BaseUnit);
+            return MeasurementPool.GetMeasurement(quantity, sample.Exponent, sample.BaseUnits);
         }
 
         public override IOutputData PullOutputData(IDAQOutputStream stream, TimeSpan duration)

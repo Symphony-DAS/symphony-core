@@ -12,14 +12,14 @@ namespace Symphony.Core
         /// <param name="measurements">Enumerable of Measurements</param>
         /// <exception cref="MeasurementIncompatibilityException">if units are not homogenous</exception>
         /// <returns>array of quantities in base units</returns>
-        public static double[] ToBaseUnitQuantityArray(this IEnumerable<IMeasurement> measurements)
+        public static double[] ToBaseUnitsQuantityArray(this IEnumerable<IMeasurement> measurements)
         {
             if (!CheckUnitsHomogenous(measurements))
             {
                 throw new MeasurementIncompatibilityException("Measurement units are not homgenous in list.");
             }
 
-            return measurements.Select((m) => (double)m.QuantityInBaseUnit).ToArray();
+            return measurements.Select((m) => (double)m.QuantityInBaseUnits).ToArray();
         }
 
         /// <summary>
@@ -48,7 +48,7 @@ namespace Symphony.Core
         {
             try
             {
-                return measurements.Select(m => m.BaseUnit).Distinct().Single();
+                return measurements.Select(m => m.BaseUnits).Distinct().Single();
             }
             catch(InvalidOperationException e)
             {
@@ -66,7 +66,7 @@ namespace Symphony.Core
         {
             try
             {
-                return measurements.Select(m => m.DisplayUnit).Distinct().Single();
+                return measurements.Select(m => m.DisplayUnits).Distinct().Single();
             }
             catch (InvalidOperationException e)
             {
@@ -76,12 +76,12 @@ namespace Symphony.Core
 
         private static bool CheckUnitsHomogenous(IEnumerable<IMeasurement> measurements)
         {
-            return measurements.Select(m => m.BaseUnit).Distinct().Count() == 1;
+            return measurements.Select(m => m.BaseUnits).Distinct().Count() == 1;
         }
 
         private static bool CheckDisplayUnitsHomogenous(IEnumerable<IMeasurement> measurements)
         {
-            return measurements.Select(m => m.DisplayUnit).Distinct().Count() == 1;
+            return measurements.Select(m => m.DisplayUnits).Distinct().Count() == 1;
         }
 
 
@@ -106,7 +106,7 @@ namespace Symphony.Core
             var siUnits = InternationalSystem.Default;
 
             var exponent = siUnits.Exponent(units);
-            var baseUnit = siUnits.BaseUnit(units);
+            var baseUnit = siUnits.BaseUnits(units);
             return quantities.Select(q => MeasurementPool.GetMeasurement(q, exponent, baseUnit));
         }
     }

@@ -20,7 +20,7 @@ namespace Symphony.Core
         {
             IMeasurement m = new Measurement(723, "Hz");
             uint samples = 1300;
-            double expectedSeconds =(double) (samples / m.QuantityInBaseUnit);
+            double expectedSeconds =(double) (samples / m.QuantityInBaseUnits);
             TimeSpan expected = new TimeSpan((long)Math.Ceiling(expectedSeconds*TimeSpan.TicksPerSecond));
 
             Assert.AreEqual(expected, TimeSpanExtensions.FromSamples(samples, m));
@@ -101,7 +101,7 @@ namespace Symphony.Core
             TimeSpan t = TimeSpan.FromMilliseconds(99.3);
             var sampleRate = new Measurement(1000, "Hz");
             Assert.That(t.Samples(sampleRate), Is.EqualTo(
-                (ulong)Math.Ceiling(t.TotalSeconds * (double)sampleRate.QuantityInBaseUnit))
+                (ulong)Math.Ceiling(t.TotalSeconds * (double)sampleRate.QuantityInBaseUnits))
                 );
         }
     }

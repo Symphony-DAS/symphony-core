@@ -37,13 +37,13 @@ namespace Symphony.Core
         public void ShouldBuildListFromQuantityArray()
         {
             var quantities = new decimal[] { 1.0m, 2.0m, -1.0m, (decimal) Math.PI };
-            const string units = "unit";
+            const string units = "units";
 
             var actual = Measurement.FromArray(quantities, units);
             for (var i = 0; i < quantities.Length; i++)
             {
-                Assert.That((double)actual[i].QuantityInBaseUnit, Is.EqualTo(quantities[i]));
-                Assert.That(actual[i].BaseUnit, Is.EqualTo(units));
+                Assert.That((double)actual[i].QuantityInBaseUnits, Is.EqualTo(quantities[i]));
+                Assert.That(actual[i].BaseUnits, Is.EqualTo(units));
             }
         }
 
@@ -74,7 +74,7 @@ namespace Symphony.Core
                                       };
 
             Assert.Throws(typeof(MeasurementIncompatibilityException),
-                          () => measurementList.ToBaseUnitQuantityArray()
+                          () => measurementList.ToBaseUnitsQuantityArray()
                 );
         }
 
@@ -96,20 +96,20 @@ namespace Symphony.Core
         public void ShouldConvertToQuantityArray()
         {
             var quantities = new decimal[] { 1.0m, 2.0m, -1.0m, (decimal) Math.PI };
-            const string units = "unit";
+            const string units = "units";
 
             var measurements = quantities.Select((q) => new Measurement((decimal) q, units));
 
-            var actual = measurements.ToBaseUnitQuantityArray();
+            var actual = measurements.ToBaseUnitsQuantityArray();
 
-            CollectionAssert.AreEqual(Measurement.ToBaseUnitQuantityArray(measurements), quantities);
+            CollectionAssert.AreEqual(Measurement.ToBaseUnitsQuantityArray(measurements), quantities);
         }
 
         [Test]
         public void ShouldGiveHomogenousUnits()
         {
             var quantities = new double[] { 1.0, 2.0, -1.0, Math.PI };
-            const string units = "unit";
+            const string units = "units";
 
             var measurements = quantities.Select((q) => new Measurement((decimal) q, units));
 
@@ -125,16 +125,16 @@ namespace Symphony.Core
             Converters.Register("ImpFeet", "inches",
                 delegate(IMeasurement ft)
                 {
-                    if (ft.BaseUnit == "ImpFeet")
+                    if (ft.BaseUnits == "ImpFeet")
                         return new Measurement(ft.Quantity * 12, "inches");
-                    throw new Exception(String.Format("Illegal conversion: {0} to inches", ft.BaseUnit));
+                    throw new Exception(String.Format("Illegal conversion: {0} to inches", ft.BaseUnits));
                 });
             Converters.Register("ImpYards", "inches",
                 delegate(IMeasurement yd)
                 {
-                    if (yd.BaseUnit == "ImpYards")
+                    if (yd.BaseUnits == "ImpYards")
                         return new Measurement(yd.Quantity * 12 * 3, "inches");
-                    throw new Exception(String.Format("Illegal conversion: {0} to inches", yd.BaseUnit));
+                    throw new Exception(String.Format("Illegal conversion: {0} to inches", yd.BaseUnits));
                 });
 
             Measurement tedsHeight = new Measurement(6, "ImpFeet");
@@ -148,7 +148,7 @@ namespace Symphony.Core
         public void BaseUnitQuantity()
         {
             IMeasurement m = new Measurement(100, -3, "V"); //100mV
-            Assert.AreEqual(100 * Math.Pow(10, -3), m.QuantityInBaseUnit);
+            Assert.AreEqual(100 * Math.Pow(10, -3), m.QuantityInBaseUnits);
         }
 
         [Test]
@@ -157,7 +157,7 @@ namespace Symphony.Core
             Converters.Register("m", "cm",
                 delegate(IMeasurement m)
                 {
-                    if (m.BaseUnit == "m")
+                    if (m.BaseUnits == "m")
                     {
                         // m are 100 cm
                         double q = (double) (m.Quantity * 100);
@@ -183,7 +183,7 @@ namespace Symphony.Core
 
                         return new Measurement((decimal) q, "cm");
                     }
-                    throw new Exception(String.Format("Illegal conversion: {0} to cm", m.BaseUnit));
+                    throw new Exception(String.Format("Illegal conversion: {0} to cm", m.BaseUnits));
                 });
 
             Measurement oneMeter = new Measurement(1, "m"); // no exponent (oneMeter.Exponent = 0)
@@ -196,7 +196,7 @@ namespace Symphony.Core
             Converters.Register("cm", "m",
                 delegate(IMeasurement m)
                 {
-                    if (m.BaseUnit == "cm")
+                    if (m.BaseUnits == "cm")
                     {
                         // m are 100 cm
                         double q = (double) (m.Quantity / 100);
@@ -222,7 +222,7 @@ namespace Symphony.Core
 
                         return new Measurement((decimal) q, "m");
                     }
-                    throw new Exception(String.Format("Illegal conversion: {0} cm to m", m.BaseUnit));
+                    throw new Exception(String.Format("Illegal conversion: {0} cm to m", m.BaseUnits));
                 });
 
             var oneCentimeter = new Measurement(1, "cm"); // no exponent
@@ -300,7 +300,7 @@ namespace Symphony.Core
             string units)            
         {
             var siUnits = new InternationalSystem();
-            Assert.That(siUnits.BaseUnit(units), Is.EqualTo("V"));
+            Assert.That(siUnits.BaseUnits(units), Is.EqualTo("V"));
         }
 
         [Test, Sequential]
@@ -335,7 +335,7 @@ namespace Symphony.Core
             const string baseUnit = "B";
             var m = new Measurement(3m, exponent, baseUnit);
 
-            Assert.That(m.DisplayUnit, Is.EqualTo(string.Format("{0}{1}", prefix, baseUnit)));
+            Assert.That(m.DisplayUnits, Is.EqualTo(string.Format("{0}{1}", prefix, baseUnit)));
         }
 
         [Test, Sequential]
@@ -350,8 +350,8 @@ namespace Symphony.Core
             var units = string.Format("{0}{1}", prefix, baseUnits);
             var m = new Measurement(quantity, units);
 
-            Assert.That(m.DisplayUnit, Is.EqualTo(units));
-            Assert.That(m.BaseUnit, Is.EqualTo(baseUnits));
+            Assert.That(m.DisplayUnits, Is.EqualTo(units));
+            Assert.That(m.BaseUnits, Is.EqualTo(baseUnits));
             Assert.That(m.Exponent, Is.EqualTo(exponent));
             Assert.That(m.Quantity, Is.EqualTo(quantity));
         }
@@ -403,13 +403,13 @@ namespace Symphony.Core
         {
             const decimal quantity = 1.1m;
             const int exponent = 2;
-            const string unit = "V";
+            const string units = "V";
 
-            var actual = MeasurementPool.GetMeasurement(quantity, exponent, unit);
+            var actual = MeasurementPool.GetMeasurement(quantity, exponent, units);
 
             Assert.AreEqual(quantity, actual.Quantity);
             Assert.AreEqual(exponent, actual.Exponent);
-            Assert.AreEqual(unit, actual.BaseUnit);
+            Assert.AreEqual(units, actual.BaseUnits);
         }
 
         [Test]

@@ -228,7 +228,7 @@ namespace IntegrationTests
 
                         var failures0 =
                             e.Responses[dev0].Data.Select(
-                                (t, i) => new { index = i, diff = t.QuantityInBaseUnit - stimData[i].QuantityInBaseUnit })
+                                (t, i) => new { index = i, diff = t.QuantityInBaseUnits - stimData[i].QuantityInBaseUnits })
                                 .Where(dif => Math.Abs(dif.diff) > (decimal)MAX_VOLTAGE_DIFF);
 
                         foreach (var failure in failures0.Take(10))
@@ -389,7 +389,7 @@ namespace IntegrationTests
 
                         var failures0 =
                             e.Responses[dev0].Data.Select(
-                                (t, i) => new {index = i, diff = t.QuantityInBaseUnit - stimData[i].QuantityInBaseUnit})
+                                (t, i) => new {index = i, diff = t.QuantityInBaseUnits - stimData[i].QuantityInBaseUnits})
                                              .Where(dif => Math.Abs(dif.diff) > (decimal) MAX_VOLTAGE_DIFF);
 
                         foreach (var failure in failures0.Take(10))
@@ -484,8 +484,8 @@ namespace IntegrationTests
                         daq.GetStreams("ANALOG_IN.0").First() as IDAQInputStream);
 
                     //Should be within +/- 0.025 volts
-                    Assert.That(actual.Data.First().QuantityInBaseUnit, Is.InRange(expectedBackground.QuantityInBaseUnit - (decimal)0.025,
-                        expectedBackground.QuantityInBaseUnit + (decimal)0.025));
+                    Assert.That(actual.Data.First().QuantityInBaseUnits, Is.InRange(expectedBackground.QuantityInBaseUnits - (decimal)0.025,
+                        expectedBackground.QuantityInBaseUnits + (decimal)0.025));
                 }
                 finally
                 {

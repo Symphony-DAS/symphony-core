@@ -48,7 +48,7 @@ namespace IntegrationTests
 
             var inputData = e.Responses[dev0].Data;
             const double MAX_VOLTAGE_DIFF = 0.001;
-            int failures = inputData.Select((t, i) => t.QuantityInBaseUnit - stimData[i].QuantityInBaseUnit)
+            int failures = inputData.Select((t, i) => t.QuantityInBaseUnits - stimData[i].QuantityInBaseUnits)
                 .Count(dif => Math.Abs(dif) > (decimal) MAX_VOLTAGE_DIFF);
 
             Assert.AreEqual(0, failures);
@@ -162,7 +162,7 @@ namespace IntegrationTests
 
             var inputData = e.Responses[dev0].Data;
             const double MAX_VOLTAGE_DIFF = 0.001;
-            int failures = inputData.Select((t, i) => t.QuantityInBaseUnit - stimData[i].QuantityInBaseUnit)
+            int failures = inputData.Select((t, i) => t.QuantityInBaseUnits - stimData[i].QuantityInBaseUnits)
                 .Count(dif => Math.Abs(dif) > (decimal) MAX_VOLTAGE_DIFF);
 
             Assert.AreEqual(0, failures);
@@ -192,7 +192,7 @@ namespace IntegrationTests
             Assert.DoesNotThrow(() => controller.RunEpoch(e, new FakeEpochPersistor()));
 
             inputData = e.Responses[dev0].Data;
-            failures = inputData.Select((t, i) => t.QuantityInBaseUnit - stimData[i].QuantityInBaseUnit)
+            failures = inputData.Select((t, i) => t.QuantityInBaseUnits - stimData[i].QuantityInBaseUnits)
                 .Count(dif => Math.Abs(dif) > (decimal) MAX_VOLTAGE_DIFF);
 
 

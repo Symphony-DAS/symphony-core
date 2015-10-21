@@ -275,7 +275,7 @@ namespace Symphony.ExternalDevices
             }
 
 
-            var expected = new Measurement((cmd.QuantityInBaseUnit / (decimal)data.ScaleFactor / (decimal)alpha) * (decimal)Math.Pow(10, -exponent), -12, "A");
+            var expected = new Measurement((cmd.QuantityInBaseUnits / (decimal)data.ScaleFactor / (decimal)alpha) * (decimal)Math.Pow(10, -exponent), -12, "A");
 
             var actual = MultiClampDevice.ConvertInput(cmd, data);
 
@@ -337,7 +337,7 @@ namespace Symphony.ExternalDevices
             }
 
 
-            var expected = new Measurement((cmd.QuantityInBaseUnit / (decimal)data.ScaleFactor / (decimal)alpha) * (decimal)Math.Pow(10, -exponent), -3, "V");
+            var expected = new Measurement((cmd.QuantityInBaseUnits / (decimal)data.ScaleFactor / (decimal)alpha) * (decimal)Math.Pow(10, -exponent), -3, "V");
 
             var actual = MultiClampDevice.ConvertInput(cmd, data);
 

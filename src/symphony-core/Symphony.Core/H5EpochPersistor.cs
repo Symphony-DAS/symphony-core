@@ -1190,10 +1190,10 @@ namespace Symphony.Core
             var group = InsertEntityGroup(container, device.Name);
             try
             {
-                group.Attributes[ValueKey] = (double)background.Value.QuantityInBaseUnit;
-                group.Attributes[ValueUnitsKey] = background.Value.BaseUnit;
-                group.Attributes[SampleRateKey] = (double)background.SampleRate.QuantityInBaseUnit;
-                group.Attributes[SampleRateUnitsKey] = background.SampleRate.BaseUnit;
+                group.Attributes[ValueKey] = (double)background.Value.QuantityInBaseUnits;
+                group.Attributes[ValueUnitsKey] = background.Value.BaseUnits;
+                group.Attributes[SampleRateKey] = (double)background.SampleRate.QuantityInBaseUnits;
+                group.Attributes[SampleRateUnitsKey] = background.SampleRate.BaseUnits;
 
                 group.AddHardLink(DeviceGroupName, device.Group);
 
@@ -1274,7 +1274,7 @@ namespace Symphony.Core
                             {
                                 var m = (IMeasurement) kv.Value;
                                 nodeGroup.Attributes[kv.Key + "_quantity"] = (double) m.Quantity;
-                                nodeGroup.Attributes[value + "_units"] = m.DisplayUnit;
+                                nodeGroup.Attributes[value + "_units"] = m.DisplayUnits;
                                 nodeGroup.Attributes[kv.Key] = m.ToString();
                             }
                             else
@@ -1348,8 +1348,8 @@ namespace Symphony.Core
             var group = InsertIOBaseGroup(container, epoch, device, response.DataConfigurationSpans);
             try
             {
-                group.Attributes[SampleRateKey] = (double)response.SampleRate.QuantityInBaseUnit;
-                group.Attributes[SampleRateUnitsKey] = response.SampleRate.BaseUnit;
+                group.Attributes[SampleRateKey] = (double)response.SampleRate.QuantityInBaseUnits;
+                group.Attributes[SampleRateUnitsKey] = response.SampleRate.BaseUnits;
                 group.Attributes[InputTimeTicksKey] = response.InputTime.Ticks;
                 group.Attributes[InputTimeOffsetHoursKey] = response.InputTime.Offset.TotalHours;
 
@@ -1407,8 +1407,8 @@ namespace Symphony.Core
             {
                 group.Attributes[StimulusIDKey] = stimulus.StimulusID;
                 group.Attributes[UnitsKey] = stimulus.Units;
-                group.Attributes[SampleRateKey] = (double)stimulus.SampleRate.QuantityInBaseUnit;
-                group.Attributes[SampleRateUnitsKey] = stimulus.SampleRate.BaseUnit;
+                group.Attributes[SampleRateKey] = (double)stimulus.SampleRate.QuantityInBaseUnits;
+                group.Attributes[SampleRateUnitsKey] = stimulus.SampleRate.BaseUnits;
                 if (stimulus.Duration.IsSome())
                 {
                     group.Attributes[DurationKey] = ((TimeSpan)stimulus.Duration).TotalSeconds;
@@ -1633,7 +1633,7 @@ namespace Symphony.Core
             [FieldOffset(0)]
             public double quantity;
             [FieldOffset(8)]
-            public fixed byte unit[UnitsStringLength];
+            public fixed byte units[UnitsStringLength];
         }
 
         private const int UnitsStringLength = 10;
@@ -1720,22 +1720,22 @@ namespace Symphony.Core
         public static MeasurementT Convert(IMeasurement m)
         {
             var mt = new MeasurementT {quantity = (double) m.Quantity};
-            var unitdata = Encoding.ASCII.GetBytes(m.DisplayUnit);
+            var unitsdata = Encoding.ASCII.GetBytes(m.DisplayUnits);
             unsafe
             {
-                Marshal.Copy(unitdata, 0, (IntPtr) mt.unit, Math.Min(unitdata.Length, UnitsStringLength));
+                Marshal.Copy(unitsdata, 0, (IntPtr) mt.units, Math.Min(unitsdata.Length, UnitsStringLength));
             }
             return mt;
         }
 
         public static IMeasurement Convert(MeasurementT mt)
         {
-            string unit;
+            string units;
             unsafe
             {
-                unit = Marshal.PtrToStringAnsi((IntPtr) mt.unit);
+                units = Marshal.PtrToStringAnsi((IntPtr) mt.units);
             }
-            return new Measurement(mt.quantity, unit);
+            return new Measurement(mt.quantity, units);
         }
     }
 

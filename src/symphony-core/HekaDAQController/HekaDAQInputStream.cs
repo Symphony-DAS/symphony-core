@@ -61,7 +61,7 @@ namespace Heka
                 result.ChannelNumber = ChannelNumber;
                 result.ChannelType = (uint)ChannelType;
                 result.SamplingIntervalFlag = ITCMM.USE_FREQUENCY;// &ITCMM.NO_SCALE & ITCMM.ADJUST_RATE;
-                result.SamplingRate = (double) this.SampleRate.QuantityInBaseUnit;
+                result.SamplingRate = (double) this.SampleRate.QuantityInBaseUnits;
                 result.Gain = 0;
                 result.FIFOPointer = System.IntPtr.Zero;
 
@@ -73,7 +73,7 @@ namespace Heka
         {
             Converters.Register(DAQCountUnits,
                                 "V",
-                                (m) => MeasurementPool.GetMeasurement(m.QuantityInBaseUnit / (decimal)ITCMM.ANALOGVOLT, 0, "V")
+                                (m) => MeasurementPool.GetMeasurement(m.QuantityInBaseUnits / (decimal)ITCMM.ANALOGVOLT, 0, "V")
                 );
 
             Converters.Register(DAQCountUnits,
@@ -82,9 +82,9 @@ namespace Heka
 
             Converters.Register(DAQCountUnits,
                 Measurement.NORMALIZED,
-                (m) => MeasurementPool.GetMeasurement(m.QuantityInBaseUnit < 0 ?
-                    m.QuantityInBaseUnit / (decimal)ITCMM.NEGATIVEVOLT / -(decimal)ITCMM.ANALOGVOLT :
-                    m.QuantityInBaseUnit / (decimal)ITCMM.POSITIVEVOLT / +(decimal)ITCMM.ANALOGVOLT,
+                (m) => MeasurementPool.GetMeasurement(m.QuantityInBaseUnits < 0 ?
+                    m.QuantityInBaseUnits / (decimal)ITCMM.NEGATIVEVOLT / -(decimal)ITCMM.ANALOGVOLT :
+                    m.QuantityInBaseUnits / (decimal)ITCMM.POSITIVEVOLT / +(decimal)ITCMM.ANALOGVOLT,
                     0, DAQCountUnits));
         }
     }
@@ -129,7 +129,7 @@ namespace Heka
                 data = new InputData(data,
                                      data.Data.Select(
                                          m =>
-                                         MeasurementPool.GetMeasurement(((short) m.QuantityInBaseUnit >> bitPosition) & 1, 0, Measurement.UNITLESS)));
+                                         MeasurementPool.GetMeasurement(((short) m.QuantityInBaseUnits >> bitPosition) & 1, 0, Measurement.UNITLESS)));
                 ed.PushInputData(this, data.DataWithStreamConfiguration(this, this.Configuration));
             }
         }

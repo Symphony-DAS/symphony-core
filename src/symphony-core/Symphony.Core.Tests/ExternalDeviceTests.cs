@@ -52,7 +52,7 @@ namespace Symphony.Core
         [Test]
         public void ShouldConvertBackgoundUnits()
         {
-            Converters.Register("xfromUnits", "toUnits", m => new Measurement(2 * m.Quantity, m.Exponent, m.BaseUnit));
+            Converters.Register("xfromUnits", "toUnits", m => new Measurement(2 * m.Quantity, m.Exponent, m.BaseUnits));
 
             var bg = new Measurement(1, "xfromUnits");
             var e = new UnitConvertingExternalDevice(UNUSED_NAME,
@@ -67,7 +67,7 @@ namespace Symphony.Core
 
             var expected = new Measurement(bg.Quantity * 2,
                                            bg.Exponent,
-                                           bg.BaseUnit);
+                                           bg.BaseUnits);
 
             Assert.That(e.OutputBackground, Is.EqualTo(expected));
         }
@@ -131,7 +131,7 @@ namespace Symphony.Core
             var stream = new DAQOutputStream(UNUSED_NAME);
             d.BindStream(stream);
 
-            var expected = new Measurement(150, bg.Exponent, bg.BaseUnit);
+            var expected = new Measurement(150, bg.Exponent, bg.BaseUnits);
 
             Assert.That(d.OutputBackground, Is.EqualTo(expected));
         }

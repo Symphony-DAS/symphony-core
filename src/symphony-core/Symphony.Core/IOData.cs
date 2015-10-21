@@ -169,9 +169,9 @@ namespace Symphony.Core
         /// <summary>
         /// Convert this IIOData to a new physical unit. An appropriate conversion proc (i.e. from m.BaseUnit to the desired unit) must exist for each Measurment in this.Data.
         /// </summary>
-        /// <param name="unit">Unit to convert to</param>
+        /// <param name="units">Unit to convert to</param>
         /// <returns>A new IIOData with converted units.</returns>
-        IOutputData DataWithUnits(string unit);
+        IOutputData DataWithUnits(string units);
 
         /// <summary>
         /// Convert this IIOData with a conversion function applied to each Measurement in this.Data.
@@ -246,9 +246,9 @@ namespace Symphony.Core
         /// <summary>
         /// Convert this IIOData to a new physical unit. An appropriate conversion proc (i.e. from m.Unit to the desired unit) must exist for each Measurment in this.Data.
         /// </summary>
-        /// <param name="unit">Unit to convert to</param>
+        /// <param name="units">Unit to convert to</param>
         /// <returns>A new IIOData with converted units.</returns>
-        IInputData DataWithUnits(string unit);
+        IInputData DataWithUnits(string units);
 
         /// <summary>
         /// Convert this IIOData with a conversion function applied to each Measurement in this.Data.
@@ -508,9 +508,9 @@ namespace Symphony.Core
             return new OutputData(this, subData);
         }
 
-        public IOutputData DataWithUnits(string unit)
+        public IOutputData DataWithUnits(string units)
         {
-            return DataWithConversion((m) => Converters.Convert(m, unit));
+            return DataWithConversion((m) => Converters.Convert(m, units));
         }
 
         public IOutputData DataWithConversion(Func<IMeasurement, IMeasurement> conversion)
@@ -520,7 +520,7 @@ namespace Symphony.Core
 
         public OutputDataSplit SplitData(TimeSpan duration)
         {
-            int requestedSamples = duration.Ticks == 0 ? 0 : (int)Math.Ceiling(duration.TotalSeconds * (double)SampleRate.QuantityInBaseUnit);
+            int requestedSamples = duration.Ticks == 0 ? 0 : (int)Math.Ceiling(duration.TotalSeconds * (double)SampleRate.QuantityInBaseUnits);
             int numSamples = Math.Min(requestedSamples, Data.Count);
 
             var headData = Data.Take(numSamples).ToList();
@@ -596,9 +596,9 @@ namespace Symphony.Core
         }
 
 
-        public IInputData DataWithUnits(string unit)
+        public IInputData DataWithUnits(string units)
         {
-            return DataWithConversion(m => Converters.Convert(m, unit));
+            return DataWithConversion(m => Converters.Convert(m, units));
         }
 
         public IInputData DataWithConversion(Func<IMeasurement, IMeasurement> conversion)
@@ -608,7 +608,7 @@ namespace Symphony.Core
 
         public InputDataSplit SplitData(TimeSpan duration)
         {
-            int numSamples = duration.Ticks == 0 ? 0 : (int)Math.Ceiling(duration.TotalSeconds * (double)SampleRate.QuantityInBaseUnit);
+            int numSamples = duration.Ticks == 0 ? 0 : (int)Math.Ceiling(duration.TotalSeconds * (double)SampleRate.QuantityInBaseUnits);
             numSamples = Math.Min(numSamples, Data.Count);
 
             var headData = Data.Take(numSamples).ToList();

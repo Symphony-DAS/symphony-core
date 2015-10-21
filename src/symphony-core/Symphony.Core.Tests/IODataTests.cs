@@ -479,7 +479,7 @@ namespace Symphony.Core
             var result = outData.SplitData(duration);
 
             //rounds samples up for duration
-            int numSamples = (int)Math.Ceiling(duration.TotalSeconds * (double)outData.SampleRate.QuantityInBaseUnit);
+            int numSamples = (int)Math.Ceiling(duration.TotalSeconds * (double)outData.SampleRate.QuantityInBaseUnits);
 
             IEnumerable firstData = Enumerable.Range(0, numSamples).Select(i => outData.Data[i]).ToList();
             IEnumerable restData = Enumerable.Range(numSamples, outData.Data.Count - numSamples).Select(i => outData.Data[i]).ToList();
@@ -507,7 +507,7 @@ namespace Symphony.Core
             var result = inData.SplitData(duration);
 
             //rounds samples up for duration
-            int numSamples = (int)Math.Ceiling(duration.TotalSeconds * (double)inData.SampleRate.QuantityInBaseUnit);
+            int numSamples = (int)Math.Ceiling(duration.TotalSeconds * (double)inData.SampleRate.QuantityInBaseUnits);
 
             IEnumerable firstData = Enumerable.Range(0, numSamples).Select(i => inData.Data[i]).ToList();
             IEnumerable restData = Enumerable.Range(numSamples, inData.Data.Count - numSamples).Select(i => inData.Data[i]).ToList();
@@ -575,11 +575,11 @@ namespace Symphony.Core
 
 
             Converters.Clear();
-            ConvertProc fooConversion = (m) => new Measurement(m.QuantityInBaseUnit * 10, 1, "foo");
+            ConvertProc fooConversion = (m) => new Measurement(m.QuantityInBaseUnits * 10, 1, "foo");
             Converters.Register("V", "foo", fooConversion);
 
             IInputData expected = new InputData(data,
-                data.Data.Select(m => new Measurement(m.QuantityInBaseUnit * 10, 1, "foo")).ToList());
+                data.Data.Select(m => new Measurement(m.QuantityInBaseUnits * 10, 1, "foo")).ToList());
 
             Assert.NotNull(expected.NodeConfigurationWithName(IOData.STREAM_CONFIGURATION_NAME));
             IInputData actual = data.DataWithUnits("foo");
@@ -611,11 +611,11 @@ namespace Symphony.Core
             outData.OutputTime = DateTimeOffset.Now;
 
             Converters.Clear();
-            ConvertProc fooConversion = (m) => new Measurement(m.QuantityInBaseUnit * 10, 1, "foo");
+            ConvertProc fooConversion = (m) => new Measurement(m.QuantityInBaseUnits * 10, 1, "foo");
             Converters.Register("V", "foo", fooConversion);
 
             IOutputData expected = new OutputData(outData,
-                outData.Data.Select(m => new Measurement(m.QuantityInBaseUnit * 10, 1, "foo")).ToList());
+                outData.Data.Select(m => new Measurement(m.QuantityInBaseUnits * 10, 1, "foo")).ToList());
             expected.OutputTime = outData.OutputTime;
 
             Assert.NotNull(expected.NodeConfigurationWithName(devFake.Name));
@@ -649,14 +649,14 @@ namespace Symphony.Core
             outData.OutputTime = DateTimeOffset.Now;
 
             Converters.Clear();
-            ConvertProc fooConversion = (m) => new Measurement(m.QuantityInBaseUnit * 10, 1, "foo");
+            ConvertProc fooConversion = (m) => new Measurement(m.QuantityInBaseUnits * 10, 1, "foo");
             Converters.Register("V", "foo", fooConversion);
 
             IOutputData expected = new OutputData(outData,
-                outData.Data.Select(m => new Measurement(m.QuantityInBaseUnit * 10, 1, "foo")).ToList()) { OutputTime = outData.OutputTime };
+                outData.Data.Select(m => new Measurement(m.QuantityInBaseUnits * 10, 1, "foo")).ToList()) { OutputTime = outData.OutputTime };
 
 
-            IOutputData actual = outData.DataWithConversion((m) => new Measurement(m.QuantityInBaseUnit * 10, 1, "foo"));
+            IOutputData actual = outData.DataWithConversion((m) => new Measurement(m.QuantityInBaseUnits * 10, 1, "foo"));
 
             Assert.AreEqual(expected.Data, actual.Data);
             Assert.AreEqual(expected.NodeConfigurationWithName(IOData.EXTERNAL_DEVICE_CONFIGURATION_NAME),
@@ -685,10 +685,10 @@ namespace Symphony.Core
 
 
             var expected = new OutputData(outData,
-                outData.Data.Select(m => new Measurement(m.QuantityInBaseUnit * 10, 1, "foo")).ToList()) { OutputTime = outData.OutputTime };
+                outData.Data.Select(m => new Measurement(m.QuantityInBaseUnits * 10, 1, "foo")).ToList()) { OutputTime = outData.OutputTime };
 
 
-            var actual = outData.DataWithConversion((m) => new Measurement(m.QuantityInBaseUnit * 10, 1, "foo"));
+            var actual = outData.DataWithConversion((m) => new Measurement(m.QuantityInBaseUnits * 10, 1, "foo"));
 
             Assert.AreEqual(expected.Data, actual.Data);
             Assert.AreEqual(expected.NodeConfigurationWithName(IOData.EXTERNAL_DEVICE_CONFIGURATION_NAME),

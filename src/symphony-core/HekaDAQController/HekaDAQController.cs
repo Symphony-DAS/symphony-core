@@ -125,7 +125,7 @@ namespace Heka
             set
             {
                 // Set the ProcessInterval longer for high sampling rates
-                var rateProcessInterval = value.QuantityInBaseUnit > 10000m
+                var rateProcessInterval = value.QuantityInBaseUnits > 10000m
                                               ? TimeSpan.FromSeconds(2*DEFAULT_TRANSFER_BLOCK_SECONDS)
                                               : TimeSpan.FromSeconds(DEFAULT_TRANSFER_BLOCK_SECONDS);
 
@@ -368,7 +368,7 @@ namespace Heka
                     var nextOutputDataForStream = NextOutputDataForStream(s);
                     var nextSamples = nextOutputDataForStream.DataWithUnits(HekaDAQOutputStream.DAQCountUnits).Data.
                         Select(
-                            (m) => (short)m.QuantityInBaseUnit);
+                            (m) => (short)m.QuantityInBaseUnits);
 
                     outputSamples = outputSamples.Concat(nextSamples).ToList();
 
@@ -434,11 +434,11 @@ namespace Heka
 
                 var cons = outputData.DataWithUnits(HekaDAQOutputStream.DAQCountUnits).SplitData(deficit);
 
-                short[] deficitOutputSamples = cons.Head.Data.Select((m) => (short)m.QuantityInBaseUnit).ToArray();
+                short[] deficitOutputSamples = cons.Head.Data.Select((m) => (short)m.QuantityInBaseUnits).ToArray();
                 deficitOutput[new ChannelIdentifier { ChannelNumber = s.ChannelNumber, ChannelType = (ushort)s.ChannelType }] =
                     deficitOutputSamples;
 
-                short[] outputSamples = cons.Rest.Data.Select((m) => (short)m.QuantityInBaseUnit).ToArray();
+                short[] outputSamples = cons.Rest.Data.Select((m) => (short)m.QuantityInBaseUnits).ToArray();
                 output[new ChannelIdentifier { ChannelNumber = s.ChannelNumber, ChannelType = (ushort)s.ChannelType }] =
                     outputSamples;
             }
@@ -522,10 +522,10 @@ namespace Heka
                 if (SampleRate == null)
                     return Maybe<string>.No("Sample rate required.");
 
-                if (SampleRate.BaseUnit.ToLower() != "hz")
+                if (SampleRate.BaseUnits.ToLower() != "hz")
                     return Maybe<string>.No("Sample rate must be in Hz.");
 
-                if (SampleRate.QuantityInBaseUnit <= 0)
+                if (SampleRate.QuantityInBaseUnits <= 0)
                     return Maybe<string>.No("Sample rate must be greater than 0");
 
                 if (!ActiveStreams.Any())
@@ -543,7 +543,7 @@ namespace Heka
 
                 if (Math.Max(ActiveOutputStreams.Count(), ActiveInputStreams.Count()) >= 1)
                 {
-                    var samplingInterval = 1e9m / (SampleRate.QuantityInBaseUnit * Math.Max(ActiveOutputStreams.Count(), ActiveInputStreams.Count()));
+                    var samplingInterval = 1e9m / (SampleRate.QuantityInBaseUnits * Math.Max(ActiveOutputStreams.Count(), ActiveInputStreams.Count()));
 
                     while (samplingInterval % Device.DeviceInfo.MinimumSamplingStep != 0m)
                     {
@@ -555,7 +555,7 @@ namespace Heka
                         var dev = new NullDevice();
                         dev.BindStream(inactive.First());
 
-                        samplingInterval = 1e9m / (SampleRate.QuantityInBaseUnit * Math.Max(ActiveOutputStreams.Count(), ActiveInputStreams.Count()));
+                        samplingInterval = 1e9m / (SampleRate.QuantityInBaseUnits * Math.Max(ActiveOutputStreams.Count(), ActiveInputStreams.Count()));
                     }
                 }
             }

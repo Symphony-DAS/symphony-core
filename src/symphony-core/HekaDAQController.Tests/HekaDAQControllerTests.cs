@@ -233,7 +233,7 @@ namespace Heka
 
                         //NO_SCALE is seconds scale (Hz)
                         Assert.AreEqual(ITCMM.USE_FREQUENCY & ITCMM.NO_SCALE & ITCMM.ADJUST_RATE, info.SamplingIntervalFlag);
-                        Assert.That(info.SamplingRate, Is.EqualTo(stream.SampleRate.QuantityInBaseUnit));
+                        Assert.That(info.SamplingRate, Is.EqualTo(stream.SampleRate.QuantityInBaseUnits));
                         Assert.AreEqual(IntPtr.Zero, info.FIFOPointer);
                         Assert.AreEqual(0, info.Gain);
                     }
