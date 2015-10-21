@@ -1,10 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
+using NSubstitute;
 using NUnit.Framework;
 using System.Threading;
-using NUnit.Mocks;
 
 namespace Symphony.Core
 {
@@ -230,14 +229,16 @@ namespace Symphony.Core
             c.AddStream(s);
             c.SetRunning(false);
 
-            var device = new DynamicMock(typeof (IExternalDevice));
+            var device = Substitute.For<IExternalDevice>();
             var background = new Measurement(0, "V");
-            device.ExpectAndReturn("get_OutputBackground", background);
+            device.OutputBackground.Returns(background);
 
             s.MeasurementConversionTarget = "V";
-            s.Devices.Add(device.MockInstance as IExternalDevice);
+            s.Devices.Add(device);
 
             s.ApplyBackground();
+
+            var temp = device.Received().OutputBackground;
 
             Assert.That(c.AsyncBackground, Is.EqualTo(background));
         }

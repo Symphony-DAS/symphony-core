@@ -6,7 +6,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Heka;
 using Symphony.Core;
-using log4net;
 
 namespace IntegrationTests
 {
@@ -71,8 +70,6 @@ namespace IntegrationTests
                                                        };
                                         dev0.BindStream((IDAQOutputStream)daq.GetStreams("ANALOG_OUT." + i).First());
 
-                                        controller.BackgroundDataStreams[dev0] = new BackgroundOutputDataStream(new Background(STREAM_BACKGROUND, daq.SampleRate));
-
                                         return dev0;
                                     })
                                     .ToList();
@@ -134,7 +131,7 @@ namespace IntegrationTests
                 }
                 finally
                 {
-                    if (daq.HardwareReady)
+                    if (daq.IsHardwareReady)
                         daq.CloseHardware();
                 }
 
@@ -188,9 +185,6 @@ namespace IntegrationTests
                     dev1.BindStream((IDAQOutputStream)daq.GetStreams("ANALOG_OUT.1").First());
                     dev1.BindStream((IDAQInputStream)daq.GetStreams("ANALOG_IN.1").First());
 
-                    controller.BackgroundDataStreams[dev0] = new BackgroundOutputDataStream(new Background(STREAM_BACKGROUND, daq.SampleRate));
-                    controller.BackgroundDataStreams[dev1] = new BackgroundOutputDataStream(new Background(STREAM_BACKGROUND, daq.SampleRate));
-
                     for (int j = 0; j < nEpochs; j++)
                     {
                         // Setup Epoch
@@ -234,7 +228,7 @@ namespace IntegrationTests
 
                         var failures0 =
                             e.Responses[dev0].Data.Select(
-                                (t, i) => new { index = i, diff = t.QuantityInBaseUnit - stimData[i].QuantityInBaseUnit })
+                                (t, i) => new { index = i, diff = t.QuantityInBaseUnits - stimData[i].QuantityInBaseUnits })
                                 .Where(dif => Math.Abs(dif.diff) > (decimal)MAX_VOLTAGE_DIFF);
 
                         foreach (var failure in failures0.Take(10))
@@ -266,7 +260,7 @@ namespace IntegrationTests
                 }
                 finally
                 {
-                    if (daq.HardwareReady)
+                    if (daq.IsHardwareReady)
                         daq.CloseHardware();
                 }
 
@@ -274,7 +268,7 @@ namespace IntegrationTests
         }
 
         [Test]
-        [Timeout(30 * 1000)]
+        //[Timeout(30 * 1000)]
         public void ContinuousAcquisition(
             [Values(10000, 20000, 50000)] double sampleRate,
             [Values(20)] int nEpochs)
@@ -314,9 +308,6 @@ namespace IntegrationTests
                     };
                     dev1.BindStream((IDAQOutputStream)daq.GetStreams("ANALOG_OUT.1").First());
                     dev1.BindStream((IDAQInputStream)daq.GetStreams("ANALOG_IN.1").First());
-
-                    controller.BackgroundDataStreams[dev0] = new BackgroundOutputDataStream(new Background(STREAM_BACKGROUND, daq.SampleRate));
-                    controller.BackgroundDataStreams[dev1] = new BackgroundOutputDataStream(new Background(STREAM_BACKGROUND, daq.SampleRate));
 
                     var nDAQStarts = 0;
                     daq.Started += (evt, args) =>
@@ -398,7 +389,7 @@ namespace IntegrationTests
 
                         var failures0 =
                             e.Responses[dev0].Data.Select(
-                                (t, i) => new {index = i, diff = t.QuantityInBaseUnit - stimData[i].QuantityInBaseUnit})
+                                (t, i) => new {index = i, diff = t.QuantityInBaseUnits - stimData[i].QuantityInBaseUnits})
                                              .Where(dif => Math.Abs(dif.diff) > (decimal) MAX_VOLTAGE_DIFF);
 
                         foreach (var failure in failures0.Take(10))
@@ -414,7 +405,7 @@ namespace IntegrationTests
                 }
                 finally
                 {
-                    if (daq.HardwareReady)
+                    if (daq.IsHardwareReady)
                     {
                         daq.CloseHardware();
                     }
@@ -481,8 +472,6 @@ namespace IntegrationTests
                     e.Responses[dev0] = new Response();
                     e.Backgrounds[dev0] = new Background(expectedBackground, daq.SampleRate);
 
-                    controller.BackgroundDataStreams[dev0] = new BackgroundOutputDataStream(new Background(STREAM_BACKGROUND, daq.SampleRate));
-
                     //Run single epoch
                     var fakeEpochPersistor = new FakeEpochPersistor();
 
@@ -495,12 +484,12 @@ namespace IntegrationTests
                         daq.GetStreams("ANALOG_IN.0").First() as IDAQInputStream);
 
                     //Should be within +/- 0.025 volts
-                    Assert.That(actual.Data.First().QuantityInBaseUnit, Is.InRange(expectedBackground.QuantityInBaseUnit - (decimal)0.025,
-                        expectedBackground.QuantityInBaseUnit + (decimal)0.025));
+                    Assert.That(actual.Data.First().QuantityInBaseUnits, Is.InRange(expectedBackground.QuantityInBaseUnits - (decimal)0.025,
+                        expectedBackground.QuantityInBaseUnits + (decimal)0.025));
                 }
                 finally
                 {
-                    if (daq.HardwareReady)
+                    if (daq.IsHardwareReady)
                         daq.CloseHardware();
                 }
 
@@ -564,8 +553,6 @@ namespace IntegrationTests
                     e.Stimuli[dev0] = stim;
                     e.Backgrounds[dev0] = new Background(expectedBackground, daq.SampleRate);
 
-                    controller.BackgroundDataStreams[dev0] = new BackgroundOutputDataStream(new Background(STREAM_BACKGROUND, daq.SampleRate));
-
                     //Run single epoch
                     var fakeEpochPersistor = new FakeEpochPersistor();
 
@@ -581,7 +568,7 @@ namespace IntegrationTests
                 }
                 finally
                 {
-                    if (daq.HardwareReady)
+                    if (daq.IsHardwareReady)
                         daq.CloseHardware();
                 }
             }
@@ -618,6 +605,11 @@ namespace IntegrationTests
 
             Assert.That(HekaDAQController.AvailableControllers().Count(), Is.GreaterThan(0));
 
+            using (var persistor = H5EpochPersistor.Create(h5Path))
+            {
+                persistor.AddSource("source", null);
+            }
+
             foreach (var daq in HekaDAQController.AvailableControllers())
             {
 
@@ -639,8 +631,6 @@ namespace IntegrationTests
                                    };
                     dev0.BindStream((IDAQOutputStream) daq.GetStreams("ANALOG_OUT.0").First());
                     dev0.BindStream((IDAQInputStream) daq.GetStreams("ANALOG_IN.0").First());
-
-                    controller.BackgroundDataStreams[dev0] = new BackgroundOutputDataStream(new Background(STREAM_BACKGROUND, daq.SampleRate));
 
                     for (int j = 0; j < nEpochs; j++)
                     {
@@ -667,13 +657,16 @@ namespace IntegrationTests
 
 
                         //Run single epoch
-                        using (var persistor = new EpochHDF5Persistor(h5Path, null, 9))
+                        using (var persistor = new H5EpochPersistor(h5Path))
                         {
-                            persistor.BeginEpochGroup("label", "source", new string[0], new Dictionary<string, object>(),
-                                                      Guid.NewGuid(), DateTimeOffset.Now);
+                            var source = persistor.Experiment.Sources.First();
+
+                            persistor.BeginEpochGroup("label", source, DateTimeOffset.Now);
+                            persistor.BeginEpochBlock(e.ProtocolID, e.ProtocolParameters, DateTimeOffset.Now);
 
                             controller.RunEpoch(e, persistor);
 
+                            persistor.EndEpochBlock(DateTimeOffset.Now);
                             persistor.EndEpochGroup();
                         }
 
@@ -695,7 +688,7 @@ namespace IntegrationTests
                     if (File.Exists(h5Path))
                         File.Delete(h5Path);
 
-                    if (daq.HardwareReady)
+                    if (daq.IsHardwareReady)
                         daq.CloseHardware();
                 
                 }

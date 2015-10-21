@@ -93,6 +93,11 @@ namespace Symphony.Core
 
             public override Option<TimeSpan> Duration { get { return Option<TimeSpan>.Some(TimeSpan.Zero); } }
 
+            public override Option<IEnumerable<IMeasurement>> Data
+            {
+                get { throw new NotImplementedException(); }
+            }
+
             public override IMeasurement SampleRate
             {
                 get { throw new NotImplementedException(); }
@@ -155,7 +160,7 @@ namespace Symphony.Core
 
             var s = new DelegatedStimulus("DelegatedStimulus", "units", (IMeasurement)parameters["sampleRate"],
                                           parameters,
-                                          (p, b) => new OutputData(Enumerable.Range(0, (int)(b.TotalSeconds * (double)((IMeasurement)p["sampleRate"]).QuantityInBaseUnit))
+                                          (p, b) => new OutputData(Enumerable.Range(0, (int)(b.TotalSeconds * (double)((IMeasurement)p["sampleRate"]).QuantityInBaseUnits))
                                                                              .Select(i => new Measurement(i, "units")).ToList(),
                                                                    (IMeasurement)p["sampleRate"],
                                                                    false),
@@ -169,7 +174,7 @@ namespace Symphony.Core
             {
                 var expected =
                     new OutputData(
-                        Enumerable.Range(0, (int)(block.TotalSeconds * (double)((IMeasurement)parameters["sampleRate"]).QuantityInBaseUnit))
+                        Enumerable.Range(0, (int)(block.TotalSeconds * (double)((IMeasurement)parameters["sampleRate"]).QuantityInBaseUnits))
                             .Select(i => new Measurement(i, "units")).ToList(),
                         (IMeasurement)parameters["sampleRate"],
                         false);
@@ -188,7 +193,7 @@ namespace Symphony.Core
 
             var s = new DelegatedStimulus("DelegatedStimulus", "units", (IMeasurement)parameters["sampleRate"],
                                           parameters,
-                                          (p, b) => new OutputData(Enumerable.Range(0, (int)(b.TotalSeconds * (double)((IMeasurement)p["sampleRate"]).QuantityInBaseUnit))
+                                          (p, b) => new OutputData(Enumerable.Range(0, (int)(b.TotalSeconds * (double)((IMeasurement)p["sampleRate"]).QuantityInBaseUnits))
                                                                              .Select(i => new Measurement(i, "other")).ToList(),
                                                                    (IMeasurement)p["sampleRate"],
                                                                    false),
@@ -400,7 +405,7 @@ namespace Symphony.Core
 
                     expectedData = expectedData == null
                         ? cons.Head
-                        : expectedData.Zip(cons.Head, (m1, m2) => new Measurement(m1.QuantityInBaseUnit + m2.QuantityInBaseUnit, 0, m1.BaseUnit));
+                        : expectedData.Zip(cons.Head, (m1, m2) => new Measurement(m1.QuantityInBaseUnits + m2.QuantityInBaseUnits, 0, m1.BaseUnits));
                 }
 
                 Assert.That(iter.Current.Duration, Is.EqualTo(expectedData.Duration));

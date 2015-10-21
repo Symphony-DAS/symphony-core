@@ -1,6 +1,5 @@
 ﻿using System.Reflection;
 using System.Runtime.InteropServices;
-using ApprovalTests.Reporters;
 
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
@@ -11,4 +10,4 @@ using ApprovalTests.Reporters;
 [assembly: Guid("f708b7b2-0157-4667-b1be-df62b35311de")]
 
 // Assembly-level preference for ApprovalTests diff reporter
-[assembly: UseReporter(typeof(QuietReporter))]
+//[assembly: UseReporter(typeof(QuietReporter))]

@@ -46,7 +46,7 @@ namespace Heka
                 {
                     controller.Stop();
                 }
-                if (controller.HardwareReady)
+                if (controller.IsHardwareReady)
                 {
                     //controller.CloseHardware();
                 }
@@ -73,28 +73,48 @@ namespace Heka
         [Test]
         public void SampleRateMustBeGreaterThanZero()
         {
-            var c = new HekaDAQController();
+            foreach (HekaDAQController c in HekaDAQController.AvailableControllers())
+            {
+                try
+                {
+                    FixtureForController(c);
 
-            c.SampleRate = new Measurement(0, "Hz");
-            Assert.False((bool)c.Validate());
+                    c.SampleRate = new Measurement(0, "Hz");
+                    Assert.False((bool)c.Validate());
 
-            c.SampleRate = new Measurement(-.1m, "Hz");
-            Assert.False((bool)c.Validate());
+                    c.SampleRate = new Measurement(-.1m, "Hz");
+                    Assert.False((bool)c.Validate());
 
-            c.SampleRate = new Measurement(1, "Hz");
-            Assert.True((bool)c.Validate());
+                    c.SampleRate = new Measurement(1, "Hz");
+                    Assert.True((bool)c.Validate());
+                }
+                finally
+                {
+                    c.CloseHardware();
+                }
+            }
         }
 
         [Test]
         public void SampleRateMustBeInHz()
         {
-            var c = new HekaDAQController();
+            foreach (HekaDAQController c in HekaDAQController.AvailableControllers())
+            {
+                try
+                {
+                    FixtureForController(c);
 
-            c.SampleRate = new Measurement(1, "barry");
-            Assert.False((bool)c.Validate());
+                    c.SampleRate = new Measurement(1, "barry");
+                    Assert.False((bool)c.Validate());
 
-            c.SampleRate = new Measurement(1, "Hz");
-            Assert.True((bool)c.Validate());
+                    c.SampleRate = new Measurement(1, "Hz");
+                    Assert.True((bool)c.Validate());
+                }
+                finally
+                {
+                    c.CloseHardware();
+                }
+            }
         }
 
         [Test]
@@ -102,17 +122,17 @@ namespace Heka
         {
             foreach (HekaDAQController controller in HekaDAQController.AvailableControllers())
             {
-                Assert.False(controller.HardwareReady);
+                Assert.False(controller.IsHardwareReady);
                 controller.InitHardware();
 
                 try
                 {
-                    Assert.True(controller.HardwareReady);
+                    Assert.True(controller.IsHardwareReady);
                 }
                 finally
                 {
                     controller.CloseHardware();
-                    Assert.False(controller.HardwareReady);
+                    Assert.False(controller.IsHardwareReady);
                 }
             }
 
@@ -123,7 +143,7 @@ namespace Heka
         {
             foreach (HekaDAQController controller in HekaDAQController.AvailableControllers())
             {
-                Assert.False(controller.HardwareReady);
+                Assert.False(controller.IsHardwareReady);
                 controller.InitHardware();
 
                 try
@@ -213,7 +233,7 @@ namespace Heka
 
                         //NO_SCALE is seconds scale (Hz)
                         Assert.AreEqual(ITCMM.USE_FREQUENCY & ITCMM.NO_SCALE & ITCMM.ADJUST_RATE, info.SamplingIntervalFlag);
-                        Assert.That(info.SamplingRate, Is.EqualTo(stream.SampleRate.QuantityInBaseUnit));
+                        Assert.That(info.SamplingRate, Is.EqualTo(stream.SampleRate.QuantityInBaseUnits));
                         Assert.AreEqual(IntPtr.Zero, info.FIFOPointer);
                         Assert.AreEqual(0, info.Gain);
                     }
@@ -234,7 +254,7 @@ namespace Heka
                 const decimal srate = 10000;
 
                 daq.InitHardware();
-                Assert.True(daq.HardwareReady);
+                Assert.True(daq.IsHardwareReady);
                 Assert.False(daq.HardwareRunning);
 
                 try
@@ -295,7 +315,7 @@ namespace Heka
                 }
                 finally
                 {
-                    if(daq.HardwareReady)
+                    if(daq.IsHardwareReady)
                         daq.CloseHardware();
                 }
 
@@ -328,7 +348,7 @@ namespace Heka
                 }
                 finally
                 {
-                    if(daq.HardwareReady)
+                    if(daq.IsHardwareReady)
                         daq.CloseHardware();
                 }
         
@@ -367,7 +387,7 @@ namespace Heka
                 }
                 finally
                 {
-                    if(daq.HardwareReady)
+                    if(daq.IsHardwareReady)
                         daq.CloseHardware();    
                 }
                 

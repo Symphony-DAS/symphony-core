@@ -54,7 +54,8 @@ namespace Symphony.SimulationDAQController
         public SimulationDAQController(TimeSpan simulationTimeStep)
         {
             ProcessInterval = simulationTimeStep;
-            this.Clock = this;
+            Clock = this;
+            IsHardwareReady = true;
         }
 
         /// <summary>
@@ -111,6 +112,19 @@ namespace Symphony.SimulationDAQController
         public void AddStream(IDAQStream stream)
         {
             DAQStreams.Add(stream);
+        }
+
+        public override Maybe<string> Validate()
+        {
+            var result = base.Validate();
+
+            if (result)
+            {
+                if (SimulationRunner == null)
+                    return Maybe<string>.No("Must define a simulation runner");
+            }
+
+            return result;
         }
     }
 }

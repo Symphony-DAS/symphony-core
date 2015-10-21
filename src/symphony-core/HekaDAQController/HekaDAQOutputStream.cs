@@ -63,7 +63,7 @@ namespace Heka
         {
             Converters.Register("V",
                                 DAQCountUnits,
-                                (m) => MeasurementPool.GetMeasurement((decimal)Math.Round((double)m.QuantityInBaseUnit * ITCMM.ANALOGVOLT), 0, DAQCountUnits)
+                                (m) => MeasurementPool.GetMeasurement((decimal)Math.Round((double)m.QuantityInBaseUnits * ITCMM.ANALOGVOLT), 0, DAQCountUnits)
                 );
 
             Converters.Register(Measurement.UNITLESS,
@@ -72,9 +72,9 @@ namespace Heka
 
             Converters.Register(Measurement.NORMALIZED,
                 DAQCountUnits,
-                (m) => MeasurementPool.GetMeasurement(m.QuantityInBaseUnit < 0 ? 
-                    Math.Round(m.QuantityInBaseUnit * (decimal)ITCMM.NEGATIVEVOLT * -(decimal)ITCMM.ANALOGVOLT) : 
-                    Math.Round(m.QuantityInBaseUnit * (decimal)ITCMM.POSITIVEVOLT * +(decimal)ITCMM.ANALOGVOLT), 
+                (m) => MeasurementPool.GetMeasurement(m.QuantityInBaseUnits < 0 ? 
+                    Math.Round(m.QuantityInBaseUnits * (decimal)ITCMM.NEGATIVEVOLT * -(decimal)ITCMM.ANALOGVOLT) : 
+                    Math.Round(m.QuantityInBaseUnits * (decimal)ITCMM.POSITIVEVOLT * +(decimal)ITCMM.ANALOGVOLT), 
                     0, DAQCountUnits));
         }
         public ITCMM.ITCChannelInfo ChannelInfo
@@ -86,7 +86,7 @@ namespace Heka
                                      ChannelNumber = ChannelNumber,
                                      ChannelType = (uint)ChannelType,
                                      SamplingIntervalFlag = ITCMM.USE_FREQUENCY,
-                                     SamplingRate = (double)SampleRate.QuantityInBaseUnit,
+                                     SamplingRate = (double)SampleRate.QuantityInBaseUnits,
                                      Gain = 0, //Gain = 1x
                                      FIFOPointer = IntPtr.Zero,
                                  };
@@ -141,6 +141,28 @@ namespace Heka
             }
         }
 
+        public override IMeasurement Background
+        {
+            get
+            {
+                IMeasurement background = null;
+                foreach (var ed in Devices)
+                {
+                    var m = Converters.Convert(ed.Background, MeasurementConversionTarget);
+                    if (m.QuantityInBaseUnits != 0 && m.QuantityInBaseUnits != 1)
+                        throw new DAQException(ed.Name + " background must contain a value of 0 or 1");
+
+                    ushort bitPosition = BitPositions[ed];
+                    m = MeasurementPool.GetMeasurement((short)((short)m.QuantityInBaseUnits << bitPosition), 0, m.BaseUnits);
+
+                    background = background == null
+                        ? m
+                        : MeasurementPool.GetMeasurement((short)background.QuantityInBaseUnits | (short)m.QuantityInBaseUnits, 0, background.BaseUnits);
+                }
+                return background;
+            }
+        }
+
         public override IOutputData PullOutputData(TimeSpan duration)
         {
             if (!Devices.Any())
@@ -154,17 +176,17 @@ namespace Heka
                 ushort bitPosition = BitPositions[ed];
                 pulled = new OutputData(pulled, pulled.Data.Select(m =>
                 {
-                    if (m.QuantityInBaseUnit != 0 && m.QuantityInBaseUnit != 1)
+                    if (m.QuantityInBaseUnits != 0 && m.QuantityInBaseUnits != 1)
                         throw new DAQException(ed.Name + " output data must contain only values of 0 and 1");
 
-                    return MeasurementPool.GetMeasurement((short)((short)m.QuantityInBaseUnit << bitPosition), 0, m.BaseUnit);
+                    return MeasurementPool.GetMeasurement((short)((short)m.QuantityInBaseUnits << bitPosition), 0, m.BaseUnits);
                 }));
 
                 outData = outData == null
                               ? pulled
                               : outData.Zip(pulled,
                                             (m1, m2) =>
-                                            MeasurementPool.GetMeasurement((short) m1.QuantityInBaseUnit | (short) m2.QuantityInBaseUnit, 0, m1.BaseUnit));
+                                            MeasurementPool.GetMeasurement((short) m1.QuantityInBaseUnits | (short) m2.QuantityInBaseUnits, 0, m1.BaseUnits));
             }
 
             if (!outData.SampleRate.Equals(this.SampleRate))

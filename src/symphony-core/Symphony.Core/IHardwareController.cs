@@ -13,6 +13,11 @@ namespace Symphony.Core
     public interface IHardwareController
     {
         /// <summary>
+        /// Indicates if the hardware is ready to start.
+        /// </summary>
+        bool IsHardwareReady { get; }
+
+        /// <summary>
         /// Indicates if the hardware is running (i.e. DAQ running, video output running)
         /// </summary>
         bool IsRunning { get; }

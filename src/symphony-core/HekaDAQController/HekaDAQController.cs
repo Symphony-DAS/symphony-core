@@ -125,7 +125,7 @@ namespace Heka
             set
             {
                 // Set the ProcessInterval longer for high sampling rates
-                var rateProcessInterval = value.QuantityInBaseUnit > 10000m
+                var rateProcessInterval = value.QuantityInBaseUnits > 10000m
                                               ? TimeSpan.FromSeconds(2*DEFAULT_TRANSFER_BLOCK_SECONDS)
                                               : TimeSpan.FromSeconds(DEFAULT_TRANSFER_BLOCK_SECONDS);
 
@@ -226,7 +226,7 @@ namespace Heka
         {
             this.DeviceType = deviceType;
             this.DeviceNumber = deviceNumber;
-            this.HardwareReady = false;
+            this.IsHardwareReady = false;
             this.ProcessInterval = TimeSpan.FromSeconds(DEFAULT_TRANSFER_BLOCK_SECONDS);
             this.Clock = clock;
         }
@@ -237,7 +237,7 @@ namespace Heka
         public override void BeginSetup()
         {
             base.BeginSetup();
-            if (!HardwareReady)
+            if (!IsHardwareReady)
             {
                 InitHardware();
                 CloseHardware();
@@ -276,38 +276,40 @@ namespace Heka
         /// </summary>
         public void InitHardware()
         {
-            if (!this.HardwareReady)
+            if (!this.IsHardwareReady)
             {
                 var deviceInfo = OpenDevice();
-                this.DAQStreams.Clear();
-
-                //set-up ADC channels
-                for (ushort i = 0; i < deviceInfo.NumberOfADCs; i++)
+                
+                if (!DAQStreams.Any())
                 {
-                    string name = String.Format("{0}.{1}", "ANALOG_IN", i);
-                    this.DAQStreams.Add(new HekaDAQInputStream(name, StreamType.ANALOG_IN, i, this));
+                    //set-up ADC channels
+                    for (ushort i = 0; i < deviceInfo.NumberOfADCs; i++)
+                    {
+                        string name = String.Format("{0}.{1}", "ANALOG_IN", i);
+                        this.DAQStreams.Add(new HekaDAQInputStream(name, StreamType.ANALOG_IN, i, this));
+                    }
+
+
+                    for (ushort i = 0; i < deviceInfo.NumberOfDACs; i++)
+                    {
+                        string name = String.Format("{0}.{1}", "ANALOG_OUT", i);
+                        this.DAQStreams.Add(new HekaDAQOutputStream(name, StreamType.ANALOG_OUT, i, this));
+                    }
+
+                    for (ushort i = 0; i < deviceInfo.NumberOfDIs; i++)
+                    {
+                        string name = String.Format("{0}.{1}", "DIGITAL_IN", i);
+                        this.DAQStreams.Add(new HekaDigitalDAQInputStream(name, i, this));
+                    }
+
+                    for (ushort i = 0; i < deviceInfo.NumberOfDOs; i++)
+                    {
+                        string name = String.Format("{0}.{1}", "DIGITAL_OUT", i);
+                        this.DAQStreams.Add(new HekaDigitalDAQOutputStream(name, i, this));
+                    }
                 }
 
-
-                for (ushort i = 0; i < deviceInfo.NumberOfDACs; i++)
-                {
-                    string name = String.Format("{0}.{1}", "ANALOG_OUT", i);
-                    this.DAQStreams.Add(new HekaDAQOutputStream(name, StreamType.ANALOG_OUT, i, this));
-                }
-
-                for (ushort i = 0; i < deviceInfo.NumberOfDIs; i++)
-                {
-                    string name = String.Format("{0}.{1}", "DIGITAL_IN", i);
-                    this.DAQStreams.Add(new HekaDigitalDAQInputStream(name, i, this));
-                }
-
-                for (ushort i = 0; i < deviceInfo.NumberOfDOs; i++)
-                {
-                    string name = String.Format("{0}.{1}", "DIGITAL_OUT", i);
-                    this.DAQStreams.Add(new HekaDigitalDAQOutputStream(name, i, this));
-                }
-
-                this.HardwareReady = true;
+                this.IsHardwareReady = true;
             }
         }
 
@@ -315,7 +317,7 @@ namespace Heka
         {
             ITCMM.GlobalDeviceInfo deviceInfo;
             this.Device = QueuedHekaHardwareDevice.OpenDevice(DeviceType, DeviceNumber, out deviceInfo);
-            HardwareReady = true;
+            IsHardwareReady = true;
             return deviceInfo;
         }
 
@@ -326,16 +328,15 @@ namespace Heka
         {
             try
             {
-                if(HardwareReady)
+                if (IsHardwareReady)
+                {
+                    IsHardwareReady = false;
                     Device.CloseDevice();
+                }   
             }
             catch (HekaDAQException)
             {
                 //pass
-            }
-            finally
-            {
-                HardwareReady = false;
             }
         }
 
@@ -346,11 +347,6 @@ namespace Heka
             OpenDevice();
             SetStreamsBackground();
         }
-
-        /// <summary>
-        /// Indicates whether the ITC hardware is initialized and ready for acquisition.
-        /// </summary>
-        public bool HardwareReady { get; private set; }
 
         protected override void StartHardware(bool waitForTrigger)
         {
@@ -372,7 +368,7 @@ namespace Heka
                     var nextOutputDataForStream = NextOutputDataForStream(s);
                     var nextSamples = nextOutputDataForStream.DataWithUnits(HekaDAQOutputStream.DAQCountUnits).Data.
                         Select(
-                            (m) => (short)m.QuantityInBaseUnit);
+                            (m) => (short)m.QuantityInBaseUnits);
 
                     outputSamples = outputSamples.Concat(nextSamples).ToList();
 
@@ -391,7 +387,7 @@ namespace Heka
 
         public override void Start(bool waitForTrigger)
         {
-            if (!HardwareReady)
+            if (!IsHardwareReady)
                 OpenDevice();
 
             Device.ConfigureChannels(this.ActiveStreams.Cast<HekaDAQStream>());
@@ -438,11 +434,11 @@ namespace Heka
 
                 var cons = outputData.DataWithUnits(HekaDAQOutputStream.DAQCountUnits).SplitData(deficit);
 
-                short[] deficitOutputSamples = cons.Head.Data.Select((m) => (short)m.QuantityInBaseUnit).ToArray();
+                short[] deficitOutputSamples = cons.Head.Data.Select((m) => (short)m.QuantityInBaseUnits).ToArray();
                 deficitOutput[new ChannelIdentifier { ChannelNumber = s.ChannelNumber, ChannelType = (ushort)s.ChannelType }] =
                     deficitOutputSamples;
 
-                short[] outputSamples = cons.Rest.Data.Select((m) => (short)m.QuantityInBaseUnit).ToArray();
+                short[] outputSamples = cons.Rest.Data.Select((m) => (short)m.QuantityInBaseUnits).ToArray();
                 output[new ChannelIdentifier { ChannelNumber = s.ChannelNumber, ChannelType = (ushort)s.ChannelType }] =
                     outputSamples;
             }
@@ -526,11 +522,14 @@ namespace Heka
                 if (SampleRate == null)
                     return Maybe<string>.No("Sample rate required.");
 
-                if (SampleRate.BaseUnit.ToLower() != "hz")
+                if (SampleRate.BaseUnits.ToLower() != "hz")
                     return Maybe<string>.No("Sample rate must be in Hz.");
 
-                if (SampleRate.QuantityInBaseUnit <= 0)
+                if (SampleRate.QuantityInBaseUnits <= 0)
                     return Maybe<string>.No("Sample rate must be greater than 0");
+
+                if (!ActiveStreams.Any())
+                    return Maybe<string>.No("Must have at least one active stream (a stream with an associated device)");
 
 
                 // This is a workaround for issue #41 (https://github.com/Symphony-DAS/Symphony/issues/41)
@@ -544,7 +543,7 @@ namespace Heka
 
                 if (Math.Max(ActiveOutputStreams.Count(), ActiveInputStreams.Count()) >= 1)
                 {
-                    var samplingInterval = 1e9m / (SampleRate.QuantityInBaseUnit * Math.Max(ActiveOutputStreams.Count(), ActiveInputStreams.Count()));
+                    var samplingInterval = 1e9m / (SampleRate.QuantityInBaseUnits * Math.Max(ActiveOutputStreams.Count(), ActiveInputStreams.Count()));
 
                     while (samplingInterval % Device.DeviceInfo.MinimumSamplingStep != 0m)
                     {
@@ -556,7 +555,7 @@ namespace Heka
                         var dev = new NullDevice();
                         dev.BindStream(inactive.First());
 
-                        samplingInterval = 1e9m / (SampleRate.QuantityInBaseUnit * Math.Max(ActiveOutputStreams.Count(), ActiveInputStreams.Count()));
+                        samplingInterval = 1e9m / (SampleRate.QuantityInBaseUnits * Math.Max(ActiveOutputStreams.Count(), ActiveInputStreams.Count()));
                     }
                 }
             }

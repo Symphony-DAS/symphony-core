@@ -5,23 +5,71 @@ using System.Threading;
 
 namespace Symphony.Core
 {
-    public class FakeEpochPersistor : EpochPersistor
+    public class FakeEpochPersistor : IEpochPersistor
     {
         public IEnumerable<Epoch> PersistedEpochs { get; private set; }
+
         public FakeEpochPersistor()
         {
             PersistedEpochs = new LinkedList<Epoch>();
         }
 
-        public override void Serialize(Epoch e)
+        public virtual IPersistentEpoch Serialize(Epoch e)
         {
             ((LinkedList<Epoch>)PersistedEpochs).AddLast(e);
+            return null;
+        }
+
+        public void Close()
+        {
+        }
+
+        public bool IsClosed { get; private set; }
+
+        public IPersistentExperiment Experiment { get; private set; }
+
+        public IPersistentDevice AddDevice(string name, string manufacturer)
+        {
+            return null;
+        }
+
+        public IPersistentSource AddSource(string label, IPersistentSource parent)
+        {
+            return null;
+        }
+
+        public IPersistentEpochGroup BeginEpochGroup(string label, IPersistentSource source)
+        {
+            return null;
+        }
+
+        public IPersistentEpochGroup EndEpochGroup()
+        {
+            return null;
+        }
+
+        public IPersistentEpochGroup CurrentEpochGroup { get; private set; }
+
+        public IPersistentEpochBlock BeginEpochBlock(string protocolID, IDictionary<string, object> parameters, DateTimeOffset startTime)
+        {
+            return null;
+        }
+
+        public IPersistentEpochBlock EndEpochBlock(DateTimeOffset endTime)
+        {
+            return null;
+        }
+
+        public IPersistentEpochBlock CurrentEpochBlock { get; private set; }
+
+        public void Delete(IPersistentEntity entity)
+        {
         }
     }
 
-    public class AggregateExceptionThrowingEpochPersistor : EpochPersistor
+    public class AggregateExceptionThrowingEpochPersistor : FakeEpochPersistor
     {
-        public override void Serialize(Epoch e)
+        public override IPersistentEpoch Serialize(Epoch e)
         {
             throw new AggregateException();
         }

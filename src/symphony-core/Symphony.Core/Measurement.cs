@@ -17,15 +17,15 @@ namespace Symphony.Core
         int Exponent { get; }
 
         /// <summary>
-        /// SI (or other unit system) base unit of the measurement
+        /// SI (or other unit system) base units of the measurement
         /// </summary>
-        string BaseUnit { get; }
+        string BaseUnits { get; }
 
         /// <summary>
         /// Display units, accounting for exponent. For example 1 x 10^-3 V
         /// has a base Unit of "V", but a display unit of "mV"
         /// </summary>
-        string DisplayUnit { get; }
+        string DisplayUnits { get; }
 
         /// <summary>
         /// Measurement quantity expressed in base units. For example,
@@ -33,7 +33,7 @@ namespace Symphony.Core
         /// 
         /// Equal to Quantity * 10^(Exponent)
         /// </summary>
-        decimal QuantityInBaseUnit { get; }
+        decimal QuantityInBaseUnits { get; }
     }
 
     /// <summary>
@@ -64,14 +64,14 @@ namespace Symphony.Core
         /// <summary>
         /// SI (or other unit system) unit of the measurement
         /// </summary>
-        public string BaseUnit { get; private set; }
+        public string BaseUnits { get; private set; }
 
-        public string DisplayUnit
+        public string DisplayUnits
         {
             get
             {
                 var siUnits = InternationalSystem.Default;
-                return string.Format("{0}{1}", siUnits.ToPrefix(Exponent), BaseUnit);
+                return string.Format("{0}{1}", siUnits.ToPrefix(Exponent), BaseUnits);
             }
         }
 
@@ -86,7 +86,7 @@ namespace Symphony.Core
 
             Quantity = q;
             Exponent = siUnits.Exponent(u);
-            BaseUnit = siUnits.BaseUnit(u);
+            BaseUnits = siUnits.BaseUnits(u);
         }
 
         /// <summary>
@@ -95,7 +95,7 @@ namespace Symphony.Core
         /// <param name="q">The (howevermany)s of (whatever)s we have</param>
         /// <param name="e">The exponent of the measurement relative to base units (e.g. -3 for mV) </param>
         /// <param name="u">The (whatever)s we have (howevermany)s of</param>
-        public Measurement(decimal q, int e, string u) { Quantity = q; Exponent = e; BaseUnit = u; }
+        public Measurement(decimal q, int e, string u) { Quantity = q; Exponent = e; BaseUnits = u; }
 
         public Measurement(double q, string u) : this((decimal)q, u)
         {
@@ -117,11 +117,11 @@ namespace Symphony.Core
         /// Construct a list of Measurements from an array of quantities and unit
         /// </summary>
         /// <param name="quantities">array of measurement quantities</param>
-        /// <param name="unit">units for each measurement</param>
+        /// <param name="units">units for each measurement</param>
         /// <returns>IList of Measurements</returns>
-        public static IList<IMeasurement> FromArray(double[] quantities, string unit)
+        public static IList<IMeasurement> FromArray(double[] quantities, string units)
         {
-            return FromArray(quantities.AsEnumerable().Select(q => (decimal)q).ToArray(), unit);
+            return FromArray(quantities.AsEnumerable().Select(q => (decimal)q).ToArray(), units);
         }
 
 
@@ -129,14 +129,14 @@ namespace Symphony.Core
         /// Construct a list of Measurements from an array of quantities and unit
         /// </summary>
         /// <param name="quantities">array of measurement quantities</param>
-        /// <param name="unit">units for each measurement</param>
+        /// <param name="units">units for each measurement</param>
         /// <returns>IList of Measurements</returns>
-        public static IList<IMeasurement> FromArray(decimal[] quantities, string unit)
+        public static IList<IMeasurement> FromArray(decimal[] quantities, string units)
         {
             var siUnits = InternationalSystem.Default;
 
-            var exponent = siUnits.Exponent(unit);
-            var baseUnit = siUnits.BaseUnit(unit);
+            var exponent = siUnits.Exponent(units);
+            var baseUnit = siUnits.BaseUnits(units);
 
             return quantities.AsEnumerable().Select(q => MeasurementPool.GetMeasurement(q, exponent, baseUnit)).ToList();
         }
@@ -146,11 +146,11 @@ namespace Symphony.Core
             if (other == null)
                 return false;
 
-            if(this.BaseUnit != other.BaseUnit)
+            if(this.BaseUnits != other.BaseUnits)
                 return false;
 
             // .Net decimals may be compared exactly
-            var difference = Math.Abs(QuantityInBaseUnit - other.QuantityInBaseUnit);
+            var difference = Math.Abs(QuantityInBaseUnits - other.QuantityInBaseUnits);
             
             return Decimal.ToDouble(difference) < Double.Epsilon;
         }
@@ -161,14 +161,14 @@ namespace Symphony.Core
         /// <returns>A string representation of the Measurement.</returns>
         public override string ToString()
         {
-            return String.Format("{0} x 10^{1} {2}", Quantity, Exponent, BaseUnit);
+            return String.Format("{0} x 10^{1} {2}", Quantity, Exponent, BaseUnits);
         }
 
         /// <summary>
         /// Measurement quantity expressed in base units. For example,
         /// 1 mV would be 1*10^-3 V.
         /// </summary>
-        public decimal QuantityInBaseUnit
+        public decimal QuantityInBaseUnits
         {
             get
             {
@@ -227,7 +227,7 @@ namespace Symphony.Core
         /// <returns></returns>
         public override int GetHashCode()
         {
-            return BaseUnit.GetHashCode();
+            return BaseUnits.GetHashCode();
         }
 
         /// <summary>
@@ -236,9 +236,9 @@ namespace Symphony.Core
         /// <param name="measurements">Enumerable of Measurements</param>
         /// <exception cref="MeasurementIncompatibilityException">if BaseUnits are not homogenous</exception>
         /// <returns>array of quantities in base units</returns>
-        public static double[] ToBaseUnitQuantityArray(IEnumerable<IMeasurement> measurements)
+        public static double[] ToBaseUnitsQuantityArray(IEnumerable<IMeasurement> measurements)
         {
-            return measurements.ToBaseUnitQuantityArray();
+            return measurements.ToBaseUnitsQuantityArray();
         }
 
         /// <summary>
@@ -297,7 +297,7 @@ namespace Symphony.Core
             int index = (hash & 0x7FFFFFFF) % Size;
 
             var m = Measurements[index];
-            if (m != null && m.Quantity == q && m.Exponent == e && m.BaseUnit == u)
+            if (m != null && m.Quantity == q && m.Exponent == e && m.BaseUnits == u)
                 return m;
 
             return Measurements[index] = new Measurement(q, e, u);
@@ -342,7 +342,7 @@ namespace Symphony.Core
         int ToExponent(string prefix);
         string ToPrefix(int exponent);
 
-        string BaseUnit(string units);
+        string BaseUnits(string units);
         int Exponent(string units);
     }
 
@@ -382,7 +382,7 @@ namespace Symphony.Core
 
         private readonly IDictionary<string, string> _baseUnitsCache = new Dictionary<string, string>();
 
-        public string BaseUnit(string units)
+        public string BaseUnits(string units)
         {
             string result;
             if (_baseUnitsCache.TryGetValue(units, out result))
@@ -390,7 +390,7 @@ namespace Symphony.Core
                 return result;
             }
 
-            var prefix = UnitPrefix(units);
+            var prefix = UnitsPrefix(units);
             result = HasPrefix(units, prefix) ? units.Substring(prefix.Length) : units;
 
             _baseUnitsCache[units] = result;
@@ -405,24 +405,24 @@ namespace Symphony.Core
 
         public int Exponent(string units)
         {
-            var prefix = UnitPrefix(units);
+            var prefix = UnitsPrefix(units);
 
             return HasPrefix(units, prefix) ? ToExponent(prefix) : 0;
         }
 
 
-        private readonly IDictionary<string, string> _unitPrefixCache = new Dictionary<string, string>();
+        private readonly IDictionary<string, string> _unitsPrefixCache = new Dictionary<string, string>();
 
-        private string UnitPrefix(string units)
+        private string UnitsPrefix(string units)
         {
             string result;
-            if (_unitPrefixCache.TryGetValue(units, out result))
+            if (_unitsPrefixCache.TryGetValue(units, out result))
             {
                 return result;
             }
 
             result = _prefixToExponent.Keys.Where(k => !string.IsNullOrEmpty(k)).FirstOrDefault(units.StartsWith);
-            _unitPrefixCache[units] = result;
+            _unitsPrefixCache[units] = result;
 
             return result;
         }

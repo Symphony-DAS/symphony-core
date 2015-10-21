@@ -52,41 +52,35 @@ namespace Symphony.ExternalDevices
                             mdArgs.Data.ExternalCommandSensitivityUnits,
                             mdArgs.TimeStamp);
 
-                        if (HasBoundInputStream)
-                            InputParameters[mdArgs.TimeStamp.ToUniversalTime()] = mdArgs;
+                        if (!HasBoundInputStream)
+                            InputParameters.Clear();
+                            
+                        InputParameters[mdArgs.TimeStamp.ToUniversalTime()] = mdArgs;
 
-                        if (HasBoundOutputStream)
+                        if (!HasBoundOutputStream)
+                            OutputParameters.Clear();
+
+                        OutputParameters[mdArgs.TimeStamp.ToUniversalTime()] = mdArgs;
+
+                        foreach (var outputStream in OutputStreams.Where(s => s.DAQ != null && s.DAQ.IsHardwareReady && !s.DAQ.IsRunning))
                         {
-                            OutputParameters[mdArgs.TimeStamp.ToUniversalTime()] = mdArgs;
-
-                            foreach (var outputStream in OutputStreams.Where(s => s.DAQ != null && s.DAQ.IsRunning == false))
+                            log.DebugFormat("Setting new background for stream {0}", outputStream.Name);
+                            try
                             {
-                                log.DebugFormat("Setting new background for stream {0}", outputStream.Name);
                                 outputStream.ApplyBackground();
                             }
+                            catch (Exception x)
+                            {
+                                log.ErrorFormat("Error applying new background: {0}", x);
+                                throw;
+                            }
+                            
                         }
                     }
                 };
+            Commander.RequestTelegraphValue();
 
             Backgrounds = background;
-        }
-
-        /// <summary>
-        /// Constructs a new MultiClampDevice
-        /// </summary>
-        /// <param name="serialNumber">MultiClamp serial number</param>
-        /// <param name="channel">MultiClamp channel</param>
-        /// <param name="clock">Clock instance defining canonical time</param>
-        /// <param name="c">Controller instance for this device</param>
-        /// <param name="background">Dictionary of background Measurements for each MultiClamp operating mode</param>
-        public MultiClampDevice(uint serialNumber,
-            uint channel,
-            IClock clock,
-            Controller c,
-            IDictionary<MultiClampInterop.OperatingMode, IMeasurement> background)
-            : this(new MultiClampCommander(serialNumber, channel, clock), c, background)
-        {
-            this.Clock = clock;
         }
 
         /// <summary>
@@ -110,6 +104,7 @@ namespace Symphony.ExternalDevices
             (k, v) => new { Key = k, Value = v })
             .ToDictionary(x => x.Key, x => x.Value))
         {
+            this.Clock = clock;
         }
 
         /// <summary>
@@ -188,7 +183,7 @@ namespace Symphony.ExternalDevices
 
                 var bg = Backgrounds[parameters.Data.OperatingMode];
 
-                log.DebugFormat("Desired background value: {0} ({1} {2})", bg, bg.Quantity, bg.DisplayUnit);
+                log.DebugFormat("Desired background value: {0} ({1} {2})", bg, bg.Quantity, bg.DisplayUnits);
                 log.DebugFormat("  Current parameters:");
                 log.DebugFormat("     Mode: {0}", parameters.Data.OperatingMode);
                 log.DebugFormat("     ExtCmdSensitivity: {0}", parameters.Data.ExternalCommandSensitivity);
@@ -220,7 +215,7 @@ namespace Symphony.ExternalDevices
 
                 var parameters = CurrentDeviceOutputParameters;
 
-                log.DebugFormat("Output background value: {0} ({1} {2})", bg, bg.Quantity, bg.DisplayUnit);
+                log.DebugFormat("Output background value: {0} ({1} {2})", bg, bg.Quantity, bg.DisplayUnits);
                 log.DebugFormat("  Current parameters:");
                 log.DebugFormat("     Mode: {0}", parameters.Data.OperatingMode);
                 log.DebugFormat("     ExtCmdSensitivity: {0}", parameters.Data.ExternalCommandSensitivity);
@@ -415,7 +410,7 @@ namespace Symphony.ExternalDevices
                                                        );
 
             return MeasurementPool.GetMeasurement(
-                    (sample.QuantityInBaseUnit/(decimal) deviceParams.ScaleFactor/(decimal) deviceParams.Alpha)*
+                    (sample.QuantityInBaseUnits/(decimal) deviceParams.ScaleFactor/(decimal) deviceParams.Alpha)*
                     desiredUnitsMultiplier,
                     DesiredUnitsExponentForScaleFactorUnits(deviceParams.ScaleFactorUnits),
                     UnitsForScaleFactorUnits(deviceParams.ScaleFactorUnits));
@@ -472,7 +467,7 @@ namespace Symphony.ExternalDevices
                 //Output cmd in Volts
                 case MultiClampInterop.OperatingMode.VClamp:
 
-                    if (string.Compare(sample.BaseUnit, "V", false) != 0) //output
+                    if (string.Compare(sample.BaseUnits, "V", false) != 0) //output
                     {
                         throw new ArgumentException("Sample units must be in Volts.", "sample.BaseUnit");
                     }
@@ -492,7 +487,7 @@ namespace Symphony.ExternalDevices
                     }
 
 
-                    if (string.Compare(sample.BaseUnit, "A", false) != 0) //output
+                    if (string.Compare(sample.BaseUnits, "A", false) != 0) //output
                     {
                         throw new ArgumentException("Sample units must be in Amps.", "sample.BaseUnit");
                     }
@@ -507,7 +502,7 @@ namespace Symphony.ExternalDevices
                         throw new MultiClampDeviceException("External command units " + deviceParams.ExternalCommandSensitivityUnits + " are not A/V as expected for current deivce mode.");
                     }
 
-                    if (string.Compare(sample.BaseUnit, "A", false) != 0) //output
+                    if (string.Compare(sample.BaseUnits, "A", false) != 0) //output
                     {
                         throw new ArgumentException("Sample units must be in Amps.", "sample.BaseUnit");
                     }
@@ -658,7 +653,7 @@ namespace Symphony.ExternalDevices
         {
             try
             {
-                var deviceParameters = DeviceParametersForInput(Clock.Now.UtcDateTime).Data;
+                var deviceParameters = DeviceParametersForInput(inData.InputTime.UtcDateTime).Data;
 
                 IInputData convertedData = inData.DataWithConversion(
                     m => ConvertInput(m, deviceParameters)
@@ -764,7 +759,7 @@ namespace Symphony.ExternalDevices
             get
             {
                 if (!HasDeviceInputParameters)
-                    throw new MultiClampDeviceException("No current device input parameters.");
+                    throw new MultiClampDeviceException("No current MultiClamp input parameters. Make sure MultiClamp Commander is open or try toggling the mode.");
 
                 return MostRecentDeviceParameterPreceedingDate(InputParameters, Clock.Now);
             }
@@ -795,7 +790,7 @@ namespace Symphony.ExternalDevices
             get
             {
                 if (!HasDeviceOutputParameters)
-                    throw new MultiClampDeviceException("No current device output parameters.");
+                    throw new MultiClampDeviceException("No current MultiClamp output parameters. Make sure MultiClamp Commander is open or try toggling the mode.");
 
                 return MostRecentDeviceParameterPreceedingDate(OutputParameters, Clock.Now);
             }

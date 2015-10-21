@@ -31,12 +31,6 @@ namespace Symphony.ExternalDevices
             : base("Axopatch", "Molecular Devices", c)
         {
             Axopatch = axopatch;
-
-            c.Started += (sender, args) =>
-                {
-                    DeviceParameters = ReadDeviceParameters();
-                };
-
             Backgrounds = background;
         }
 
@@ -174,7 +168,7 @@ namespace Symphony.ExternalDevices
         public static IMeasurement ConvertInput(IMeasurement sample, AxopatchInterop.AxopatchData deviceParams)
         {
             return MeasurementPool.GetMeasurement(
-                (sample.QuantityInBaseUnit/(decimal) deviceParams.Gain) * 1000m,
+                (sample.QuantityInBaseUnits/(decimal) deviceParams.Gain) * 1000m,
                 InputUnitsExponentForMode(deviceParams.OperatingMode),
                 InputUnitsForMode(deviceParams.OperatingMode));
         }
@@ -222,7 +216,7 @@ namespace Symphony.ExternalDevices
             {
                 case AxopatchInterop.OperatingMode.Track:
                 case AxopatchInterop.OperatingMode.VClamp:
-                    if (String.CompareOrdinal(sample.BaseUnit, "V") != 0)
+                    if (String.CompareOrdinal(sample.BaseUnits, "V") != 0)
                     {
                         throw new ArgumentException("Sample units must be in Volts.", "sample");
                     }
@@ -235,7 +229,7 @@ namespace Symphony.ExternalDevices
                 case AxopatchInterop.OperatingMode.I0:
                 case AxopatchInterop.OperatingMode.IClampNormal:
                 case AxopatchInterop.OperatingMode.IClampFast:
-                    if (String.CompareOrdinal(sample.BaseUnit, "A") != 0)
+                    if (String.CompareOrdinal(sample.BaseUnits, "A") != 0)
                     {
                         throw new ArgumentException("Sample units must be in Amps.", "sample");
                     }
@@ -320,6 +314,36 @@ namespace Symphony.ExternalDevices
                 log.DebugFormat("Error pushing data to controller: {0} ({1})", ex.Message, ex);
                 throw;
             }
+        }
+
+        /// <summary>
+        /// Verify that everything is hooked up correctly
+        /// </summary>
+        /// <returns></returns>
+        public override Maybe<string> Validate()
+        {
+            if (InputStreams.Any() &&
+                (!Streams.ContainsKey(SCALED_OUTPUT_STREAM_NAME) ||
+                 !(Streams[SCALED_OUTPUT_STREAM_NAME] is IDAQInputStream)))
+            {
+                return Maybe<string>.No(Name + " must have a bound input stream named " + SCALED_OUTPUT_STREAM_NAME);
+            }
+
+            if (Streams.Any() && 
+                (!Streams.ContainsKey(GAIN_TELEGRAPH_STREAM_NAME) ||
+                !(Streams[GAIN_TELEGRAPH_STREAM_NAME] is IDAQInputStream)))
+            {
+                return Maybe<string>.No(Name + " must have a bound input stream named " + GAIN_TELEGRAPH_STREAM_NAME);
+            }
+
+            if (Streams.Any() &&
+                (!Streams.ContainsKey(MODE_TELEGRAPH_STREAM_NAME) ||
+                !(Streams[MODE_TELEGRAPH_STREAM_NAME] is IDAQInputStream)))
+            {
+                return Maybe<string>.No(Name + " must have a bound input stream named " + MODE_TELEGRAPH_STREAM_NAME);
+            }
+
+            return base.Validate();
         }
 
     }

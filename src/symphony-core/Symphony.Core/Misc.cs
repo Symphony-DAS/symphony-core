@@ -1,6 +1,7 @@
 ﻿/* Copyright (c) 2012 Physion Consulting, LLC */
 
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics.Contracts;
 
@@ -142,6 +143,54 @@ namespace Symphony.Core
     }
 
     /// <summary>
+    /// Strangely an IEnumerable may not expose its interface to Matlab. This is a workaround. 
+    /// </summary>
+    public static class EnumerableExtensions
+    {
+        public static EnumerableWrapper Wrap(this IEnumerable source)
+        {
+            return new EnumerableWrapper(source);
+        }
+    }
+
+    public class EnumerableWrapper : IEnumerable
+    {
+        private readonly IEnumerable _source;
+
+        public EnumerableWrapper(IEnumerable source)
+        {
+            _source = source;
+        }
+
+        public IEnumerator GetEnumerator()
+        {
+            return new EnumeratorWrapper(_source.GetEnumerator());
+        }
+    }
+
+    public class EnumeratorWrapper : IEnumerator
+    {
+        private readonly IEnumerator _source;
+
+        public EnumeratorWrapper(IEnumerator source)
+        {
+            _source = source;
+        }
+
+        public bool MoveNext()
+        {
+            return _source.MoveNext();
+        }
+
+        public void Reset()
+        {
+            _source.Reset();
+        }
+
+        public object Current { get { return _source.Current; } }
+    }
+
+    /// <summary>
     /// This is the conversion function that Converters must provide so as to
     /// convert from one measurement to another (usually in a different unit
     /// of measure).
@@ -150,6 +199,16 @@ namespace Symphony.Core
     /// <returns>The result of the conversion</returns>
     public delegate IMeasurement ConvertProc(IMeasurement input);
 
+    /// <summary>
+    /// Conversion functions for use in Matlab.
+    /// </summary>
+    public static class ConvertProcs
+    {
+        public static ConvertProc Scale(double factor, string baseUnit)
+        {
+            return m => MeasurementPool.GetMeasurement(m.QuantityInBaseUnits * (decimal)factor, 0, baseUnit);
+        }
+    }
 
     /// <summary>
     /// Convenient extensions for the TimeSpan class to convert between TimeSpan and number of samples
@@ -168,12 +227,12 @@ namespace Symphony.Core
         {
             Contract.Assert(sampleRate != null, "sampleRate is null.");
 
-            if (sampleRate.BaseUnit.ToLower() != "hz")
+            if (sampleRate.BaseUnits.ToLower() != "hz")
             {
-                throw new ArgumentException(String.Format("Sample Rate has unexpected units: {0}", sampleRate.BaseUnit));
+                throw new ArgumentException(String.Format("Sample Rate has unexpected units: {0}", sampleRate.BaseUnits));
             }
 
-            var seconds = sampleCount / sampleRate.QuantityInBaseUnit;
+            var seconds = sampleCount / sampleRate.QuantityInBaseUnits;
             return new TimeSpan((long)Math.Ceiling(seconds * TimeSpan.TicksPerSecond));
         }
 
@@ -186,19 +245,19 @@ namespace Symphony.Core
         /// <exception cref="ArgumentException">If samplieRate is not in Hz or has rate less than or equal to 0</exception>
         public static ulong Samples(this TimeSpan timeSpan, IMeasurement sampleRate)
         {
-            if (sampleRate.BaseUnit.ToLower() != "hz")
+            if (sampleRate.BaseUnits.ToLower() != "hz")
             {
-                throw new ArgumentException(String.Format("Sample Rate has unexpected units: {0}", sampleRate.BaseUnit));
+                throw new ArgumentException(String.Format("Sample Rate has unexpected units: {0}", sampleRate.BaseUnits));
             }
 
-            if (sampleRate.QuantityInBaseUnit <= 0)
+            if (sampleRate.QuantityInBaseUnits <= 0)
             {
                 throw new ArgumentException("Sample rate must be greater than 0.", "sampleRate");
             }
 
             checked
             {
-                return (ulong)Math.Ceiling(timeSpan.TotalSeconds * (double)sampleRate.QuantityInBaseUnit);
+                return (ulong)Math.Ceiling(timeSpan.TotalSeconds * (double)sampleRate.QuantityInBaseUnits);
             }
         }
     }
@@ -297,14 +356,14 @@ namespace Symphony.Core
             // Identity transformation always works. We do handle 
             // differences in exponent
             
-            if (_SIUnits.BaseUnit(to) == from.BaseUnit)
+            if (_SIUnits.BaseUnits(to) == from.BaseUnits)
             {
                 if(_SIUnits.Exponent(to) == from.Exponent)
                     return from;
 
                 var toExp = _SIUnits.Exponent(to);
                 var expDiff = from.Exponent - toExp;
-                return MeasurementPool.GetMeasurement(from.Quantity * (decimal)Math.Pow(10, expDiff), toExp, _SIUnits.BaseUnit(to));
+                return MeasurementPool.GetMeasurement(from.Quantity * (decimal)Math.Pow(10, expDiff), toExp, _SIUnits.BaseUnits(to));
             }
 
             // Can we find a converter for these two units? Use TryGetValue()
@@ -312,7 +371,7 @@ namespace Symphony.Core
             // traditional [] lookup--we want to throw our own exception.
             //
             ConvertProc converter = null;
-            if (converters.TryGetValue(new Tuple<string, string>(from.BaseUnit, to), out converter))
+            if (converters.TryGetValue(new Tuple<string, string>(from.BaseUnits, to), out converter))
                 return converter(from);
 
             // I dunno what the hell you're trying to convert
@@ -320,7 +379,7 @@ namespace Symphony.Core
             throw new Exception(
                 String.Format(
                     "Unrecognized Measurement conversion: {0} to {1}",
-                    from.BaseUnit, to));
+                    from.BaseUnits, to));
         }
 
 

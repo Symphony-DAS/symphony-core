@@ -1,12 +1,5 @@
 ﻿using System.Collections.Generic;
-using System.IO;
 using System.Linq;
-
-using System.Xml;
-using System.Xml.Serialization;
-using ApprovalTests;
-using ApprovalTests.Reporters;
-using HDF5DotNet;
 
 namespace Symphony.Core
 {
@@ -45,7 +38,7 @@ namespace Symphony.Core
             Assert.IsNotNull(e.Responses);
             Assert.IsNotNull(e.ProtocolParameters);
             Assert.IsNotNull(e.Backgrounds);
-            Assert.IsFalse(e.WaitForTrigger);
+            Assert.IsFalse(e.ShouldWaitForTrigger);
         }
 
         [Test]

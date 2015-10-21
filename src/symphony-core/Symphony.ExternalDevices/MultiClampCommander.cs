@@ -62,12 +62,9 @@ namespace Symphony.ExternalDevices
             Clock = clock;
 
             var lParam = DeviceLParam();
-
+            OpenMultiClampConversation(lParam);
             RegisterForWmCopyDataEvents();
             RegisterForReconnectEvents();
-            
-            OpenMultiClampConversation(lParam);
-            RequestTelegraphValue(lParam);
         }
 
         private uint DeviceLParam()
@@ -79,15 +76,20 @@ namespace Symphony.ExternalDevices
 
         private void ReceiveReconnectEvent(object sender, Win32Interop.MessageReceivedEventArgs evtArgs)
         {
+            var lParam = DeviceLParam();
+            if (evtArgs.Message.LParam != (IntPtr) lParam)
+                return;
+
             log.DebugFormat("Received MCTG_RECONNECT_MESSAGE: {0}", evtArgs.Message);
 
-            var lParam = DeviceLParam();
-            if ((IntPtr) lParam == evtArgs.Message.LParam)
-            {
-                OpenMultiClampConversation(lParam);
-                RegisterForWmCopyDataEvents();
-                RequestTelegraphValue((uint) lParam);
-            }            
+            UnregisterForWmCopyDataEvents();
+            UnregisterForReconnectEvents();
+
+            OpenMultiClampConversation(lParam);
+            RegisterForWmCopyDataEvents();
+            RegisterForReconnectEvents();
+                
+            RequestTelegraphValue((uint) lParam);        
         }
 
         private void RegisterForReconnectEvents()
@@ -136,10 +138,10 @@ namespace Symphony.ExternalDevices
             // lpData -- MC_TELEGRAPH_DATA*
             try
             {
-                if (cds.lpData == IntPtr.Zero || cds.cbData != Marshal.SizeOf(typeof(MultiClampInterop.MC_TELEGRAPH_DATA))) 
+                if (cds.lpData == IntPtr.Zero || cds.cbData != Marshal.SizeOf(typeof(MultiClampInterop.MC_TELEGRAPH_DATA)) || cds.dwData.ToInt64() != MultiClampInterop.MCTG_REQUEST_MESSAGE) 
                     return;
 
-                var mtd = (MultiClampInterop.MC_TELEGRAPH_DATA) Marshal.PtrToStructure(cds.lpData, typeof (MultiClampInterop.MC_TELEGRAPH_DATA));
+                var mtd = (MultiClampInterop.MC_TELEGRAPH_DATA)Marshal.PtrToStructure(cds.lpData, typeof(MultiClampInterop.MC_TELEGRAPH_DATA));
                 if (mtd.uChannelID == Channel)
                 {
                     var md = new MultiClampInterop.MulticlampData(mtd);
@@ -173,9 +175,10 @@ namespace Symphony.ExternalDevices
         {
             lock (_eventLock)
             {
-                if (ParametersChanged != null)
+                var temp = ParametersChanged;
+                if (temp != null)
                 {
-                    ParametersChanged(this, new MultiClampParametersChangedArgs(Clock, data));
+                    temp(this, new MultiClampParametersChangedArgs(Clock, data));
                 }
             }
         }
@@ -187,6 +190,12 @@ namespace Symphony.ExternalDevices
         {
             if (!this._disposed)
             {
+                // Remove references from static Win32Interop class or this object will exist indefinitely
+                UnregisterForWmCopyDataEvents();
+                UnregisterForReconnectEvents();
+
+                int result = Win32Interop.PostMessage(Win32Interop.HWND_BROADCAST, MultiClampInterop.MCTG_CLOSE_MESSAGE, (IntPtr)Win32Interop.MessageEvents.WindowHandle, (IntPtr)DeviceLParam());
+
                 if (disposing)
                 {
                     //Handle manage object disposal
@@ -198,13 +207,6 @@ namespace Symphony.ExternalDevices
                     // from executing a second time.
                     GC.SuppressFinalize(this);
                 }
-
-                // Remove references from static Win32Interop class or this object will exist indefinitely
-                UnregisterForWmCopyDataEvents();
-                UnregisterForReconnectEvents();
-
-                UInt32 lParam = MultiClampInterop.MCTG_Pack700BSignalIDs(this.SerialNumber, this.Channel); // Pack the above two into an UInt32
-                int result = Win32Interop.PostMessage(Win32Interop.HWND_BROADCAST, MultiClampInterop.MCTG_CLOSE_MESSAGE, (IntPtr)Win32Interop.MessageEvents.WindowHandle, (IntPtr)lParam);
 
                 // Note disposing has been done.
                 _disposed = true;

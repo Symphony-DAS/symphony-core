@@ -33,7 +33,7 @@ namespace Symphony.Core
         /// Constructs a new Epoch instance.
         /// </summary>
         /// <param name="protocolID">Protocol ID of the Epoch</param>
-        /// <param name="parameters">Protocol paramters of the Epoch</param>
+        /// <param name="parameters">Protocol parameters of the Epoch</param>
         public Epoch(string protocolID, IDictionary<string, object> parameters)
         {
             ProtocolID = protocolID;
@@ -42,7 +42,7 @@ namespace Symphony.Core
             Stimuli = new Dictionary<IExternalDevice, IStimulus>();
             Backgrounds = new Dictionary<IExternalDevice, Background>();
             Keywords = new HashSet<string>();
-            WaitForTrigger = false;
+            ShouldWaitForTrigger = false;
             ShouldBePersisted = true;
         }
 
@@ -64,7 +64,7 @@ namespace Symphony.Core
         /// is true, the Epoch will begin following the next external trigger after being pushed to the
         /// Controller. The default value is false.
         /// </summary>
-        public bool WaitForTrigger { get; set; }
+        public bool ShouldWaitForTrigger { get; set; }
 
         /// <summary>
         /// Indicates if this Epoch should be persisted by the EpochPersistor upon completion. The default
@@ -126,6 +126,9 @@ namespace Symphony.Core
             {
                 if (IsIndefinite)
                     return Option<TimeSpan>.None();
+
+                if (!Stimuli.Any())
+                    return Option<TimeSpan>.Some(TimeSpan.Zero);
 
                 return Option<TimeSpan>.Some(Stimuli
                     .Values
@@ -204,6 +207,14 @@ namespace Symphony.Core
         /// generates data indefinitely.
         /// </summary>
         Option<TimeSpan> Duration { get; }
+
+        /// <summary>
+        /// A single enumerable of Measurement that is the concatenation of the DataBlocks' data of this 
+        /// Stimulus. The presence of this property, i.e. Option Yes (true), indicates that this data should
+        /// be persisted with the Stimulus. In general, Stimulus data can be regenerated solely by its parameters
+        /// and thus the presence of this property is unnecessary and will needlessly increase file size.
+        /// </summary>
+        Option<IEnumerable<IMeasurement>> Data { get; }
         
         /// <summary>
         /// Sample rate of this stimulus.
@@ -292,6 +303,8 @@ namespace Symphony.Core
         public abstract IEnumerable<IOutputData> DataBlocks(TimeSpan blockDuration);
 
         public abstract Option<TimeSpan> Duration { get; }
+
+        public abstract Option<IEnumerable<IMeasurement>> Data { get; } 
 
         /// <summary>
         /// Sample rate of this stimulus.
@@ -559,6 +572,11 @@ namespace Symphony.Core
             get { return DurationDelegate(Parameters); }
         }
 
+        public override Option<IEnumerable<IMeasurement>> Data
+        {
+            get { return Option<IEnumerable<IMeasurement>>.None(); }
+        }
+
         private readonly IMeasurement _sampleRate;
 
         public override IMeasurement SampleRate
@@ -597,6 +615,8 @@ namespace Symphony.Core
 
             _data = data;
             _duration = duration;
+
+            ShouldDataBePersisted = false;
         }
 
         /// <summary>
@@ -642,6 +662,21 @@ namespace Symphony.Core
             get { return _duration; }
         }
 
+        /// <summary>
+        /// Indicates if this Stimulus' data should be persisted upon completion. The default value is false.
+        /// </summary>
+        public bool ShouldDataBePersisted { get; set; }
+
+        public override Option<IEnumerable<IMeasurement>> Data
+        {
+            get
+            {
+                return ShouldDataBePersisted
+                           ? Option<IEnumerable<IMeasurement>>.Some(_data.Data)
+                           : Option<IEnumerable<IMeasurement>>.None();
+            }
+        }
+
         public override IMeasurement SampleRate
         {
             get { return _data.SampleRate; }
@@ -669,7 +704,7 @@ namespace Symphony.Core
             data.Values.Aggregate<IOutputData, IOutputData>(null,
                                                             (current, d) => current == null
                                                                 ? d
-                                                                : current.Zip(d, (m1, m2) => MeasurementPool.GetMeasurement(m1.QuantityInBaseUnit + m2.QuantityInBaseUnit, 0, m1.BaseUnit)));
+                                                                : current.Zip(d, (m1, m2) => MeasurementPool.GetMeasurement(m1.QuantityInBaseUnits + m2.QuantityInBaseUnits, 0, m1.BaseUnits)));
 
         /// <summary>
         /// A simple CombineProc that combines data blocks by subtracting them, producing a stimulus equal to the
@@ -679,7 +714,7 @@ namespace Symphony.Core
             data.Values.Aggregate<IOutputData, IOutputData>(null,
                                                             (current, d) => current == null
                                                                 ? d
-                                                                : current.Zip(d, (m1, m2) => MeasurementPool.GetMeasurement(m1.QuantityInBaseUnit - m2.QuantityInBaseUnit, 0, m1.BaseUnit)));
+                                                                : current.Zip(d, (m1, m2) => MeasurementPool.GetMeasurement(m1.QuantityInBaseUnits - m2.QuantityInBaseUnits, 0, m1.BaseUnits)));
 
         private readonly IEnumerable<IStimulus> _stimuli;
 
@@ -702,6 +737,9 @@ namespace Symphony.Core
 
             if (stimuli.Select(s => s.SampleRate).Distinct().Count() > 1)
                 throw new ArgumentException("All stimulus sample rates must be equal", "stimuli");
+
+            if (stimuli.Any(s => s.Data.IsSome()))
+                throw new ArgumentException("Cannot combine stimuli that require data persistence", "stimuli");
 
             _combine = combine;
             _stimuli = stimuli;
@@ -740,6 +778,11 @@ namespace Symphony.Core
         {
             get { return _stimuli.Select(s => s.Duration).FirstOrDefault(); }
         }
+
+        public override Option<IEnumerable<IMeasurement>> Data
+        {
+            get { return Option<IEnumerable<IMeasurement>>.None(); }
+        } 
 
         public override IMeasurement SampleRate
         {

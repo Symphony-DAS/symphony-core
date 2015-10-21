@@ -1,14 +1,9 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using System.Xml;
-using ApprovalTests;
-using ApprovalTests.Reporters;
-using HDF5DotNet;
 using Symphony.Core;
 using Symphony.SimulationDAQController;
 using NUnit.Framework;
@@ -29,7 +24,7 @@ namespace IntegrationTests
             RunSingleEpoch(sampleRate, nChannels, new FakeEpochPersistor());
         }
 
-        private void RunSingleEpoch(double sampleRate, int nChannels, EpochPersistor epochPersistor)
+        private Epoch RunSingleEpoch(double sampleRate, int nChannels, IEpochPersistor epochPersistor)
         {
             Epoch e;
             IExternalDevice dev0;
@@ -39,7 +34,13 @@ namespace IntegrationTests
             IList<IMeasurement> stimData;
             var controller = SetupController(sampleRate, out e, out dev0, out stim1, out dev1, out stim2, out stimData, nChannels);
 
+            var time = new DateTimeOffset(2011, 8, 22, 11, 12, 0, 0, TimeSpan.FromHours(-6));
+
+            var block = epochPersistor.BeginEpochBlock(e.ProtocolID, e.ProtocolParameters, time);
+            
             controller.RunEpoch(e, epochPersistor);
+            
+            epochPersistor.EndEpochBlock(time.Add(e.Duration));
 
             Assert.AreEqual((TimeSpan)stim1.Duration, e.Responses[dev0].Duration);
             if (nChannels > 1)
@@ -47,62 +48,46 @@ namespace IntegrationTests
 
             var inputData = e.Responses[dev0].Data;
             const double MAX_VOLTAGE_DIFF = 0.001;
-            int failures = inputData.Select((t, i) => t.QuantityInBaseUnit - stimData[i].QuantityInBaseUnit)
+            int failures = inputData.Select((t, i) => t.QuantityInBaseUnits - stimData[i].QuantityInBaseUnits)
                 .Count(dif => Math.Abs(dif) > (decimal) MAX_VOLTAGE_DIFF);
 
             Assert.AreEqual(0, failures);
+
+            return e;
         }
 
         [Test]
-        [UseReporter(typeof(NUnitReporter))]
-        public void SingleEpochXMLPersistence()
+        public void SingleH5EpochPersistence()
         {
-            var sb = new System.Text.StringBuilder();
-            var sxw = XmlWriter.Create(sb);
-            var gID = new Guid("a5839fe9-90ef-4e39-bf26-8f75048306a3");
-            var exp = new EpochXMLPersistor(sxw, () => gID);
+            if (File.Exists("SingleH5Persistence.h5"))
+                File.Delete("SingleH5Persistence.h5");
 
-            var g1ID = new Guid("a5839fe9-90ef-4e39-bf26-8f75048306f3");
-            var startTime1 = new DateTimeOffset(2011, 8, 22, 11, 12, 0, 0, TimeSpan.FromHours(-6));
+            Epoch e;
 
-            exp.BeginEpochGroup("label", "source", new string[0], new Dictionary<string, object>(), g1ID, startTime1);
-            RunSingleEpoch(5, 2, exp);
-            exp.EndEpochGroup(startTime1.AddMilliseconds(100));
-
-            exp.Close();
-
-            Approvals.VerifyXml(sb.ToString());
-
-        }
-
-
-        [Test]
-        [UseReporter(typeof(NUnitReporter))]
-        public void SingleEpochHDF5Persistence()
-        {
-            if (File.Exists("SingleEpochHDF5Persistence.h5"))
-                File.Delete("SingleEpochHDF5Persistence.h5");
-
-            var gID = new Guid("a5839fe9-90ef-4e39-bf26-8f75048306a4");
-            using (var exp = new EpochHDF5Persistor("SingleEpochHDF5Persistence.h5", null, () => gID))
+            using (var persistor = H5EpochPersistor.Create("SingleH5Persistence.h5"))
             {
                 var time = new DateTimeOffset(2011, 8, 22, 11, 12, 0, 0, TimeSpan.FromHours(-6));
-                var guid = new Guid("053C64D4-ED7A-4128-AA43-ED115716A97D");
 
-                exp.BeginEpochGroup("label1",
-                    "source1",
-                    new string[0],
-                    new Dictionary<string, object>(),
-                    guid,
-                    time);
+                var src = persistor.AddSource("source1", null);
 
-                RunSingleEpoch(5000, 2, exp);
-                exp.EndEpochGroup(time.AddMilliseconds(100));
+                persistor.BeginEpochGroup("label1", src, time);
+
+                e = RunSingleEpoch(5000, 2, persistor);
+                persistor.EndEpochGroup(time.AddMinutes(2));
                 
-                exp.Close();
+                persistor.Close();
             }
 
-            VerifyHDF5File("SingleEpochHDF5Persistence.h5");
+            using (var persistor = new H5EpochPersistor("SingleH5Persistence.h5"))
+            {
+                Assert.AreEqual(1, persistor.Experiment.EpochGroups.Count());
+
+                var eg = persistor.Experiment.EpochGroups.First();
+
+                Assert.AreEqual(1, eg.EpochBlocks.Count());
+                Assert.AreEqual(1, eg.EpochBlocks.First().Epochs.Count());
+                PersistentEpochAssert.AssertEpochsEqual(e, eg.EpochBlocks.First().Epochs.First());
+            }
         }
 
         [Test]
@@ -112,46 +97,51 @@ namespace IntegrationTests
             if (File.Exists("AppendToExistingHDF5.h5"))
                 File.Delete("AppendToExistingHDF5.h5");
 
-            var gID = new Guid("a5839fe9-90ef-4e39-bf26-8f75048306a4");
-            using (var exp = new EpochHDF5Persistor("AppendToExistingHDF5.h5", null, () => gID))
+            Epoch e1;
+            Epoch e2;
+
+            using (var persistor = H5EpochPersistor.Create("AppendToExistingHDF5.h5"))
             {
                 var time = new DateTimeOffset(2011, 8, 22, 11, 12, 0, 0, TimeSpan.FromHours(-6));
-                var guid = new Guid("053C64D4-ED7A-4128-AA43-ED115716A97D");
 
-                exp.BeginEpochGroup("label1",
-                    "source1",
-                    new string[0],
-                    new Dictionary<string, object>(),
-                    guid,
-                    time);
+                var src = persistor.AddSource("source1", null);
+                persistor.BeginEpochGroup("label1", src, time);
 
-                RunSingleEpoch(5000, 2, exp);
-                exp.EndEpochGroup(time.AddMilliseconds(100));
+                e1 = RunSingleEpoch(5000, 2, persistor);
+                persistor.EndEpochGroup(time.AddMilliseconds(100));
 
-                exp.Close();
+                persistor.Close();
             }
 
-            gID = new Guid("a5839fe9-90ef-4e39-bf26-8f75048306a5");
-            using (var exp = new EpochHDF5Persistor("AppendToExistingHDF5.h5", null, () => gID))
+            using (var persistor = new H5EpochPersistor("AppendToExistingHDF5.h5"))
             {
                 var time = new DateTimeOffset(2011, 8, 22, 11, 12, 0, 0, TimeSpan.FromHours(-6));
-                var guid = new Guid("053C64D4-ED7A-4128-AA43-ED115716A97E");
 
-                exp.BeginEpochGroup("label1",
-                    "source1",
-                    new string[0],
-                    new Dictionary<string, object>(),
-                    guid,
-                    time);
+                var src = persistor.AddSource("source2", null);
+                persistor.BeginEpochGroup("label2", src, time);
 
-                RunSingleEpoch(5000, 2, exp);
-                exp.EndEpochGroup(time.AddMilliseconds(100));
+                e2 = RunSingleEpoch(5000, 2, persistor);
+                persistor.EndEpochGroup(time.AddMilliseconds(100));
 
-                exp.Close();
+                persistor.Close();
             }
 
+            using (var persistor = new H5EpochPersistor("AppendToExistingHDF5.h5"))
+            {
+                Assert.AreEqual(2, persistor.Experiment.EpochGroups.Count());
 
-            VerifyHDF5File("AppendToExistingHDF5.h5");
+                var eg1 = persistor.Experiment.EpochGroups.First(g => g.Label == "label1");
+
+                Assert.AreEqual(1, eg1.EpochBlocks.Count());
+                Assert.AreEqual(1, eg1.EpochBlocks.First().Epochs.Count());
+                PersistentEpochAssert.AssertEpochsEqual(e1, eg1.EpochBlocks.First().Epochs.First());
+
+                var eg2 = persistor.Experiment.EpochGroups.First(g => g.Label == "label2");
+
+                Assert.AreEqual(1, eg2.EpochBlocks.Count());
+                Assert.AreEqual(1, eg2.EpochBlocks.First().Epochs.Count());
+                PersistentEpochAssert.AssertEpochsEqual(e2, eg2.EpochBlocks.First().Epochs.First());
+            }
         }
 
 
@@ -172,7 +162,7 @@ namespace IntegrationTests
 
             var inputData = e.Responses[dev0].Data;
             const double MAX_VOLTAGE_DIFF = 0.001;
-            int failures = inputData.Select((t, i) => t.QuantityInBaseUnit - stimData[i].QuantityInBaseUnit)
+            int failures = inputData.Select((t, i) => t.QuantityInBaseUnits - stimData[i].QuantityInBaseUnits)
                 .Count(dif => Math.Abs(dif) > (decimal) MAX_VOLTAGE_DIFF);
 
             Assert.AreEqual(0, failures);
@@ -202,7 +192,7 @@ namespace IntegrationTests
             Assert.DoesNotThrow(() => controller.RunEpoch(e, new FakeEpochPersistor()));
 
             inputData = e.Responses[dev0].Data;
-            failures = inputData.Select((t, i) => t.QuantityInBaseUnit - stimData[i].QuantityInBaseUnit)
+            failures = inputData.Select((t, i) => t.QuantityInBaseUnits - stimData[i].QuantityInBaseUnits)
                 .Count(dif => Math.Abs(dif) > (decimal) MAX_VOLTAGE_DIFF);
 
 
@@ -343,28 +333,10 @@ namespace IntegrationTests
             if (nChannels > 1)
                 e.Responses[dev1] = new Response();
 
-            controller.BackgroundDataStreams[dev0] = new BackgroundOutputDataStream(new Background(new Measurement(0, "V"), srate));
-            controller.BackgroundDataStreams[dev1] = new BackgroundOutputDataStream(new Background(new Measurement(0, "V"), srate));
-
             e.Backgrounds[dev0] = new Background(new Measurement(0, "V"), srate);
             e.Backgrounds[dev1] = new Background(new Measurement(0, "V"), srate);
 
             return controller;
-        }
-
-        private static void VerifyHDF5File(string file)
-        {
-            // Directly comparing HDF5 files does not work because of some
-            // unknown discrepancies in the binary files. We'll compare the 
-            // XML dump via h5dump instead.
-            var startInfo = new ProcessStartInfo(@"..\..\..\..\..\..\externals\HDF5\bin\h5dump",
-                                                 @" --xml " + file);
-            startInfo.RedirectStandardOutput = true;
-            startInfo.UseShellExecute = false;
-            startInfo.CreateNoWindow = true;
-            Process proc = Process.Start(startInfo);
-
-            Approvals.VerifyXml(proc.StandardOutput.ReadToEnd());
         }
     }
 }

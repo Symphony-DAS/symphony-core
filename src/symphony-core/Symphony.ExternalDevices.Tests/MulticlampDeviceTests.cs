@@ -1,13 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using NUnit.Mocks;
+using NSubstitute;
+using NUnit.Framework;
 using Symphony.Core;
 
 namespace Symphony.ExternalDevices
 {
-    using NUnit.Framework;
 
     [TestFixture]
     class MulticlampInteropTests
@@ -277,7 +275,7 @@ namespace Symphony.ExternalDevices
             }
 
 
-            var expected = new Measurement((cmd.QuantityInBaseUnit / (decimal)data.ScaleFactor / (decimal)alpha) * (decimal)Math.Pow(10, -exponent), -12, "A");
+            var expected = new Measurement((cmd.QuantityInBaseUnits / (decimal)data.ScaleFactor / (decimal)alpha) * (decimal)Math.Pow(10, -exponent), -12, "A");
 
             var actual = MultiClampDevice.ConvertInput(cmd, data);
 
@@ -339,7 +337,7 @@ namespace Symphony.ExternalDevices
             }
 
 
-            var expected = new Measurement((cmd.QuantityInBaseUnit / (decimal)data.ScaleFactor / (decimal)alpha) * (decimal)Math.Pow(10, -exponent), -3, "V");
+            var expected = new Measurement((cmd.QuantityInBaseUnits / (decimal)data.ScaleFactor / (decimal)alpha) * (decimal)Math.Pow(10, -exponent), -3, "V");
 
             var actual = MultiClampDevice.ConvertInput(cmd, data);
 
@@ -693,19 +691,18 @@ namespace Symphony.ExternalDevices
             };
 
 
-            var daq = new DynamicMock(typeof(IDAQController));
-            var s = new DAQOutputStream("test", daq.MockInstance as IDAQController);
-
+            var daq = Substitute.For<IDAQController>();
+            var s = new DAQOutputStream("test", daq);
 
             var mcd = new MultiClampDevice(mc, c, background);
             mcd.BindStream(s);
 
-            daq.ExpectAndReturn("get_IsRunning", false);
-            daq.Expect("ApplyStreamBackground", new object[] {s});
+            daq.IsHardwareReady.Returns(true);
+            daq.IsRunning.Returns(false);
 
             mc.FireParametersChanged(DateTimeOffset.Now, dataVClamp);
 
-            daq.Verify();
+            daq.Received().ApplyStreamBackground(s);
         }
 
         [Test]
@@ -733,19 +730,18 @@ namespace Symphony.ExternalDevices
             };
 
 
-            var daq = new DynamicMock(typeof(IDAQController));
-            var s = new DAQOutputStream("test", daq.MockInstance as IDAQController);
+            var daq = Substitute.For<IDAQController>();
+            var s = new DAQOutputStream("test", daq);
 
 
             var mcd = new MultiClampDevice(mc, c, background);
             mcd.BindStream(s);
 
-            daq.ExpectAndReturn("get_IsRunning", true);
-            daq.ExpectNoCall("ApplyStreamBackground");
+            daq.IsRunning.Returns(true);
 
             mc.FireParametersChanged(DateTimeOffset.Now, dataVClamp);
 
-            daq.Verify();
+            daq.DidNotReceiveWithAnyArgs().ApplyStreamBackground(s);
         }
 
         [Test]
@@ -894,9 +890,9 @@ namespace Symphony.ExternalDevices
 
             var time = DateTimeOffset.MinValue.Add(MultiClampDevice.ParameterStalenessInterval);
 
-            var clock = new DynamicMock(typeof(IClock));
-            clock.SetReturnValue("get_Now", time);
-            var mcd = new MultiClampDevice(mc, c, UNUSED_BACKGROUND_DICTIONARY) { Clock = clock.MockInstance as IClock };
+            var clock = Substitute.For<IClock>();
+            clock.Now.Returns(time);
+            var mcd = new MultiClampDevice(mc, c, UNUSED_BACKGROUND_DICTIONARY) { Clock = clock };
 
             mcd.BindStream(new DAQInputStream(UNUSED_NAME));
 
@@ -916,9 +912,9 @@ namespace Symphony.ExternalDevices
 
             var time = DateTimeOffset.MinValue.Add(MultiClampDevice.ParameterStalenessInterval);
 
-            var clock = new DynamicMock(typeof(IClock));
-            clock.SetReturnValue("get_Now", time);
-            var mcd = new MultiClampDevice(mc, c, UNUSED_BACKGROUND_DICTIONARY) { Clock = clock.MockInstance as IClock };
+            var clock = Substitute.For<IClock>();
+            clock.Now.Returns(time);
+            var mcd = new MultiClampDevice(mc, c, UNUSED_BACKGROUND_DICTIONARY) { Clock = clock };
 
             mcd.BindStream(new DAQOutputStream(UNUSED_NAME));
 

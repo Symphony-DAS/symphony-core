@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using NUnit.Mocks;
+using NSubstitute;
 
 namespace Symphony.Core
 {
@@ -55,19 +55,19 @@ namespace Symphony.Core
         [Test]
         public void InputStreamShouldReadValue()
         {
-            var controller = new DynamicMock(typeof(IDAQController));
-            var s = new DAQInputStream("test", controller.MockInstance as IDAQController)
+            var controller = Substitute.For<IDAQController>();
+            var s = new DAQInputStream("test", controller)
                 {
                     MeasurementConversionTarget = "V"
                 };
 
             var expected = new InputData(Enumerable.Repeat(new Measurement(1, "V"), 1), null, DateTimeOffset.Now);
 
-            controller.ExpectAndReturn("ReadStream", expected, s);
+            controller.ReadStream(s).Returns(expected);
 
             var actual = s.Read();
 
-            controller.Verify();
+            controller.Received().ReadStream(s);
         }
 
         [Test]
@@ -107,9 +107,9 @@ namespace Symphony.Core
 
 
             DAQOutputStream s = new DAQOutputStream("OUT");
-            s.MeasurementConversionTarget = measurements.First().BaseUnit;
+            s.MeasurementConversionTarget = measurements.First().BaseUnits;
 
-            s.SampleRate = new Measurement(sampleRate.QuantityInBaseUnit * 2, "Hz");
+            s.SampleRate = new Measurement(sampleRate.QuantityInBaseUnits * 2, "Hz");
 
             var outData = new Dictionary<IDAQOutputStream, Queue<IOutputData>>(1);
             outData[s] = new Queue<IOutputData>(data);
@@ -163,7 +163,7 @@ namespace Symphony.Core
             
             foreach (IOutputData d in data)
             {
-                var measurements = Measurement.FromArray(d.Data.Select(m => m.QuantityInBaseUnit*numDevices).ToArray(), d.Data.BaseUnits());
+                var measurements = Measurement.FromArray(d.Data.Select(m => m.QuantityInBaseUnits*numDevices).ToArray(), d.Data.BaseUnits());
                 var expected = new OutputData(measurements, d.SampleRate, d.IsLast);
 
                 var actual = s.PullOutputData(TimeSpan.FromSeconds(1));
@@ -189,7 +189,7 @@ namespace Symphony.Core
             var stream = new DAQOutputStream(UNUSED_NAME);
             stream.Devices.Add(dev);
 
-            Assert.AreEqual(background.QuantityInBaseUnit, stream.Background.QuantityInBaseUnit);
+            Assert.AreEqual(background.QuantityInBaseUnits, stream.Background.QuantityInBaseUnits);
         }
 
         private static void OutputStreamFixture(out IList<IOutputData> data, out DAQOutputStream s, int numData)
@@ -212,7 +212,7 @@ namespace Symphony.Core
 
             s = new DAQOutputStream("OUT")
                     {
-                        MeasurementConversionTarget = measurements.First().BaseUnit,
+                        MeasurementConversionTarget = measurements.First().BaseUnits,
                         SampleRate = sampleRate
                     };
 
@@ -338,30 +338,27 @@ namespace Symphony.Core
         public void OutputStreamShouldPropagateOutputConfiguration()
         {
             var s = new DAQOutputStream("test");
-            var device = new DynamicMock(typeof (IExternalDevice));
+            var device = Substitute.For<IExternalDevice>();
 
             DateTimeOffset time = DateTime.Now;
             var config = new List<IPipelineNodeConfiguration>();
-            device.Expect("DidOutputData", new object[] {s, time, TimeSpan.FromSeconds(0.1), config});
 
-            s.Devices.Add(device.MockInstance as IExternalDevice);
+            s.Devices.Add(device);
 
             s.DidOutputData(time, TimeSpan.FromSeconds(0.1), config);
 
-            device.Verify();
+            device.Received().DidOutputData(s, time, TimeSpan.FromSeconds(0.1), config);
         }
 
         [Test]
         public void OutputStreamShouldApplyBackground()
         {
-            var controller = new DynamicMock(typeof (IDAQController));
-            var s = new DAQOutputStream("test", controller.MockInstance as IDAQController);
-
-            controller.Expect("ApplyStreamBackground", s);
+            var controller = Substitute.For<IDAQController>();
+            var s = new DAQOutputStream("test", controller);
 
             s.ApplyBackground();
 
-            controller.Verify();
+            controller.Received().ApplyStreamBackground(s);
         }
     }
 }

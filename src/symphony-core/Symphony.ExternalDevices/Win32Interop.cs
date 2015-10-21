@@ -210,9 +210,7 @@ namespace Symphony.ExternalDevices
                         MessageEvents.context.Post(
                             (object state) =>
                             {
-                                // Do not use the logger within this delegate.
-
-                                foreach (var h in handlers)
+                                foreach (var h in handlers.ToList())
                                 {
                                     h(null, new MessageReceivedEventArgs((Message)state));
                                 }

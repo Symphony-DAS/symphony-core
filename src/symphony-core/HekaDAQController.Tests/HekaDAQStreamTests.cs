@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading.Tasks;
 
 namespace Heka
 {
@@ -65,7 +64,7 @@ namespace Heka
 
             s.Preload(itcMock.Object as IHekaDevice, new OutputData(dataQueue[s].Peek()));
 
-            int expectedSamples = (int)Math.Ceiling(bufferDuration.TotalSeconds * (double)s.SampleRate.QuantityInBaseUnit);
+            int expectedSamples = (int)Math.Ceiling(bufferDuration.TotalSeconds * (double)s.SampleRate.QuantityInBaseUnits);
             itcMock.VerifyAll();
             Assert.AreEqual(availableSamplesStart - expectedSamples, availableSamples); //Preload should not affect buffer availablility because PRELOAD_FIFO is used
         }
@@ -105,7 +104,7 @@ namespace Heka
 
             Assert.AreEqual(channelNumber, info.ChannelNumber);
             Assert.AreEqual((int)streamType, info.ChannelType);
-            Assert.AreEqual(s.SampleRate.QuantityInBaseUnit, info.SamplingRate);
+            Assert.AreEqual(s.SampleRate.QuantityInBaseUnits, info.SamplingRate);
             Assert.AreEqual(ITCMM.USE_FREQUENCY, info.SamplingIntervalFlag);
             Assert.AreEqual(0, info.Gain);
             Assert.AreEqual(IntPtr.Zero, info.FIFOPointer);
@@ -115,6 +114,26 @@ namespace Heka
     [TestFixture]
     class HekaDigitalDAQOutputStreamTests
     {
+        [Test]
+        public void ShouldBitShiftAndMergeBackground()
+        {
+            var controller = new HekaDAQController();
+            var s = new HekaDigitalDAQOutputStream("OUT", 0, controller);
+            controller.SampleRate = new Measurement(10000, 1, "Hz");
+
+            for (ushort bitPosition = 1; bitPosition < 16; bitPosition += 2)
+            {
+                TestDevice dev = new TestDevice {Background = new Measurement(1, Measurement.UNITLESS)};
+                dev.BindStream(s);
+                s.BitPositions[dev] = bitPosition;
+            }
+
+            ushort q = 0xaaaa;
+            var expected = new Measurement((short)q, Measurement.UNITLESS);
+
+            Assert.AreEqual(expected, s.Background);
+        }
+
         [Test]
         public void ShouldBitShiftAndMergePulledOutputData()
         {
@@ -176,7 +195,7 @@ namespace Heka
 
             Assert.AreEqual(channelNumber, info.ChannelNumber);
             Assert.AreEqual((int)streamType, info.ChannelType);
-            Assert.AreEqual(s.SampleRate.QuantityInBaseUnit, info.SamplingRate);
+            Assert.AreEqual(s.SampleRate.QuantityInBaseUnits, info.SamplingRate);
             Assert.AreEqual(ITCMM.USE_FREQUENCY, info.SamplingIntervalFlag);
             Assert.AreEqual(0, info.Gain);
             Assert.AreEqual(IntPtr.Zero, info.FIFOPointer);

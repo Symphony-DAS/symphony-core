@@ -185,6 +185,7 @@ namespace Symphony.Core
             this.OutputTasks = new List<Task>();
         }
 
+        public bool IsHardwareReady { get; protected set; }
 
         /// <summary>
         /// Flag indicating whether or not the represented hardware device is running
@@ -237,10 +238,6 @@ namespace Symphony.Core
         {
             if (!IsRunning)
             {
-                IsRunning = true;
-                IsStopRequested = false;
-                OnStarted();
-
                 Process(waitForTrigger);
             }
         }
@@ -271,6 +268,10 @@ namespace Symphony.Core
             // pushing the results back through the input pipeline
             try
             {
+                IsRunning = true;
+                IsStopRequested = false;
+                OnStarted();
+
                 OutputTasks.Clear();
                 InputTasks.Clear();
 
@@ -314,10 +315,7 @@ namespace Symphony.Core
 
             var cts = new CancellationTokenSource();
 
-            EventHandler<TimeStampedEventArgs> stopRequested = (c, args) =>
-            {
-                cts.Cancel();
-            };
+            EventHandler<TimeStampedEventArgs> stopRequested = (c, args) => cts.Cancel();
 
             try
             {

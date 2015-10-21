@@ -184,7 +184,7 @@ namespace Symphony.Core
             get { return sampleRate; }
             set
             {
-                if (value.Quantity < 0 || value.BaseUnit.ToLower() != "hz")
+                if (value.Quantity < 0 || value.BaseUnits.ToLower() != "hz")
                 {
                     throw new ArgumentException("Illegal SampleRate");
                 }
@@ -372,17 +372,17 @@ namespace Symphony.Core
         /// The "background" value to be used when no data is available or upon stopping the 
         /// DAQ device. The value is the sum of OutputBackgrounds of all associated devices.
         /// </summary>
-        public IMeasurement Background
+        public virtual IMeasurement Background
         {
             get
             {
                 var backgrounds = Devices.Select(ed => ed.OutputBackground).ToList();
 
-                var units = backgrounds.Select(b => b.BaseUnit).Distinct().ToList();
+                var units = backgrounds.Select(b => b.BaseUnits).Distinct().ToList();
                 if (units.Count() > 1)
                     throw new DAQException("Devices have multiple background base units");
 
-                var quantity = backgrounds.Select(b => b.QuantityInBaseUnit).Sum();
+                var quantity = backgrounds.Select(b => b.QuantityInBaseUnits).Sum();
 
                 return new Measurement(quantity, 0, units.First());
             }
@@ -409,7 +409,7 @@ namespace Symphony.Core
             get { return sampleRate; }
             set
             {
-                if (value.Quantity < 0 || value.BaseUnit.ToLower() != "hz")
+                if (value.Quantity < 0 || value.BaseUnits.ToLower() != "hz")
                 {
                     throw new ArgumentException("Illegal SampleRate");
                 }
@@ -509,7 +509,7 @@ namespace Symphony.Core
 
                 outData = outData == null 
                     ? pulled
-                    : outData.Zip(pulled, (m1, m2) => MeasurementPool.GetMeasurement(m1.QuantityInBaseUnit + m2.QuantityInBaseUnit, 0, m1.BaseUnit));
+                    : outData.Zip(pulled, (m1, m2) => MeasurementPool.GetMeasurement(m1.QuantityInBaseUnits + m2.QuantityInBaseUnits, 0, m1.BaseUnits));
             }
 
             if (!outData.SampleRate.Equals(this.SampleRate))
