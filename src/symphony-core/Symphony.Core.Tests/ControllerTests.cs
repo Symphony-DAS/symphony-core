@@ -999,7 +999,7 @@ namespace Symphony.Core
 
             c.DAQController = daq;
 
-            var e = new Epoch(UNUSED_PROTOCOL) { WaitForTrigger = true };
+            var e = new Epoch(UNUSED_PROTOCOL) { ShouldWaitForTrigger = true };
 
             new TaskFactory().StartNew(() =>
             {

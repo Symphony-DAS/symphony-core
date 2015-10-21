@@ -692,7 +692,7 @@ namespace Symphony.Core
                         Epoch nextEpoch;
                         if (epochQueue.TryPeek(out nextEpoch))
                         {
-                            bool shouldBufferEpoch = !nextEpoch.WaitForTrigger && !IsPauseRequested && !IsStopRequested;
+                            bool shouldBufferEpoch = !nextEpoch.ShouldWaitForTrigger && !IsPauseRequested && !IsStopRequested;
 
                             if (shouldBufferEpoch && epochQueue.TryDequeue(out nextEpoch))
                             {
@@ -788,7 +788,7 @@ namespace Symphony.Core
                         BufferEpoch(epoch);
                         incompleteEpochs.Enqueue(epoch);
 
-                        DAQController.Start(epoch.WaitForTrigger);
+                        DAQController.Start(epoch.ShouldWaitForTrigger);
 
                         DAQController.WaitForInputTasks();
                     }
