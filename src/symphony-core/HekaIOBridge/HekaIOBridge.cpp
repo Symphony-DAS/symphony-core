@@ -180,8 +180,10 @@ namespace Heka {
 		vector<vector<itcsample_t> > inputSamples(input->Count); 
 		vector<vector<itcsample_t> > outputSamples(output->Count);
 
+		unsigned int transferBlock = min(nsamples, TRANSFER_BLOCK_SAMPLES);
+
 		for(int i=0; i < input->Count; i++) {
-			inputSamples[i] = vector<itcsample_t>(max(2*nsamples, 2*TRANSFER_BLOCK_SAMPLES));
+			inputSamples[i] = vector<itcsample_t>(2*nsamples);
 		}
 
 		for(int i=0; i < output->Count; i++) {
@@ -209,8 +211,8 @@ namespace Heka {
 
 			bool inBlockAvailable = false;
 			for(int i=0; i < input->Count; i++) {
-				if(inputData[i].Value >= TRANSFER_BLOCK_SAMPLES) {
-					inputData[i].Value = TRANSFER_BLOCK_SAMPLES;
+				if(inputData[i].Value >= transferBlock) {
+					inputData[i].Value = transferBlock;
 					inBlockAvailable = true;
 				} else {
 					inputData[i].Value = 0;
@@ -227,7 +229,7 @@ namespace Heka {
 					throw gcnew HekaDAQException("ITC_ReadWriteFIFO error", err);
 				}
 
-				nIn += TRANSFER_BLOCK_SAMPLES;
+				nIn += transferBlock;
 				for(int i=0; i < input->Count; i++) {
 					ChannelIdentifier c = input[i];
 					c.Samples = c.Samples + inputData[i].Value;
@@ -239,8 +241,8 @@ namespace Heka {
 
 			bool outBlockAvailable = false;
 			for(int i=0; i < output->Count; i++) {
-				if(outputData[i].Value >= TRANSFER_BLOCK_SAMPLES) {
-					outputData[i].Value = TRANSFER_BLOCK_SAMPLES;
+				if(outputData[i].Value >= transferBlock) {
+					outputData[i].Value = transferBlock;
 					if((int)(nOut + outputData[i].Value) >= output[outputStreams[i]]->Length) {
 						outputData[i].Value = output[outputStreams[i]]->Length - nOut;
 					}
@@ -261,7 +263,7 @@ namespace Heka {
 						throw gcnew HekaDAQException("ITC_ReadWriteFIFO error", err);
 					}
 
-					nOut += TRANSFER_BLOCK_SAMPLES;
+					nOut += transferBlock;
 				}
 			}
 		}

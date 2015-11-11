@@ -34,10 +34,10 @@ namespace IntegrationTests
         [Test, Sequential]
         [Timeout(30*1000)]
         public void MaxBandwidth(
-            [Values(10000,25000,50000)] decimal sampleRate,
-            [Values(1,1,1)] int nEpochs,
-            [Values(4,4,4)] int nOut,
-            [Values(8,8,4)] int nIn
+            [Values(1000,10000,25000,50000)] decimal sampleRate,
+            [Values(1,1,1,1)] int nEpochs,
+            [Values(4,4,4,4)] int nOut,
+            [Values(8,8,8,4)] int nIn
             )
         {
             Converters.Clear();
@@ -141,7 +141,7 @@ namespace IntegrationTests
         [Test]
         [Timeout(30 * 1000)]
         public void RenderedStimulus(
-            [Values(10000, 20000, 50000)] double sampleRate,
+            [Values(1000, 10000, 20000, 50000)] double sampleRate,
             [Values(2)] int nEpochs
             )
         {
@@ -270,7 +270,7 @@ namespace IntegrationTests
         [Test]
         //[Timeout(30 * 1000)]
         public void ContinuousAcquisition(
-            [Values(10000, 20000, 50000)] double sampleRate,
+            [Values(1000, 10000, 20000, 50000)] double sampleRate,
             [Values(20)] int nEpochs)
         {
             Converters.Clear();

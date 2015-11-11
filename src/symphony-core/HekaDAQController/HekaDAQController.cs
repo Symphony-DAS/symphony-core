@@ -102,7 +102,6 @@ namespace Heka
     public sealed class HekaDAQController : DAQControllerBase, IDisposable
     {
         private const double DEFAULT_TRANSFER_BLOCK_SECONDS = 0.25;
-        private const double PRELOAD_DURATION_SECONDS = 2 * DEFAULT_TRANSFER_BLOCK_SECONDS;
 
         private IHekaDevice Device { get; set; }
 
@@ -363,7 +362,7 @@ namespace Heka
             {
                 s.Reset();
                 var outputSamples = new List<short>();
-                while (TimeSpanExtensions.FromSamples((uint)outputSamples.Count(), s.SampleRate).TotalSeconds < PRELOAD_DURATION_SECONDS) // && s.HasMoreData
+                while (TimeSpanExtensions.FromSamples((uint)outputSamples.Count(), s.SampleRate) < ProcessInterval) // && s.HasMoreData
                 {
                     var nextOutputDataForStream = NextOutputDataForStream(s);
                     var nextSamples = nextOutputDataForStream.DataWithUnits(HekaDAQOutputStream.DAQCountUnits).Data.
