@@ -40,7 +40,7 @@ namespace Heka {
 			return;
 		}
 
-		ITCChannelDataEx outputData[max(USB18_NUMBEROFOUTPUTS,ITC18_NUMBEROFOUTPUTS)];
+		ITCChannelDataEx outputData[ITC00_NUMBEROFOUTPUTS];
 		ZeroMemory(outputData, sizeof(outputData));
 
 
@@ -125,11 +125,11 @@ namespace Heka {
 			throw gcnew HekaDAQException("nsamples may not be less than zero.");
 		}
 
-		if(output->Keys->Count >= max(USB18_NUMBEROFOUTPUTS,ITC18_NUMBEROFOUTPUTS)) {
+		if(output->Keys->Count >= ITC00_NUMBEROFOUTPUTS) {
 			throw gcnew HekaDAQException("Too many output channels");
 		}
 
-		if(input->Count >= max(USB18_NUMBEROFINPUTS,ITC18_NUMBEROFINPUTS)) {
+		if(input->Count >= ITC00_NUMBEROFINPUTS) {
 			throw gcnew HekaDAQException("Too many input channels");
 		}
 
@@ -148,9 +148,9 @@ namespace Heka {
 		ZeroMemory(&status, sizeof(status));
 		status.CommandStatus = READ_ERRORS | READ_OVERFLOW | READ_RUNNINGMODE;
 
-		ITCChannelDataEx outputData[max(USB18_NUMBEROFOUTPUTS,ITC18_NUMBEROFOUTPUTS)];
+		ITCChannelDataEx outputData[ITC00_NUMBEROFOUTPUTS];
 		ZeroMemory(outputData, sizeof(outputData));
-		ITCChannelDataEx inputData[max(USB18_NUMBEROFINPUTS,ITC18_NUMBEROFINPUTS)];
+		ITCChannelDataEx inputData[ITC00_NUMBEROFINPUTS];
 		ZeroMemory(inputData, sizeof(inputData));
 
 
