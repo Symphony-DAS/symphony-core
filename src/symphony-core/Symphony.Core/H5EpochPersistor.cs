@@ -424,6 +424,15 @@ namespace Symphony.Core
             return H5PersistentResource.InsertResource(_resourcesGroup, EntityFactory, uti, name, data);
         }
 
+        public bool RemoveResource(string name)
+        {
+            var resource = Resources.FirstOrDefault(r => r.Name == name);
+            if (resource == null)
+                return false;
+            ((H5PersistentResource) resource).Delete();
+            return true;
+        }
+
         public IPersistentResource GetResource(string name)
         {
             var resource = Resources.FirstOrDefault(r => r.Name == name);

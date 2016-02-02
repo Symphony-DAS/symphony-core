@@ -110,7 +110,7 @@ namespace Symphony.Core
         }
 
         [Test]
-        public void ShouldAddResources()
+        public void ShouldAddAndRemoveResources()
         {
             var resources = new List<IPersistentResource>();
 
@@ -129,6 +129,19 @@ namespace Symphony.Core
                 Assert.AreEqual(data, r.Data);
 
                 resources.Add(r);
+            }
+
+            foreach (var expected in resources)
+            {
+                var actual = experiment.GetResource(expected.Name);
+                Assert.AreEqual(expected, actual);
+            }
+
+            for (int i = 0; i < 5; i++)
+            {
+                var r = resources[i];
+                experiment.RemoveResource(r.Name);
+                resources.Remove(r);
             }
 
             foreach (var expected in resources)

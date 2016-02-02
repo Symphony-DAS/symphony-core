@@ -173,9 +173,16 @@ namespace Symphony.Core
         IPersistentResource AddResource(string uti, string name, byte[] data);
 
         /// <summary>
+        /// Removes a Resource by name.
+        /// </summary>
+        /// <param name="name">The name of the resource to remove</param>
+        /// <returns></returns>
+        bool RemoveResource(string name);
+
+        /// <summary>
         /// Gets a Resource by name.
         /// </summary>
-        /// <param name="name"></param>
+        /// <param name="name">The name of the resource to get</param>
         /// <returns></returns>
         IPersistentResource GetResource(string name);
 
