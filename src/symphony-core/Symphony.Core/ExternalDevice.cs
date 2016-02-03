@@ -121,9 +121,26 @@ namespace Symphony.Core
         IDictionary<string, object> Configuration { get; }
 
         /// <summary>
-        /// Any resources associated with this device (i.e. gamma tables, calibration values, etc).
+        /// Adds a Resource (gamma table, calibration value, etc) to this device.
         /// </summary>
-        IList<Resource> Resources { get; }
+        /// <param name="uti">The Uniform Type Identifier of the resource data</param>
+        /// <param name="name">The name of the resource</param>
+        /// <param name="data">The raw byte data of the resource</param>
+        /// <returns></returns>
+        Resource AddResource(string uti, string name, byte[] data);
+
+        /// <summary>
+        /// Gets a Resource by name.
+        /// </summary>
+        /// <param name="name">The name of the resource to get</param>
+        /// <returns></returns>
+        Resource GetResource(string name);
+
+        /// <summary>
+        /// Gets all Resource names associated with this entity.
+        /// </summary>
+        /// <returns></returns>
+        IEnumerable<string> GetResourceNames();
 
         /// <summary>
         /// Binds an IDAQInputStream to this device. Adds this device to the stream's
@@ -256,7 +273,7 @@ namespace Symphony.Core
             this.Manufacturer = manufacturer;
             this.Streams = new Dictionary<string, IDAQStream>();
             Configuration = new Dictionary<string, object>();
-            Resources = new List<Resource>();
+            Resources = new Dictionary<string, Resource>();
 
 
             if (c != null)
@@ -446,9 +463,43 @@ namespace Symphony.Core
         public virtual IDictionary<string, object> Configuration { get; private set; }
 
         /// <summary>
-        /// Any resources associated with this device (i.e. gamma tables, calibration values, etc).
+        /// Adds a Resource (gamma table, calibration value, etc) to this device.
         /// </summary>
-        public IList<Resource> Resources { get; private set; }
+        /// <param name="uti">The Uniform Type Identifier of the resource data</param>
+        /// <param name="name">The name of the resource</param>
+        /// <param name="data">The raw byte data of the resource</param>
+        /// <returns></returns>
+        public Resource AddResource(string uti, string name, byte[] data)
+        {
+            if (Resources.ContainsKey(name))
+                throw new ArgumentException(name + " already exists");
+            var resource = new Resource(uti, name, data);
+            Resources.Add(name, resource);
+            return resource;
+        }
+
+        /// <summary>
+        /// Gets a Resource by name.
+        /// </summary>
+        /// <param name="name">The name of the resource to get</param>
+        /// <returns></returns>
+        public Resource GetResource(string name)
+        {
+            if (!Resources.ContainsKey(name))
+                throw new ArgumentException(name + " does not exist");
+            return Resources[name];
+        }
+
+        /// <summary>
+        /// Gets all Resource names associated with this entity.
+        /// </summary>
+        /// <returns></returns>
+        public IEnumerable<string> GetResourceNames()
+        {
+            return Resources.Keys;
+        }
+
+        private IDictionary<string, Resource> Resources { get; set; }
 
         // needs a shot at processing the OutputData on its way out to the board
         /// <summary>

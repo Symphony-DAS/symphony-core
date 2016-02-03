@@ -769,11 +769,12 @@ namespace Symphony.Core
                     var pDevice = persistor.Device(device.Name, device.Manufacturer);
                     var pResourceNames = pDevice.GetResourceNames().ToList();
 
-                    foreach (var resource in device.Resources)
+                    foreach (var name in device.GetResourceNames())
                     {
-                        if (pResourceNames.Contains(resource.Name))
+                        var resource = device.GetResource(name);
+                        if (pResourceNames.Contains(name))
                         {
-                            var pResource = pDevice.GetResource(resource.Name);
+                            var pResource = pDevice.GetResource(name);
                             if (!resource.UTI.Equals(pResource.UTI) || !resource.Data.SequenceEqual(pResource.Data))
                                 throw new SymphonyControllerException(device.Name +
                                                                       " already contains a resource named '" +
