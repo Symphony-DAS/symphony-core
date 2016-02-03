@@ -121,6 +121,11 @@ namespace Symphony.Core
         IDictionary<string, object> Configuration { get; }
 
         /// <summary>
+        /// Any resources associated with this device (i.e. gamma tables, calibration values, etc).
+        /// </summary>
+        IList<Resource> Resources { get; }
+
+        /// <summary>
         /// Binds an IDAQInputStream to this device. Adds this device to the stream's
         /// Devices list.
         /// </summary>
@@ -251,6 +256,7 @@ namespace Symphony.Core
             this.Manufacturer = manufacturer;
             this.Streams = new Dictionary<string, IDAQStream>();
             Configuration = new Dictionary<string, object>();
+            Resources = new List<Resource>();
 
 
             if (c != null)
@@ -438,6 +444,11 @@ namespace Symphony.Core
         /// May also include information about conversion proc(s) parameters.
         /// </summary>
         public virtual IDictionary<string, object> Configuration { get; private set; }
+
+        /// <summary>
+        /// Any resources associated with this device (i.e. gamma tables, calibration values, etc).
+        /// </summary>
+        public IList<Resource> Resources { get; private set; }
 
         // needs a shot at processing the OutputData on its way out to the board
         /// <summary>

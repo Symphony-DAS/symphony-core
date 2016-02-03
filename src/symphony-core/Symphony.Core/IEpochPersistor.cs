@@ -51,6 +51,14 @@ namespace Symphony.Core
         IPersistentDevice AddDevice(string name, string manufacturer);
 
         /// <summary>
+        /// Gets a Device from the persistent hierarchy. A new Device will be created if the given Device is not found.
+        /// </summary>
+        /// <param name="name">Name of the Device</param>
+        /// <param name="manufacturer">Manufacturer of the Device</param>
+        /// <returns></returns>
+        IPersistentDevice Device(string name, string manufacturer);
+
+        /// <summary>
         /// Adds a new Source to the persistent hierarchy. A Source represents the subject of an experiment. Each Source
         /// has a label property to describe the type of the Source (e.g. "animal", "cortex", "cell", etc). Sources
         /// may be nested to create a Source hierarchy (e.g. "animal" -> "cortex" -> "cell").

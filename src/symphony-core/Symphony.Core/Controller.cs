@@ -761,6 +761,32 @@ namespace Symphony.Core
                     throw new SymphonyControllerException("DAQ Controller stopped due to an exception", args.Exception);
                 };
 
+            if (persistor != null)
+            {
+                // Add devices to persistor
+                foreach (var device in Devices)
+                {
+                    var pDevice = persistor.Device(device.Name, device.Manufacturer);
+                    var pResourceNames = pDevice.GetResourceNames().ToList();
+
+                    foreach (var resource in device.Resources)
+                    {
+                        if (pResourceNames.Contains(resource.Name))
+                        {
+                            var pResource = pDevice.GetResource(resource.Name);
+                            if (!resource.UTI.Equals(pResource.UTI) || !resource.Data.SequenceEqual(pResource.Data))
+                                throw new SymphonyControllerException(device.Name +
+                                                                      " already contains a resource named '" +
+                                                                      resource.Name + "' with a different value");
+                        }
+                        else
+                        {
+                            pDevice.AddResource(resource.UTI, resource.Name, resource.Data);
+                        }
+                    }
+                }
+            }
+
             try
             {
                 RequestedStop += stopRequested;

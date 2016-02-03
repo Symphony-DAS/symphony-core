@@ -139,6 +139,7 @@
     <Compile Include="MeasurementExtensions.cs" />
     <Compile Include="Misc.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Resource.cs" />
     <Compile Include="SymphonyFramework.cs" />
     <Compile Include="SystemClock.cs" />
     <Compile Include="TimelineProducer.cs" />

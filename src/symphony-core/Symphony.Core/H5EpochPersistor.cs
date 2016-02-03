@@ -157,6 +157,11 @@ namespace Symphony.Core
             return _experiment.InsertDevice(name, manufacturer);
         }
 
+        public IPersistentDevice Device(string name, string manufacturer)
+        {
+            return _experiment.Device(name, manufacturer);
+        }
+
         public IPersistentSource AddSource(string label, IPersistentSource parent)
         {
             return parent == null

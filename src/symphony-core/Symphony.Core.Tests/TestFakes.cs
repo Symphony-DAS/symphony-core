@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
@@ -33,6 +34,11 @@ namespace Symphony.Core
             return null;
         }
 
+        public IPersistentDevice Device(string name, string manufacturer)
+        {
+            return new FakePersistentDevice(name, manufacturer);
+        }
+
         public IPersistentSource AddSource(string label, IPersistentSource parent)
         {
             return null;
@@ -65,6 +71,68 @@ namespace Symphony.Core
         public void Delete(IPersistentEntity entity)
         {
         }
+    }
+
+    public class FakePersistentDevice : IPersistentDevice
+    {
+        public FakePersistentDevice(string name, string manufacturer)
+        {
+            Name = name;
+            Manufacturer = manufacturer;
+        }
+
+        public Guid UUID { get; private set; }
+        public IEnumerable<KeyValuePair<string, object>> Properties { get; private set; }
+        public void AddProperty(string key, object value)
+        {
+            throw new NotImplementedException();
+        }
+
+        public bool RemoveProperty(string key)
+        {
+            throw new NotImplementedException();
+        }
+
+        public IEnumerable<string> Keywords { get; private set; }
+        public bool AddKeyword(string keyword)
+        {
+            throw new NotImplementedException();
+        }
+
+        public bool RemoveKeyword(string keyword)
+        {
+            throw new NotImplementedException();
+        }
+
+        public IPersistentResource AddResource(string uti, string name, byte[] data)
+        {
+            throw new NotImplementedException();
+        }
+
+        public bool RemoveResource(string name)
+        {
+            throw new NotImplementedException();
+        }
+
+        public IPersistentResource GetResource(string name)
+        {
+            throw new NotImplementedException();
+        }
+
+        public IEnumerable<string> GetResourceNames()
+        {
+            return Enumerable.Empty<string>();
+        }
+
+        public IEnumerable<IPersistentNote> Notes { get; private set; }
+        public IPersistentNote AddNote(DateTimeOffset time, string text)
+        {
+            throw new NotImplementedException();
+        }
+
+        public string Name { get; private set; }
+        public string Manufacturer { get; private set; }
+        public IPersistentExperiment Experiment { get; private set; }
     }
 
     public class AggregateExceptionThrowingEpochPersistor : FakeEpochPersistor

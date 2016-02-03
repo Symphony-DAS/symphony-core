@@ -88,6 +88,8 @@ namespace Symphony.Core
                 get { throw new NotImplementedException(); }
             }
 
+            public IList<Resource> Resources { get; private set; }
+
             public ExternalDeviceBase BindStream(IDAQInputStream inputStream)
             {
                 throw new NotImplementedException();
