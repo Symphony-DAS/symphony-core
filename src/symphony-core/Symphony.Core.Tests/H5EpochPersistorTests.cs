@@ -619,6 +619,7 @@ namespace Symphony.Core
             foreach (var kv in expected.Stimuli)
             {
                 var a = actual.Stimuli.First(b => b.Device.Name == kv.Key.Name && b.Device.Manufacturer == kv.Key.Manufacturer);
+                Assert.AreEqual(a.Epoch, actual);
                 AssertStimuliEqual(kv.Value, a);
             }
 
@@ -627,6 +628,7 @@ namespace Symphony.Core
             foreach (var kv in expected.Responses)
             {
                 var a = actual.Responses.First(b => b.Device.Name == kv.Key.Name && b.Device.Manufacturer == kv.Key.Manufacturer);
+                Assert.AreEqual(a.Epoch, actual);
                 AssertResponsesEqual(kv.Value, a);
             }
         }

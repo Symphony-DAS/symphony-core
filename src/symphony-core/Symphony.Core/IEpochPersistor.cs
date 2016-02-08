@@ -486,6 +486,11 @@ namespace Symphony.Core
         /// The Measurements recorded in this Response.
         /// </summary>
         IEnumerable<IMeasurement> Data { get; }
+
+        /// <summary>
+        /// The Epoch that contains this Response.
+        /// </summary>
+        IPersistentEpoch Epoch { get; }
     }
 
     /// <summary>
@@ -522,6 +527,11 @@ namespace Symphony.Core
         /// The Measurements presented by this Stimulus. None if data is not persisted.
         /// </summary>
         Option<IEnumerable<IMeasurement>> Data { get; }
+
+        /// <summary>
+        /// The Epoch that contains this Stimulus.
+        /// </summary>
+        IPersistentEpoch Epoch { get; }
     }
 
     /// <summary>

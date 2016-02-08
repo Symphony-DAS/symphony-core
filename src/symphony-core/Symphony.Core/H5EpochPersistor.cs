@@ -1098,6 +1098,7 @@ namespace Symphony.Core
                 var parametersGroup = group.AddGroup(ProtocolParametersGroupName);
                 var responsesGroup = group.AddGroup(ResponsesGroupName);
                 var stimuliGroup = group.AddGroup(StimuliGroupName);
+
                 group.AddHardLink(EpochBlockGroupName, block.Group);
 
                 var experiment = (H5PersistentExperiment)block.EpochGroup.Experiment;
@@ -1354,8 +1355,10 @@ namespace Symphony.Core
         private const string InputTimeTicksKey = "inputTimeDotNetDateTimeOffsetTicks";
         private const string InputTimeOffsetHoursKey = "inputTimeDotNetDateTimeOffsetOffsetHours";
         private const string DataDatasetName = "data";
+        private const string EpochGroupName = "epoch";
 
         private readonly H5Dataset _dataDataset;
+        private readonly H5Group _epochGroup;
 
         public static H5PersistentResponse InsertResponse(H5Group container, H5PersistentEntityFactory factory, H5PersistentEpoch epoch, H5PersistentDevice device, Response response, uint compression)
         {
@@ -1368,6 +1371,8 @@ namespace Symphony.Core
                 group.Attributes[InputTimeOffsetHoursKey] = response.InputTime.Offset.TotalHours;
 
                 group.AddDataset(DataDatasetName, H5Map.GetMeasurementType(container.File), response.Data.Select(H5Map.Convert).ToArray(), compression);
+
+                group.AddHardLink(EpochGroupName, epoch.Group);
 
                 return factory.Create<H5PersistentResponse>(group);
             }
@@ -1389,6 +1394,7 @@ namespace Symphony.Core
             InputTime = new DateTimeOffset(ticks, TimeSpan.FromHours(offset));
 
             _dataDataset = group.Datasets.First(ds => ds.Name == DataDatasetName);
+            _epochGroup = group.Groups.First(g => g.Name == EpochGroupName);
         }
 
         public IMeasurement SampleRate { get; private set; }
@@ -1398,6 +1404,11 @@ namespace Symphony.Core
         public IEnumerable<IMeasurement> Data
         {
             get { return _dataDataset.GetData<H5Map.MeasurementT>().Select(H5Map.Convert); }
+        }
+
+        public IPersistentEpoch Epoch
+        {
+            get { return EntityFactory.Create<H5PersistentEpoch>(_epochGroup); }
         }
     }
 
@@ -1410,9 +1421,11 @@ namespace Symphony.Core
         private const string ParametersGroupName = "parameters";
         private const string DurationKey = "durationSeconds";
         private const string DataDatasetName = "data";
+        private const string EpochGroupName = "epoch";
 
         private readonly H5Group _parametersGroup;
         private readonly H5Dataset _dataDataset;
+        private readonly H5Group _epochGroup;
 
         public static H5PersistentStimulus InsertStimulus(H5Group container, H5PersistentEntityFactory factory, H5PersistentEpoch epoch, H5PersistentDevice device, IStimulus stimulus, uint compression)
         {
@@ -1451,6 +1464,8 @@ namespace Symphony.Core
                     group.AddDataset(DataDatasetName, H5Map.GetMeasurementType(container.File), data.Select(H5Map.Convert).ToArray(), compression);
                 }
 
+                group.AddHardLink(EpochGroupName, epoch.Group);
+
                 return factory.Create<H5PersistentStimulus>(group);
             }
             catch (Exception x)
@@ -1475,6 +1490,7 @@ namespace Symphony.Core
 
             _parametersGroup = group.Groups.First(g => g.Name == ParametersGroupName);
             _dataDataset = group.Datasets.FirstOrDefault(g => g.Name == DataDatasetName);
+            _epochGroup = group.Groups.First(g => g.Name == EpochGroupName);
         }
 
         public string StimulusID { get; private set; }
@@ -1498,6 +1514,11 @@ namespace Symphony.Core
                            ? Option<IEnumerable<IMeasurement>>.None()
                            : Option<IEnumerable<IMeasurement>>.Some(_dataDataset.GetData<H5Map.MeasurementT>().Select(H5Map.Convert));
             }
+        }
+
+        public IPersistentEpoch Epoch
+        {
+            get { return EntityFactory.Create<H5PersistentEpoch>(_epochGroup); }
         }
     }
 
