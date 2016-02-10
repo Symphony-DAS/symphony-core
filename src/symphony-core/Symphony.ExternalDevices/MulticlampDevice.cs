@@ -138,6 +138,10 @@ namespace Symphony.ExternalDevices
         {
         }
 
+        public static IEnumerable<uint> AvailableSerialNumbers()
+        {
+            return MultiClampCommander.AvailableSerialNumbers();
+        }
 
         private static IDictionary<string, object> MergeDeviceParametersIntoConfiguration(IDictionary<string, object> config,
             MultiClampInterop.MulticlampData deviceParameters)

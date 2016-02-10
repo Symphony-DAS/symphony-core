@@ -40,6 +40,13 @@ namespace Symphony.ExternalDevices
             return lparamSignalIDs;
         }
 
+        public static bool MCTG_Unpack700BSignalIDs(uint lparamSignalIDs, out uint uSerialNum, out uint uChannelID)
+        {
+            uSerialNum = lparamSignalIDs & 0x0FFFFFFF;
+            uChannelID = (lparamSignalIDs >> 28) & 0x0000000F;
+            return true;
+        }
+
         [StructLayout(LayoutKind.Sequential, Pack = 4)]
         public unsafe struct MC_TELEGRAPH_DATA
         {

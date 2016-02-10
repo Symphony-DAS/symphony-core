@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
+using System.Threading;
 using Symphony.Core;
 using log4net;
 
@@ -49,6 +51,26 @@ namespace Symphony.ExternalDevices
 
         private static readonly ILog log = LogManager.GetLogger(typeof(MultiClampCommander));
 
+        public static IEnumerable<uint> AvailableSerialNumbers()
+        {
+            availableSerialNumbers = new HashSet<uint>();
+
+            RegisterForIdEvents();
+            try
+            {
+                ScanMultiClamps();
+                Thread.Sleep(10);
+            }
+            finally
+            {
+                UnregisterForIdEvents();
+            }
+
+            return availableSerialNumbers;
+        }
+
+        private static HashSet<uint> availableSerialNumbers; 
+
         /// <summary>
         /// Constructs a new MultiClampCommander for a given serial number and channel.
         /// </summary>
@@ -72,6 +94,39 @@ namespace Symphony.ExternalDevices
             UInt32 lParam = MultiClampInterop.MCTG_Pack700BSignalIDs(this.SerialNumber, this.Channel);
                 // Pack the above two into an UInt32
             return lParam;
+        }
+
+        private static void RegisterForIdEvents()
+        {
+            log.Debug("Registering for MCTG_ID_MESSAGE messages...");
+
+            Win32Interop.MessageEvents.WatchMessage(MultiClampInterop.MCTG_ID_MESSAGE, ReceiveIdEvent);
+        }
+
+        private static void UnregisterForIdEvents()
+        {
+            log.Debug("Unregistering for MCTG_ID_MESSAGE messages...");
+
+            Win32Interop.MessageEvents.UnwatchMessage(MultiClampInterop.MCTG_ID_MESSAGE, ReceiveIdEvent);
+        }
+
+        private static void ReceiveIdEvent(object sender, Win32Interop.MessageReceivedEventArgs evtArgs)
+        {
+            log.DebugFormat("Received MCTG_ID_MESSAGE: {0}", evtArgs.Message);
+
+            uint serialNumber;
+            uint channel;
+            MultiClampInterop.MCTG_Unpack700BSignalIDs((uint)evtArgs.Message.LParam, out serialNumber, out channel);
+
+            availableSerialNumbers.Add(serialNumber);
+        }
+
+        private static void ScanMultiClamps()
+        {
+            log.Debug("Scanning for MultiClamps...");
+            int result = Win32Interop.PostMessage(Win32Interop.HWND_BROADCAST, MultiClampInterop.MCTG_BROADCAST_MESSAGE,
+                                                  (IntPtr)Win32Interop.MessageEvents.WindowHandle, (IntPtr)0);
+            log.DebugFormat("  result = {0}", result);
         }
 
         private void ReceiveReconnectEvent(object sender, Win32Interop.MessageReceivedEventArgs evtArgs)
