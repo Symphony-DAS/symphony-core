@@ -239,17 +239,22 @@ namespace Symphony.ExternalDevices
 
         public override ExternalDeviceBase BindStream(string name, IDAQInputStream inputStream)
         {
-            lock(_bindLock) return base.BindStream(name, inputStream);
+            lock(_bindLock) base.BindStream(name, inputStream);
+            Commander.RequestTelegraphValue();
+            return this;
         }
 
         public override ExternalDeviceBase BindStream(string name, IDAQOutputStream outputStream)
         {
-            lock(_bindLock) return base.BindStream(name, outputStream);
+            lock(_bindLock) base.BindStream(name, outputStream);
+            Commander.RequestTelegraphValue();
+            return this;
         }
 
         public override void UnbindStream(string name)
         {
             lock(_bindLock) base.UnbindStream(name);
+            Commander.RequestTelegraphValue();
         }
 
         private bool HasBoundOutputStream
