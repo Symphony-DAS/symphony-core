@@ -48,12 +48,17 @@ namespace Symphony.Core
 
 
         /// <summary>
-        /// Fired when hardware started.
+        /// Fired when started.
         /// </summary>
         event EventHandler<TimeStampedEventArgs> Started;
 
         /// <summary>
-        /// Fired when hardware stopped.
+        /// Fired when the physical hardware is started and is now possibly waiting for a trigger.
+        /// </summary>
+        event EventHandler<TimeStampedEventArgs> StartedHardware;
+
+        /// <summary>
+        /// Fired when stopped.
         /// </summary>
         event EventHandler<TimeStampedEventArgs> Stopped;
 

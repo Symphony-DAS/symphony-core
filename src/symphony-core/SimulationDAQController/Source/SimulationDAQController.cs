@@ -78,10 +78,7 @@ namespace Symphony.SimulationDAQController
 
         protected override void StartHardware(bool waitForTrigger)
         {
-            if (waitForTrigger)
-                throw new DAQException("SimulationDAQController does not support triggered start.");
-
-            IsRunning = true;
+            // no op
         }
 
         public override IInputData ReadStreamAsync(IDAQInputStream s)
