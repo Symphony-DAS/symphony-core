@@ -482,8 +482,7 @@ namespace Symphony.Core
                                          {
                                              data = data.DataWithNodeConfiguration(this.Name, this.Configuration);
 
-                                             Task.Factory.StartNew(
-                                                 () => OnStimulusOutput(outputTime, outputStream, data));
+                                             OnStimulusOutput(outputTime, outputStream, data);
 
                                              outputStream.DidOutputData(outputTime, data.Duration, data.Configuration);
                                          }
