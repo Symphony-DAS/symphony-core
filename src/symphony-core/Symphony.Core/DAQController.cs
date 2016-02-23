@@ -156,8 +156,6 @@ namespace Symphony.Core
     /// <see cref="ProcessLoopIteration"/>
     public abstract class DAQControllerBase : IDAQController
     {
-        private object eventLock = new Object();
-
         /// <summary>
         /// The name of this controller
         /// </summary>
@@ -309,7 +307,9 @@ namespace Symphony.Core
 
             // Pull outgoing data
             var outgoingDataTasks = NextOutgoingData();
+            
             bool start = true;
+            var startedHardwareTask = new Task(OnStartedHardware);
 
             var iterationStart = DateTimeOffset.Now;
 
@@ -357,7 +357,7 @@ namespace Symphony.Core
                     if (start)
                     {
                         StartHardware(waitForTrigger);
-                        OnStartedHardware();
+                        startedHardwareTask.Start();
                         start = false;
                     }
 
@@ -382,6 +382,8 @@ namespace Symphony.Core
             finally
             {
                 RequestedStop -= stopRequested;
+                
+                startedHardwareTask.Wait();
             }
         }
 
@@ -534,9 +536,13 @@ namespace Symphony.Core
 
         protected bool IsStopRequested { get; private set; }
 
+        private readonly object _eventLock = new Object();
+        private readonly object _pipelineEventLock = new Object();
+        private readonly object _processEventLock = new Object();
+
         private void OnProcessIteration()
         {
-            lock (eventLock)
+            lock (_processEventLock)
             {
                 var evt = ProcessIteration;
                 if (evt != null)
@@ -546,7 +552,7 @@ namespace Symphony.Core
 
         private void OnStarted()
         {
-            lock (eventLock)
+            lock (_eventLock)
             {
                 var evt = Started;
                 if (evt != null)
@@ -556,7 +562,7 @@ namespace Symphony.Core
 
         private void OnStartedHardware()
         {
-            lock (eventLock)
+            lock (_pipelineEventLock)
             {
                 var evt = StartedHardware;
                 if (evt != null)
@@ -566,7 +572,7 @@ namespace Symphony.Core
 
         private void OnRequestedStop()
         {
-            lock (eventLock)
+            lock (_eventLock)
             {
                 var evt = RequestedStop;
                 if (evt != null)
@@ -576,7 +582,7 @@ namespace Symphony.Core
 
         private void OnStimulusOutput(DateTimeOffset time, IDAQOutputStream stream, IIOData data)
         {
-            lock(eventLock)
+            lock (_processEventLock)
             {
                 var evt = StimulusOutput;
                 if(evt != null)
@@ -650,7 +656,7 @@ namespace Symphony.Core
 
         private void OnStopped()
         {
-            lock (eventLock)
+            lock (_eventLock)
             {
                 var evt = Stopped;
                 if (evt != null)
@@ -660,7 +666,7 @@ namespace Symphony.Core
 
         private void OnExceptionalStop(Exception e)
         {
-            lock (eventLock)
+            lock (_eventLock)
             {
                 log.ErrorFormat("DAQController.ExceptionalStop: {0}", e);
                 var evt = ExceptionalStop;
