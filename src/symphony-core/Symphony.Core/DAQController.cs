@@ -309,7 +309,7 @@ namespace Symphony.Core
             var outgoingDataTasks = NextOutgoingData();
             
             bool start = true;
-            var startedHardwareTask = new Task(OnStartedHardware);
+            Task startedHardwareTask = null;
 
             var iterationStart = DateTimeOffset.Now;
 
@@ -357,7 +357,7 @@ namespace Symphony.Core
                     if (start)
                     {
                         StartHardware(waitForTrigger);
-                        startedHardwareTask.Start();
+                        startedHardwareTask = Task.Factory.StartNew(OnStartedHardware);
                         start = false;
                     }
 
@@ -382,8 +382,11 @@ namespace Symphony.Core
             finally
             {
                 RequestedStop -= stopRequested;
-                
-                startedHardwareTask.Wait();
+
+                if (startedHardwareTask != null)
+                {
+                    startedHardwareTask.Wait();
+                }
             }
         }
 
