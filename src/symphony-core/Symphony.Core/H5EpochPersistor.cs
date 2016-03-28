@@ -1205,10 +1205,10 @@ namespace Symphony.Core
             var group = InsertEntityGroup(container, device.Name);
             try
             {
-                group.Attributes[ValueKey] = (double)background.Value.QuantityInBaseUnits;
-                group.Attributes[ValueUnitsKey] = background.Value.BaseUnits;
-                group.Attributes[SampleRateKey] = (double)background.SampleRate.QuantityInBaseUnits;
-                group.Attributes[SampleRateUnitsKey] = background.SampleRate.BaseUnits;
+                group.Attributes[ValueKey] = (double)background.Value.Quantity;
+                group.Attributes[ValueUnitsKey] = background.Value.DisplayUnits;
+                group.Attributes[SampleRateKey] = (double)background.SampleRate.Quantity;
+                group.Attributes[SampleRateUnitsKey] = background.SampleRate.DisplayUnits;
 
                 group.AddHardLink(DeviceGroupName, device.Group);
 
@@ -1365,8 +1365,8 @@ namespace Symphony.Core
             var group = InsertIOBaseGroup(container, epoch, device, response.DataConfigurationSpans);
             try
             {
-                group.Attributes[SampleRateKey] = (double)response.SampleRate.QuantityInBaseUnits;
-                group.Attributes[SampleRateUnitsKey] = response.SampleRate.BaseUnits;
+                group.Attributes[SampleRateKey] = (double)response.SampleRate.Quantity;
+                group.Attributes[SampleRateUnitsKey] = response.SampleRate.DisplayUnits;
                 group.Attributes[InputTimeTicksKey] = response.InputTime.Ticks;
                 group.Attributes[InputTimeOffsetHoursKey] = response.InputTime.Offset.TotalHours;
 
@@ -1434,8 +1434,8 @@ namespace Symphony.Core
             {
                 group.Attributes[StimulusIDKey] = stimulus.StimulusID;
                 group.Attributes[UnitsKey] = stimulus.Units;
-                group.Attributes[SampleRateKey] = (double)stimulus.SampleRate.QuantityInBaseUnits;
-                group.Attributes[SampleRateUnitsKey] = stimulus.SampleRate.BaseUnits;
+                group.Attributes[SampleRateKey] = (double)stimulus.SampleRate.Quantity;
+                group.Attributes[SampleRateUnitsKey] = stimulus.SampleRate.DisplayUnits;
                 if (stimulus.Duration.IsSome())
                 {
                     group.Attributes[DurationKey] = ((TimeSpan)stimulus.Duration).TotalSeconds;
