@@ -142,21 +142,9 @@ namespace HDF5
                 int rank = dims.Length;
                 sid = maxDims == null ? H5S.create_simple(rank, dims) : H5S.create_simple(rank, dims, maxDims);
                 pid = H5P.create(H5P.PropertyListClass.DATASET_CREATE);
-                //H5P.setDeflate(pid, compression);
+                H5P.setDeflate(pid, compression);
 
-                bool isExtentable = false;
-                if (maxDims != null)
-                {
-                    for (int i = 0; i < maxDims.Length; i++)
-                    {
-                        if (maxDims[i] != dims[i])
-                        {
-                            isExtentable = true;
-                        }
-                    }
-                }
-
-                if (chunks == null && isExtentable)
+                if (chunks == null)
                 {
                     chunks = new long[dims.Length];
                     for (int i = 0; i < dims.Length; i++)
@@ -164,11 +152,8 @@ namespace HDF5
                         chunks[i] = Math.Min(dims[i], 64);
                     }
                 }
+                H5P.setChunk(pid, chunks);
 
-                if (chunks != null)
-                {
-                    H5P.setChunk(pid, chunks);
-                }
                 did = H5D.create(Fid, path, tid, sid, new H5PropertyListId(H5P.Template.DEFAULT), pid,
                                  new H5PropertyListId(H5P.Template.DEFAULT));
             }
