@@ -344,7 +344,7 @@ namespace Symphony.Core
         /// <summary>
         /// The Source associated with this Epoch Group.
         /// </summary>
-        IPersistentSource Source { get; }
+        IPersistentSource Source { get; set; }
 
         /// <summary>
         /// The child Epoch Groups of this Epoch Group.

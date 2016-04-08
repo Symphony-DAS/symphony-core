@@ -332,6 +332,20 @@ namespace Symphony.Core
         }
 
         [Test]
+        public void ShouldSetEpochGroupSource()
+        {
+            var src1 = persistor.AddSource("source1", null);
+            var grp = persistor.BeginEpochGroup("group", src1);
+
+            Assert.AreEqual(grp.Source, src1);
+
+            var src2 = persistor.AddSource("source2", null);
+            grp.Source = src2;
+
+            Assert.AreEqual(grp.Source, src2);
+        }
+
+        [Test]
         public void ShouldSetEpochGroupEndTimeOnEnd()
         {
             var src = persistor.AddSource("label", null);

@@ -947,6 +947,15 @@ namespace Symphony.Core
         public IPersistentSource Source
         {
             get { return EntityFactory.Create<H5PersistentSource>(_sourceGroup); }
+            set
+            {
+                if (value == null)
+                    throw new ArgumentNullException();
+
+                H5Group group = ((H5PersistentSource) value).Group;
+                _sourceGroup.Delete();
+                Group.AddHardLink(SourceGroupName, group);
+            }
         }
 
         public IEnumerable<IPersistentEpochGroup> EpochGroups
