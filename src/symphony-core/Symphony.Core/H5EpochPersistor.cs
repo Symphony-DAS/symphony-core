@@ -953,8 +953,10 @@ namespace Symphony.Core
                     throw new ArgumentNullException();
 
                 H5Group group = ((H5PersistentSource) value).Group;
+                ((H5PersistentSource) Source).RemoveEpochGroup(this);
                 _sourceGroup.Delete();
                 Group.AddHardLink(SourceGroupName, group);
+                ((H5PersistentSource) Source).AddEpochGroup(this);
             }
         }
 

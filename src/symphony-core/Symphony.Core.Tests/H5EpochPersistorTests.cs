@@ -337,12 +337,17 @@ namespace Symphony.Core
             var src1 = persistor.AddSource("source1", null);
             var grp = persistor.BeginEpochGroup("group", src1);
 
-            Assert.AreEqual(grp.Source, src1);
+            Assert.AreEqual(src1, grp.Source);
+            Assert.AreEqual(1, src1.EpochGroups.Count());
+            Assert.AreEqual(grp, src1.EpochGroups.First());
 
             var src2 = persistor.AddSource("source2", null);
             grp.Source = src2;
 
-            Assert.AreEqual(grp.Source, src2);
+            Assert.AreEqual(src2, grp.Source);
+            Assert.AreEqual(1, src2.EpochGroups.Count());
+            Assert.AreEqual(0, src1.EpochGroups.Count());
+            Assert.AreEqual(grp, src2.EpochGroups.First());
         }
 
         [Test]
