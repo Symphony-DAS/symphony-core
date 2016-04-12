@@ -18,15 +18,12 @@
     <MSBuild Projects="$(SolutionRoot)\symphony-core.sln" Targets="Clean" />
   </Target>
 
-  <Target Name="Go" DependsOnTargets="UpdateAssemblyVersion; Build">
-  </Target>
-
   <Target Name="UpdateAssemblyVersion" Condition="'$(SYMPHONY_VERSION)' != ''">
     <RegexTransform Items="@(RegexTransform)" />
   </Target>
 
   <Target Name="Build">
-    <MSBuild Projects="$(SolutionRoot)\symphony-core.sln" Targets="Build" />
+    <MSBuild Projects="$(SolutionRoot)\symphony-core.sln" Targets="Build" Properties="OutputPath=$(MSBuildProjectDirectory)\bin\$(Platform)\$(Configuration)" />
   </Target>
 
 </Project>
