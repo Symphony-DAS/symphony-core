@@ -1300,7 +1300,7 @@ namespace Symphony.Core
                             {
                                 var m = (IMeasurement) kv.Value;
                                 nodeGroup.Attributes[kv.Key + "_quantity"] = (double) m.Quantity;
-                                nodeGroup.Attributes[value + "_units"] = m.DisplayUnits;
+                                nodeGroup.Attributes[kv.Key + "_units"] = m.DisplayUnits;
                                 nodeGroup.Attributes[kv.Key] = m.ToString();
                             }
                             else
