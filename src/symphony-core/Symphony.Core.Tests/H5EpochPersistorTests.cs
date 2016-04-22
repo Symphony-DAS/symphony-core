@@ -630,6 +630,7 @@ namespace Symphony.Core
             foreach (var kv in expected.Backgrounds)
             {
                 var a = actual.Backgrounds.First(b => b.Device.Name == kv.Key.Name && b.Device.Manufacturer == kv.Key.Manufacturer);
+                Assert.AreEqual(a.Epoch, actual);
                 AssertBackgroundsEqual(kv.Value, a);
             }
 
@@ -656,6 +657,7 @@ namespace Symphony.Core
         {
             Assert.AreEqual(expected.Value, actual.Value);
             Assert.AreEqual(expected.SampleRate, actual.SampleRate);
+            AssertConfigurationSpansEqual(expected.OutputConfigurationSpans, actual.ConfigurationSpans);
         }
 
         public static void AssertStimuliEqual(IStimulus expected, IPersistentStimulus actual)

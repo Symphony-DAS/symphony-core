@@ -154,6 +154,7 @@ namespace Symphony.Core
             get
             {
                 var times = Stimuli.Values.Where(s => s.StartTime).Select(s => s.StartTime).ToList();
+                times.AddRange(Backgrounds.Values.Where(b => b.StartTime).Select(b => b.StartTime).ToList());
                 times.Sort((s1, s2) => ((DateTimeOffset)s1).CompareTo(s2));
 
                 return times.Any() ? times.First() : Maybe<DateTimeOffset>.No();
@@ -374,6 +375,8 @@ namespace Symphony.Core
         {
             Value = value;
             SampleRate = sampleRate;
+            OutputConfigurationSpanList = new List<IConfigurationSpan>();
+            StartTime = Maybe<DateTimeOffset>.No();
         }
 
         /// <summary>
@@ -385,6 +388,51 @@ namespace Symphony.Core
         /// Sample rate for generated stimulus data.
         /// </summary>
         public IMeasurement SampleRate { get; private set; }
+
+        /// <summary>
+        /// The approximate time this background began being processed by the DAQController, or
+        /// Maybe.No if this stimulus has not yet started processing. 
+        /// </summary>
+        public Maybe<DateTimeOffset> StartTime { get; private set; }
+
+        private IList<IConfigurationSpan> OutputConfigurationSpanList
+        {
+            get;
+            set;
+        }
+
+        //TODO comment
+        public IEnumerable<IConfigurationSpan> OutputConfigurationSpans
+        {
+            get
+            {
+                return OutputConfigurationSpanList;
+            }
+        }
+
+        /// <summary>
+        /// Informs this background that a segment of its data was pushed "to the wire". This method expects to be called
+        /// in the sequence that data was output.
+        /// </summary>
+        /// <param name="outputTime">Approximate time the data was written "to the wire"</param>
+        /// <param name="timeSpan">Duration of the data that was written</param>
+        /// <param name="configuration">Pipeline node configuration(s) of nodes that processed the outgoing data</param>
+        public void DidOutputData(DateTimeOffset outputTime, TimeSpan timeSpan, IEnumerable<IPipelineNodeConfiguration> configuration)
+        {
+            if (_outputTimes.Any(t => outputTime < t))
+                throw new ArgumentException("Output time is out of sequence", "outputTime");
+
+            _outputTimes.Add(outputTime);
+
+            if (!StartTime)
+            {
+                StartTime = Maybe<DateTimeOffset>.Some(outputTime);
+            }
+
+            OutputConfigurationSpanList.Add(new ConfigurationSpan(timeSpan, configuration));
+        }
+
+        private readonly ISet<DateTimeOffset> _outputTimes = new HashSet<DateTimeOffset>();
     }
 
     public class ResponseException : SymphonyException

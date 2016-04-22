@@ -429,28 +429,6 @@ namespace Symphony.Core
         IPersistentEpochBlock EpochBlock { get; }
     }
 
-
-    /// <summary>
-    /// Represents a background in the absence of a stimulus
-    /// </summary>
-    public interface IPersistentBackground : IPersistentEntity
-    {
-        /// <summary>
-        /// The Device through which this Background was presented.
-        /// </summary>
-        IPersistentDevice Device { get; }
-
-        /// <summary>
-        /// The value of this Background.
-        /// </summary>
-        IMeasurement Value { get; }
-
-        /// <summary>
-        /// The sampling rate of this Background.
-        /// </summary>
-        IMeasurement SampleRate { get; }
-    }
-
     /// <summary>
     /// Interface for entities that describe I/O data.
     /// </summary>
@@ -465,6 +443,11 @@ namespace Symphony.Core
         /// The parameters describing the configuration of the associated Device.
         /// </summary>
         IEnumerable<IConfigurationSpan> ConfigurationSpans { get; }
+
+        /// <summary>
+        /// The Epoch that contains this entity.
+        /// </summary>
+        IPersistentEpoch Epoch { get; }
     }
 
     /// <summary>
@@ -486,11 +469,6 @@ namespace Symphony.Core
         /// The Measurements recorded in this Response.
         /// </summary>
         IEnumerable<IMeasurement> Data { get; }
-
-        /// <summary>
-        /// The Epoch that contains this Response.
-        /// </summary>
-        IPersistentEpoch Epoch { get; }
     }
 
     /// <summary>
@@ -527,11 +505,22 @@ namespace Symphony.Core
         /// The Measurements presented by this Stimulus. None if data is not persisted.
         /// </summary>
         Option<IEnumerable<IMeasurement>> Data { get; }
+    }
+
+    /// <summary>
+    /// Represents a background in the absence of a stimulus
+    /// </summary>
+    public interface IPersistentBackground : IPersistentIOBase
+    {
+        /// <summary>
+        /// The value of this Background.
+        /// </summary>
+        IMeasurement Value { get; }
 
         /// <summary>
-        /// The Epoch that contains this Stimulus.
+        /// The sampling rate of this Background.
         /// </summary>
-        IPersistentEpoch Epoch { get; }
+        IMeasurement SampleRate { get; }
     }
 
     /// <summary>

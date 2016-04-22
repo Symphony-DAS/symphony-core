@@ -1119,12 +1119,6 @@ namespace Symphony.Core
                 // ToList() everything before enumerating to guard against external collection modification
                 // causing exceptions during serialization
 
-                foreach (var kv in epoch.Backgrounds.ToList())
-                {
-                    var device = experiment.Device(kv.Key.Name, kv.Key.Manufacturer);
-                    H5PersistentBackground.InsertBackground(backgroundsGroup, factory, persistentEpoch, device, kv.Value);
-                }
-
                 foreach (var kv in epoch.ProtocolParameters.ToList())
                 {
                     var value = kv.Value ?? "";
@@ -1149,6 +1143,12 @@ namespace Symphony.Core
                 {
                     var device = experiment.Device(kv.Key.Name, kv.Key.Manufacturer);
                     H5PersistentStimulus.InsertStimulus(stimuliGroup, factory, persistentEpoch, device, kv.Value, compression);
+                }
+
+                foreach (var kv in epoch.Backgrounds.ToList())
+                {
+                    var device = experiment.Device(kv.Key.Name, kv.Key.Manufacturer);
+                    H5PersistentBackground.InsertBackground(backgroundsGroup, factory, persistentEpoch, device, kv.Value);
                 }
 
                 foreach (var keyword in epoch.Keywords.ToList())
@@ -1201,60 +1201,6 @@ namespace Symphony.Core
         }
     }
 
-    class H5PersistentBackground : H5PersistentEntity, IPersistentBackground
-    {
-        private const string ValueKey = "value";
-        private const string ValueUnitsKey = "valueUnits";
-        private const string SampleRateKey = "sampleRate";
-        private const string SampleRateUnitsKey = "sampleRateUnits";
-        private const string DeviceGroupName = "device";
-
-        private readonly H5Group _deviceGroup;
-
-        public static H5PersistentBackground InsertBackground(H5Group container, H5PersistentEntityFactory factory, H5PersistentEpoch epoch, H5PersistentDevice device, Background background)
-        {
-            var group = InsertEntityGroup(container, device.Name);
-            try
-            {
-                group.Attributes[ValueKey] = (double)background.Value.Quantity;
-                group.Attributes[ValueUnitsKey] = background.Value.DisplayUnits;
-                group.Attributes[SampleRateKey] = (double)background.SampleRate.Quantity;
-                group.Attributes[SampleRateUnitsKey] = background.SampleRate.DisplayUnits;
-
-                group.AddHardLink(DeviceGroupName, device.Group);
-
-                return factory.Create<H5PersistentBackground>(group);
-            }
-            catch (Exception x)
-            {
-                group.Delete();
-                throw new PersistanceException(x.Message);
-            }
-        }
-
-        public H5PersistentBackground(H5Group group, H5PersistentEntityFactory factory) : base(group, factory)
-        {
-            double value = group.Attributes[ValueKey];
-            string valueUnits = group.Attributes[ValueUnitsKey];
-            Value = new Measurement(value, valueUnits);
-
-            double sampleRate = group.Attributes[SampleRateKey];
-            string sampleRateUnits = group.Attributes[SampleRateUnitsKey];
-            SampleRate = new Measurement(sampleRate, sampleRateUnits);
-
-            _deviceGroup = group.Groups.First(g => g.Name == DeviceGroupName);
-        }
-
-        public IPersistentDevice Device
-        {
-            get { return EntityFactory.Create<H5PersistentDevice>(_deviceGroup); }
-        }
-
-        public IMeasurement Value { get; private set; }
-
-        public IMeasurement SampleRate { get; private set; }
-    }
-
     abstract class H5PersistentIOBase : H5PersistentEntity, IPersistentIOBase
     {
         private const string DeviceGroupName = "device";
@@ -1263,9 +1209,11 @@ namespace Symphony.Core
         private const string SpanIndexKey = "index";
         private const string SpanStartTimeKey = "startTimeSeconds";
         private const string SpanDurationKey = "timeSpanSeconds";
+        private const string EpochGroupName = "epoch";
 
         private readonly H5Group _deviceGroup;
         private readonly H5Group _dataConfigurationSpansGroup;
+        private readonly H5Group _epochGroup;
 
         protected static H5Group InsertIOBaseGroup(H5Group container, H5PersistentEpoch epoch, H5PersistentDevice device, IEnumerable<IConfigurationSpan> configSpans)
         {
@@ -1314,6 +1262,8 @@ namespace Symphony.Core
                     i++;
                 }
 
+                group.AddHardLink(EpochGroupName, epoch.Group);
+
                 return group;
             }
             catch (Exception x)
@@ -1328,6 +1278,7 @@ namespace Symphony.Core
             var subGroups = group.Groups.ToList(); 
             _deviceGroup = subGroups.First(g => g.Name == DeviceGroupName);
             _dataConfigurationSpansGroup = subGroups.First(g => g.Name == DataConfigurationSpansGroupName);
+            _epochGroup = subGroups.First(g => g.Name == EpochGroupName);
         }
 
         public IPersistentDevice Device
@@ -1357,6 +1308,11 @@ namespace Symphony.Core
                 }
             }
         }
+
+        public IPersistentEpoch Epoch
+        {
+            get { return EntityFactory.Create<H5PersistentEpoch>(_epochGroup); }
+        }
     }
 
     class H5PersistentResponse : H5PersistentIOBase, IPersistentResponse
@@ -1366,10 +1322,8 @@ namespace Symphony.Core
         private const string InputTimeTicksKey = "inputTimeDotNetDateTimeOffsetTicks";
         private const string InputTimeOffsetHoursKey = "inputTimeDotNetDateTimeOffsetOffsetHours";
         private const string DataDatasetName = "data";
-        private const string EpochGroupName = "epoch";
 
         private readonly H5Dataset _dataDataset;
-        private readonly H5Group _epochGroup;
 
         public static H5PersistentResponse InsertResponse(H5Group container, H5PersistentEntityFactory factory, H5PersistentEpoch epoch, H5PersistentDevice device, Response response, uint compression)
         {
@@ -1382,8 +1336,6 @@ namespace Symphony.Core
                 group.Attributes[InputTimeOffsetHoursKey] = response.InputTime.Offset.TotalHours;
 
                 group.AddDataset(DataDatasetName, H5Map.GetMeasurementType(container.File), response.Data.Select(H5Map.Convert).ToArray(), compression);
-
-                group.AddHardLink(EpochGroupName, epoch.Group);
 
                 return factory.Create<H5PersistentResponse>(group);
             }
@@ -1405,7 +1357,6 @@ namespace Symphony.Core
             InputTime = new DateTimeOffset(ticks, TimeSpan.FromHours(offset));
 
             _dataDataset = group.Datasets.First(ds => ds.Name == DataDatasetName);
-            _epochGroup = group.Groups.First(g => g.Name == EpochGroupName);
         }
 
         public IMeasurement SampleRate { get; private set; }
@@ -1415,11 +1366,6 @@ namespace Symphony.Core
         public IEnumerable<IMeasurement> Data
         {
             get { return _dataDataset.GetData<H5Map.MeasurementT>().Select(H5Map.Convert); }
-        }
-
-        public IPersistentEpoch Epoch
-        {
-            get { return EntityFactory.Create<H5PersistentEpoch>(_epochGroup); }
         }
     }
 
@@ -1432,11 +1378,9 @@ namespace Symphony.Core
         private const string ParametersGroupName = "parameters";
         private const string DurationKey = "durationSeconds";
         private const string DataDatasetName = "data";
-        private const string EpochGroupName = "epoch";
 
         private readonly H5Group _parametersGroup;
         private readonly H5Dataset _dataDataset;
-        private readonly H5Group _epochGroup;
 
         public static H5PersistentStimulus InsertStimulus(H5Group container, H5PersistentEntityFactory factory, H5PersistentEpoch epoch, H5PersistentDevice device, IStimulus stimulus, uint compression)
         {
@@ -1475,8 +1419,6 @@ namespace Symphony.Core
                     group.AddDataset(DataDatasetName, H5Map.GetMeasurementType(container.File), data.Select(H5Map.Convert).ToArray(), compression);
                 }
 
-                group.AddHardLink(EpochGroupName, epoch.Group);
-
                 return factory.Create<H5PersistentStimulus>(group);
             }
             catch (Exception x)
@@ -1501,7 +1443,6 @@ namespace Symphony.Core
 
             _parametersGroup = group.Groups.First(g => g.Name == ParametersGroupName);
             _dataDataset = group.Datasets.FirstOrDefault(g => g.Name == DataDatasetName);
-            _epochGroup = group.Groups.First(g => g.Name == EpochGroupName);
         }
 
         public string StimulusID { get; private set; }
@@ -1526,11 +1467,49 @@ namespace Symphony.Core
                            : Option<IEnumerable<IMeasurement>>.Some(_dataDataset.GetData<H5Map.MeasurementT>().Select(H5Map.Convert));
             }
         }
+    }
 
-        public IPersistentEpoch Epoch
+    class H5PersistentBackground : H5PersistentIOBase, IPersistentBackground
+    {
+        private const string ValueKey = "value";
+        private const string ValueUnitsKey = "valueUnits";
+        private const string SampleRateKey = "sampleRate";
+        private const string SampleRateUnitsKey = "sampleRateUnits";
+
+        public static H5PersistentBackground InsertBackground(H5Group container, H5PersistentEntityFactory factory, H5PersistentEpoch epoch, H5PersistentDevice device, Background background)
         {
-            get { return EntityFactory.Create<H5PersistentEpoch>(_epochGroup); }
+            var group = InsertIOBaseGroup(container, epoch, device, background.OutputConfigurationSpans);
+            try
+            {
+                group.Attributes[ValueKey] = (double)background.Value.Quantity;
+                group.Attributes[ValueUnitsKey] = background.Value.DisplayUnits;
+                group.Attributes[SampleRateKey] = (double)background.SampleRate.Quantity;
+                group.Attributes[SampleRateUnitsKey] = background.SampleRate.DisplayUnits;
+
+                return factory.Create<H5PersistentBackground>(group);
+            }
+            catch (Exception x)
+            {
+                group.Delete();
+                throw new PersistanceException(x.Message);
+            }
         }
+
+        public H5PersistentBackground(H5Group group, H5PersistentEntityFactory factory)
+            : base(group, factory)
+        {
+            double value = group.Attributes[ValueKey];
+            string valueUnits = group.Attributes[ValueUnitsKey];
+            Value = new Measurement(value, valueUnits);
+
+            double sampleRate = group.Attributes[SampleRateKey];
+            string sampleRateUnits = group.Attributes[SampleRateUnitsKey];
+            SampleRate = new Measurement(sampleRate, sampleRateUnits);
+        }
+
+        public IMeasurement Value { get; private set; }
+
+        public IMeasurement SampleRate { get; private set; }
     }
 
     class H5PersistentResource : H5PersistentEntity, IPersistentResource

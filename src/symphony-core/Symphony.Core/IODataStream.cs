@@ -454,6 +454,8 @@ namespace Symphony.Core
             if (OutputPosition + timeSpan > Position)
                 throw new ArgumentException("Time span would set output position past stream position", "timeSpan");
 
+            Background.DidOutputData(outputTime, timeSpan, configuration);
+
             OutputPosition += timeSpan;
         }
 
