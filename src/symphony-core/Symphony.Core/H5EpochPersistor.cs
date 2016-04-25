@@ -1522,7 +1522,7 @@ namespace Symphony.Core
 
         public static H5PersistentResource InsertResource(H5Group container, H5PersistentEntityFactory factory, string uti, string name, byte[] data)
         {
-            var group = InsertEntityGroup(container, name);
+            var group = InsertEntityGroup(container, "resource");
             try
             {
                 group.Attributes[UTIKey] = uti;

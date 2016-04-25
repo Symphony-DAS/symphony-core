@@ -17,6 +17,7 @@ namespace Symphony.Core
     ///         EpochGroups (nestable)
     ///         EpochBlocks
     ///             Epochs
+    ///                 Backgrounds
     ///                 Responses
     ///                 Stimuli
     /// 
