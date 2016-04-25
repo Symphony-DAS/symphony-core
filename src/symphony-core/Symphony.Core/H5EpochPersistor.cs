@@ -525,7 +525,7 @@ namespace Symphony.Core
 
         public static H5PersistentDevice InsertDevice(H5Group container, H5PersistentEntityFactory factory, H5PersistentExperiment experiment, string name, string manufacturer)
         {
-            var group = InsertEntityGroup(container, name);
+            var group = InsertEntityGroup(container, "device");
             try
             {
                 group.Attributes[NameKey] = name;
