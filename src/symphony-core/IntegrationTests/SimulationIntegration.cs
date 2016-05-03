@@ -36,11 +36,26 @@ namespace IntegrationTests
 
             var time = new DateTimeOffset(2011, 8, 22, 11, 12, 0, 0, TimeSpan.FromHours(-6));
 
-            var block = epochPersistor.BeginEpochBlock(e.ProtocolID, e.ProtocolParameters, time);
+            var h5Persistor = epochPersistor as H5EpochPersistor;
+            if (h5Persistor != null)
+            {
+                h5Persistor.BeginEpochBlock(e.ProtocolID, e.ProtocolParameters, time);
+            }
+            else
+            {
+                epochPersistor.BeginEpochBlock(e.ProtocolID, e.ProtocolParameters);
+            }
             
             controller.RunEpoch(e, epochPersistor);
             
-            epochPersistor.EndEpochBlock(time.Add(e.Duration));
+            if (h5Persistor != null)
+            {
+                h5Persistor.EndEpochBlock(time.Add(e.Duration));
+            }
+            else
+            {
+                epochPersistor.EndEpochBlock();
+            }
 
             Assert.AreEqual((TimeSpan)stim1.Duration, e.Responses[dev0].Duration);
             if (nChannels > 1)

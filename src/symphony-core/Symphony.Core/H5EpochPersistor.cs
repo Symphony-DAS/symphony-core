@@ -208,6 +208,11 @@ namespace Symphony.Core
             get { return _openEpochGroups.Count == 0 ? null : _openEpochGroups.Peek(); }
         }
 
+        public IPersistentEpochBlock BeginEpochBlock(string protocolID, IDictionary<string, object> parameters)
+        {
+            return BeginEpochBlock(protocolID, parameters, DateTimeOffset.Now);
+        }
+
         public IPersistentEpochBlock BeginEpochBlock(string protocolID, IDictionary<string, object> parameters, DateTimeOffset startTime)
         {
             if (CurrentEpochGroup == null)
@@ -217,6 +222,11 @@ namespace Symphony.Core
             
             CurrentEpochBlock = ((H5PersistentEpochGroup) CurrentEpochGroup).InsertEpochBlock(protocolID, parameters, startTime);
             return CurrentEpochBlock;
+        }
+
+        public IPersistentEpochBlock EndEpochBlock()
+        {
+            return EndEpochBlock(DateTimeOffset.Now);
         }
 
         public IPersistentEpochBlock EndEpochBlock(DateTimeOffset endTime)

@@ -56,12 +56,12 @@ namespace Symphony.Core
 
         public IPersistentEpochGroup CurrentEpochGroup { get; private set; }
 
-        public IPersistentEpochBlock BeginEpochBlock(string protocolID, IDictionary<string, object> parameters, DateTimeOffset startTime)
+        public IPersistentEpochBlock BeginEpochBlock(string protocolID, IDictionary<string, object> parameters)
         {
             return null;
         }
 
-        public IPersistentEpochBlock EndEpochBlock(DateTimeOffset endTime)
+        public IPersistentEpochBlock EndEpochBlock()
         {
             return null;
         }

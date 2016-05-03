@@ -94,16 +94,14 @@ namespace Symphony.Core
         /// </summary>
         /// <param name="protocolID">Protocol ID of the protocol that produced the block</param>
         /// <param name="parameters">Common protocol parameters used to produce the block</param>
-        /// <param name="startTime">Start time of the Epoch Block</param>
         /// <returns>The Epoch Block that was started</returns>
-        IPersistentEpochBlock BeginEpochBlock(string protocolID, IDictionary<string, object> parameters, DateTimeOffset startTime);
+        IPersistentEpochBlock BeginEpochBlock(string protocolID, IDictionary<string, object> parameters);
 
         /// <summary>
         /// Ends the current Epoch Block.
         /// </summary>
-        /// <param name="endTime">End time of the Epoch Block</param>
         /// <returns>The Epoch Block that was ended</returns>
-        IPersistentEpochBlock EndEpochBlock(DateTimeOffset endTime);
+        IPersistentEpochBlock EndEpochBlock();
 
         /// <summary>
         /// The currently open Epoch Block or null if there is no open Epoch Block.
