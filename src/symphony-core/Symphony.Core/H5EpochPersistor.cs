@@ -830,7 +830,7 @@ namespace Symphony.Core
 
         public IEnumerable<IPersistentSource> AllSources
         {
-            get { return Sources.Aggregate(Sources, (current, source) => current.Concat(source.AllSources)); }
+            get { return Sources.Flatten(s => s.Sources); }
         }
 
         public H5PersistentSource InsertSource(string label)
@@ -848,7 +848,7 @@ namespace Symphony.Core
 
         public IEnumerable<IPersistentEpochGroup> AllEpochGroups
         {
-            get { return EpochGroups.Aggregate(EpochGroups, (current, group) => current.Concat(group.AllEpochGroups)); }
+            get { return EpochGroups.Flatten(g => g.EpochGroups); }
         }
 
         public H5PersistentEpochGroup InsertEpochGroup(string label, H5PersistentSource source, DateTimeOffset startTime)

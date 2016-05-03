@@ -4,6 +4,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics.Contracts;
+using System.Linq;
 
 /*
  * These are "utility" constructs used elsewhere throughout the
@@ -150,6 +151,18 @@ namespace Symphony.Core
         public static EnumerableWrapper Wrap(this IEnumerable source)
         {
             return new EnumerableWrapper(source);
+        }
+
+        public static IEnumerable<T> Flatten<T>(this IEnumerable<T> source, Func<T, IEnumerable<T>> selector)
+        {
+            foreach (var item in source)
+            {
+                yield return item;
+                foreach (var child in selector(item).Flatten(selector))
+                {
+                    yield return child;
+                }
+            }
         }
     }
 
