@@ -653,7 +653,7 @@ namespace Symphony.Core
 
         public IEnumerable<IPersistentSource> Sources
         {
-            get { return _sourcesGroup.Groups.Select(g => EntityFactory.Create<H5PersistentSource>(g)); }
+            get { return _sourcesGroup.Groups.Select(g => EntityFactory.Create<H5PersistentSource>(g)).OrderBy(s => s.CreationTime); }
         }
 
         public IEnumerable<IPersistentSource> AllSources
@@ -671,7 +671,7 @@ namespace Symphony.Core
 
         public IEnumerable<IPersistentEpochGroup> EpochGroups
         {
-            get { return _epochGroupsGroup.Groups.Select(g => EntityFactory.Create<H5PersistentEpochGroup>(g)); }
+            get { return _epochGroupsGroup.Groups.Select(g => EntityFactory.Create<H5PersistentEpochGroup>(g)).OrderBy(g => g.StartTime); }
         }
 
         public IEnumerable<IPersistentEpochGroup> AllEpochGroups
@@ -848,7 +848,7 @@ namespace Symphony.Core
 
         public IEnumerable<IPersistentSource> Sources
         {
-            get { return _sourcesGroup.Groups.Select(g => EntityFactory.Create<H5PersistentSource>(g)); }
+            get { return _sourcesGroup.Groups.Select(g => EntityFactory.Create<H5PersistentSource>(g)).OrderBy(s => s.CreationTime); }
         }
 
         public IEnumerable<IPersistentSource> AllSources
@@ -866,7 +866,7 @@ namespace Symphony.Core
 
         public IEnumerable<IPersistentEpochGroup> EpochGroups
         {
-            get { return _epochGroupsGroup.Groups.Select(g => EntityFactory.Create<H5PersistentEpochGroup>(g)); }
+            get { return _epochGroupsGroup.Groups.Select(g => EntityFactory.Create<H5PersistentEpochGroup>(g)).OrderBy(g => g.StartTime); }
         }
 
         public IEnumerable<IPersistentEpochGroup> AllEpochGroups
@@ -985,7 +985,7 @@ namespace Symphony.Core
 
         public IEnumerable<IPersistentEpochGroup> EpochGroups
         {
-            get { return _epochGroupsGroup.Groups.Select(g => EntityFactory.Create<H5PersistentEpochGroup>(g)); }
+            get { return _epochGroupsGroup.Groups.Select(g => EntityFactory.Create<H5PersistentEpochGroup>(g)).OrderBy(g => g.StartTime); }
         }
 
         public IEnumerable<IPersistentEpochGroup> AllEpochGroups
@@ -1003,7 +1003,7 @@ namespace Symphony.Core
 
         public IEnumerable<IPersistentEpochBlock> EpochBlocks
         {
-            get { return _epochBlocksGroup.Groups.Select(g => EntityFactory.Create<H5PersistentEpochBlock>(g)); }
+            get { return _epochBlocksGroup.Groups.Select(g => EntityFactory.Create<H5PersistentEpochBlock>(g)).OrderBy(b => b.StartTime); }
         }
 
         public H5PersistentEpochBlock InsertEpochBlock(string protocolID, IDictionary<string, object> parameters, DateTimeOffset startTime)
@@ -1089,7 +1089,7 @@ namespace Symphony.Core
 
         public IEnumerable<IPersistentEpoch> Epochs
         {
-            get { return _epochsGroup.Groups.Select(g => EntityFactory.Create<H5PersistentEpoch>(g)); }
+            get { return _epochsGroup.Groups.Select(g => EntityFactory.Create<H5PersistentEpoch>(g)).OrderBy(e => e.StartTime); }
         }
 
         public H5PersistentEpoch InsertEpoch(Epoch epoch, uint compression)

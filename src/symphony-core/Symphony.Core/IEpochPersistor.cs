@@ -251,7 +251,7 @@ namespace Symphony.Core
         DateTimeOffset CreationTime { get; }
 
         /// <summary>
-        /// The child Sources of this Source.
+        /// The child Sources of this Source. Ordered by creation time.
         /// </summary>
         IEnumerable<IPersistentSource> Sources { get; }
 
@@ -261,7 +261,7 @@ namespace Symphony.Core
         IEnumerable<IPersistentSource> AllSources { get; }
 
         /// <summary>
-        /// The top-level Epoch Groups associated with this Source.
+        /// The top-level Epoch Groups associated with this Source. Ordered by start time.
         /// </summary>
         IEnumerable<IPersistentEpochGroup> EpochGroups { get; }
 
@@ -315,7 +315,7 @@ namespace Symphony.Core
         IEnumerable<IPersistentDevice> Devices { get; }
 
         /// <summary>
-        /// The top-level Sources contained within this Experiment.
+        /// The top-level Sources contained within this Experiment. Ordered by creation time.
         /// </summary>
         IEnumerable<IPersistentSource> Sources { get; }
 
@@ -325,7 +325,7 @@ namespace Symphony.Core
         IEnumerable<IPersistentSource> AllSources { get; }
 
         /// <summary>
-        /// The top-level Epoch Groups contained within this Experiment.
+        /// The top-level Epoch Groups contained within this Experiment. Ordered by start time.
         /// </summary>
         IEnumerable<IPersistentEpochGroup> EpochGroups { get; }
 
@@ -351,7 +351,7 @@ namespace Symphony.Core
         IPersistentSource Source { get; set; }
 
         /// <summary>
-        /// The child Epoch Groups of this Epoch Group.
+        /// The child Epoch Groups of this Epoch Group. Ordered by start time.
         /// </summary>
         IEnumerable<IPersistentEpochGroup> EpochGroups { get; }
 
@@ -361,7 +361,7 @@ namespace Symphony.Core
         IEnumerable<IPersistentEpochGroup> AllEpochGroups { get; }
 
         /// <summary>
-        /// The Epoch Blocks contained within this Epoch Group.
+        /// The Epoch Blocks contained within this Epoch Group. Ordered by start time.
         /// </summary>
         IEnumerable<IPersistentEpochBlock> EpochBlocks { get; }
 
@@ -392,7 +392,7 @@ namespace Symphony.Core
         IEnumerable<KeyValuePair<string, object>> ProtocolParameters { get; }
 
         /// <summary>
-        /// The Epochs contained within this Epoch Block.
+        /// The Epochs contained within this Epoch Block. Ordered by start time.
         /// </summary>
         IEnumerable<IPersistentEpoch> Epochs { get; }
 
