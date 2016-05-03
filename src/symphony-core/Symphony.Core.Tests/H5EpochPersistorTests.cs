@@ -204,10 +204,12 @@ namespace Symphony.Core
         [Test]
         public void ShouldAddSource()
         {
+            var time = new DateTimeOffset(2011, 8, 22, 11, 12, 0, 0, TimeSpan.FromHours(-6));
             var label = "animal";
-            var src = persistor.AddSource(label, null);
+            var src = persistor.AddSource(label, null, time);
 
             Assert.AreEqual(label, src.Label);
+            Assert.AreEqual(time, src.CreationTime);
             Assert.AreEqual(0, src.Sources.Count());
             Assert.AreEqual(0, src.AllSources.Count());
             Assert.AreEqual(0, src.EpochGroups.Count());

@@ -246,6 +246,11 @@ namespace Symphony.Core
         string Label { get; set; }
 
         /// <summary>
+        /// The creation time of this entity.
+        /// </summary>
+        DateTimeOffset CreationTime { get; }
+
+        /// <summary>
         /// The child Sources of this Source.
         /// </summary>
         IEnumerable<IPersistentSource> Sources { get; }

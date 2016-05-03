@@ -164,9 +164,14 @@ namespace Symphony.Core
 
         public IPersistentSource AddSource(string label, IPersistentSource parent)
         {
+            return AddSource(label, parent, DateTimeOffset.Now);
+        }
+
+        public IPersistentSource AddSource(string label, IPersistentSource parent, DateTimeOffset creationTime)
+        {
             return parent == null
-                       ? _experiment.InsertSource(label)
-                       : ((H5PersistentSource) parent).InsertSource(label);
+                       ? _experiment.InsertSource(label, creationTime)
+                       : ((H5PersistentSource) parent).InsertSource(label, creationTime);
         }
 
         public IPersistentEpochGroup BeginEpochGroup(string label, IPersistentSource source)
@@ -573,6 +578,8 @@ namespace Symphony.Core
     class H5PersistentSource : H5PersistentEntity, IPersistentSource
     {
         private const string LabelKey = "label";
+        private const string CreationTimeTicksKey = "creationTimeDotNetDateTimeOffsetTicks";
+        private const string CreationTimeOffsetHoursKey = "creationTimeDotNetDateTimeOffsetOffsetHours";
         private const string SourcesGroupName = "sources";
         private const string EpochGroupsGroupName = "epochGroups";
         private const string ParentGroupName = "parent";
@@ -585,12 +592,14 @@ namespace Symphony.Core
         private readonly H5Group _parentGroup;
         private readonly H5Group _experimentGroup;
 
-        public static H5PersistentSource InsertSource(H5Group container, H5PersistentEntityFactory factory, H5PersistentSource parent, H5PersistentExperiment experiment, string label)
+        public static H5PersistentSource InsertSource(H5Group container, H5PersistentEntityFactory factory, H5PersistentSource parent, H5PersistentExperiment experiment, string label, DateTimeOffset creationTime)
         {
             var group = InsertEntityGroup(container, "source");
             try
             {
                 group.Attributes[LabelKey] = label;
+                group.Attributes[CreationTimeTicksKey] = creationTime.Ticks;
+                group.Attributes[CreationTimeOffsetHoursKey] = creationTime.Offset.TotalHours;
 
                 group.AddGroup(SourcesGroupName);
                 group.AddGroup(EpochGroupsGroupName);
@@ -612,7 +621,9 @@ namespace Symphony.Core
 
         public H5PersistentSource(H5Group group, H5PersistentEntityFactory factory) : base(group, factory)
         {
-            _label = group.Attributes[LabelKey];
+            var attr = group.Attributes;
+            _label = attr[LabelKey];
+            CreationTime = new DateTimeOffset(attr[CreationTimeTicksKey], TimeSpan.FromHours(attr[CreationTimeOffsetHoursKey]));
 
             var subGroups = Group.Groups.ToList();
             _sourcesGroup = subGroups.First(g => g.Name == SourcesGroupName);
@@ -638,6 +649,8 @@ namespace Symphony.Core
             }
         }
 
+        public DateTimeOffset CreationTime { get; private set; }
+
         public IEnumerable<IPersistentSource> Sources
         {
             get { return _sourcesGroup.Groups.Select(g => EntityFactory.Create<H5PersistentSource>(g)); }
@@ -648,9 +661,9 @@ namespace Symphony.Core
             get { return Sources.Aggregate(Sources, (current, source) => current.Concat(source.AllSources)); }
         }
 
-        public H5PersistentSource InsertSource(string label)
+        public H5PersistentSource InsertSource(string label, DateTimeOffset creationTime)
         {
-            var source = InsertSource(_sourcesGroup, EntityFactory, this, (H5PersistentExperiment) Experiment, label);
+            var source = InsertSource(_sourcesGroup, EntityFactory, this, (H5PersistentExperiment) Experiment, label, creationTime);
             TryFlush();
 
             return source;
@@ -843,9 +856,9 @@ namespace Symphony.Core
             get { return Sources.Flatten(s => s.Sources); }
         }
 
-        public H5PersistentSource InsertSource(string label)
+        public H5PersistentSource InsertSource(string label, DateTimeOffset creationTime)
         {
-            var source = H5PersistentSource.InsertSource(_sourcesGroup, EntityFactory, null, this, label);
+            var source = H5PersistentSource.InsertSource(_sourcesGroup, EntityFactory, null, this, label, creationTime);
             TryFlush();
 
             return source;
