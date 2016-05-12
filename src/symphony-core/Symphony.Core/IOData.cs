@@ -47,7 +47,7 @@ namespace Symphony.Core
         IEnumerable<IPipelineNodeConfiguration> Nodes { get; }
     }
 
-    public interface IPipelineNodeConfiguration
+    public interface IPipelineNodeConfiguration : IEquatable<IPipelineNodeConfiguration>
     {
         string Name { get; }
         IDictionary<string, object> Configuration { get; }
@@ -77,6 +77,65 @@ namespace Symphony.Core
         {
             Name = name;
             Configuration = config;
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj)) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            if (obj.GetType() != this.GetType()) return false;
+            return Equals((PipelineNodeConfiguration) obj);
+        }
+
+        public bool Equals(IPipelineNodeConfiguration other)
+        {
+            return string.Equals(Name, other.Name) && Configuration.Count == other.Configuration.Count && !Configuration.Except(other.Configuration).Any();
+        }
+
+        public override int GetHashCode()
+        {
+            unchecked
+            {
+                return ((Name != null ? Name.GetHashCode() : 0) * 397) ^ (Configuration != null ? Configuration.GetHashCode() : 0);
+            }
+        }
+    }
+
+    public static class ConfigurationSpanExtensions
+    {
+        /// <summary>
+        /// Combines adjacent configuration spans with equivalent nodes.
+        /// </summary>
+        /// <param name="configSpans">Enumerable of spans</param>
+        /// <returns>consolidated enumerable of spans</returns>
+        public static IEnumerable<IConfigurationSpan> Consolidate(this IEnumerable<IConfigurationSpan> configSpans)
+        {
+            var spans = new List<IConfigurationSpan>();
+            var configSpanList = configSpans.ToList();
+            if (configSpanList.Any())
+            {
+                var cTime = configSpanList.First().Time;
+                IList<IPipelineNodeConfiguration> cNodes = configSpanList.First().Nodes.ToList();
+
+                for (int j = 1; j < configSpanList.Count(); j++)
+                {
+                    var span = configSpanList[j];
+                    if (!span.Nodes.Except(cNodes).Any() && !cNodes.Except(span.Nodes).Any())
+                    {
+                        cTime += span.Time;
+                    }
+                    else
+                    {
+                        spans.Add(new ConfigurationSpan(cTime, cNodes));
+                        cTime = span.Time;
+                        cNodes = span.Nodes.ToList();
+                    }
+                }
+
+                // Add last span
+                spans.Add(new ConfigurationSpan(cTime, cNodes));
+            }
+            return spans;
         }
     }
 

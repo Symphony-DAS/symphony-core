@@ -586,13 +586,22 @@ namespace Symphony.Core
             IInputData responseData1 = new InputData(samples, srate, start)
                 .DataWithStreamConfiguration(stream1, streamConfig)
                 .DataWithExternalDeviceConfiguration(dev1, devConfig);
-            IInputData responseData2 = new InputData(samples, srate, start)
+            IInputData responseData2 = new InputData(samples, srate, start + TimeSpanExtensions.FromSamples((uint) samples.Count, srate))
+                .DataWithStreamConfiguration(stream1, streamConfig)
+                .DataWithExternalDeviceConfiguration(dev1, devConfig);
+
+            IInputData responseData3 = new InputData(samples, srate, start)
+                .DataWithStreamConfiguration(stream2, streamConfig)
+                .DataWithExternalDeviceConfiguration(dev2, devConfig);
+            IInputData responseData4 = new InputData(samples, srate, start + TimeSpanExtensions.FromSamples((uint)samples.Count, srate))
                 .DataWithStreamConfiguration(stream2, streamConfig)
                 .DataWithExternalDeviceConfiguration(dev2, devConfig);
 
             epoch.Responses[dev1].AppendData(responseData1);
             epoch.Responses[dev1].AppendData(responseData2);
-            epoch.Responses[dev2].AppendData(responseData2);
+
+            epoch.Responses[dev2].AppendData(responseData3);
+            epoch.Responses[dev2].AppendData(responseData4);
 
             epoch.Keywords.Add("word1");
             epoch.Keywords.Add("word2");
@@ -659,7 +668,7 @@ namespace Symphony.Core
         {
             Assert.AreEqual(expected.Value, actual.Value);
             Assert.AreEqual(expected.SampleRate, actual.SampleRate);
-            AssertConfigurationSpansEqual(expected.OutputConfigurationSpans, actual.ConfigurationSpans);
+            AssertConfigurationSpansEqual(expected.OutputConfigurationSpans.Consolidate(), actual.ConfigurationSpans);
         }
 
         public static void AssertStimuliEqual(IStimulus expected, IPersistentStimulus actual)
@@ -670,7 +679,7 @@ namespace Symphony.Core
             Assert.AreEqual(expected.Duration, actual.Duration);
             Assert.AreEqual(expected.Data, actual.Data);
             CollectionAssert.AreEquivalent(expected.Parameters, actual.Parameters);
-            AssertConfigurationSpansEqual(expected.OutputConfigurationSpans, actual.ConfigurationSpans);
+            AssertConfigurationSpansEqual(expected.OutputConfigurationSpans.Consolidate(), actual.ConfigurationSpans);
         }
 
         public static void AssertResponsesEqual(Response expected, IPersistentResponse actual)
@@ -678,7 +687,7 @@ namespace Symphony.Core
             Assert.AreEqual(expected.SampleRate, actual.SampleRate);
             Assert.AreEqual(expected.InputTime, actual.InputTime);
             CollectionAssert.AreEqual(expected.Data, actual.Data);
-            AssertConfigurationSpansEqual(expected.DataConfigurationSpans, actual.ConfigurationSpans);
+            AssertConfigurationSpansEqual(expected.DataConfigurationSpans.Consolidate(), actual.ConfigurationSpans);
         }
 
         private static void AssertConfigurationSpansEqual(IEnumerable<IConfigurationSpan> expected, IEnumerable<IConfigurationSpan> actual)

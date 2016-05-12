@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -1248,7 +1249,7 @@ namespace Symphony.Core
 
                 uint i = 0;
                 var totalTime = TimeSpan.Zero;
-                foreach (var span in configSpans.ToList())
+                foreach (var span in configSpans.Consolidate().ToList())
                 {
                     var spanGroup = spansGroup.AddGroup(SpanGroupPrefix + i);
                     spanGroup.Attributes[SpanIndexKey] = i;
