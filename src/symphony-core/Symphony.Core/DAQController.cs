@@ -358,7 +358,6 @@ namespace Symphony.Core
                     {
                         StartHardware(waitForTrigger);
                         startedHardwareTask = Task.Factory.StartNew(OnStartedHardware);
-                        start = false;
                     }
 
                     // Run iteration
@@ -372,6 +371,15 @@ namespace Symphony.Core
                     PushIncomingData(incomingData);
 
                     OnProcessIteration();
+
+                    if (start)
+                    {
+                        // Assumes no deficit over the first process interval. This seems like a reasonable
+                        // assumption and needs to be made because the first process interval may wait for 
+                        // trigger for an extended period. The trigger wait time should not build up deficit.
+                        iterationStart = DateTimeOffset.Now - ProcessInterval;
+                        start = false;
+                    }
 
                     //Wait for rest of the process interval
                     deficit = SleepForRestOfIteration(iterationStart, ProcessInterval);
