@@ -7,17 +7,17 @@ using Symphony.Core;
 
 namespace NI
 {
-    public class NIDAQInputStream : DAQInputStream, NIDAQStream
+    public class NIDAQOutputStream : DAQOutputStream, NIDAQStream
     {
         private NIDAQController Controller { get; set; }
 
         public StreamType ChannelType { get; private set; }
 
-        public NIDAQInputStream(string name, StreamType streamType, NIDAQController controller)
+        public NIDAQOutputStream(string name, StreamType streamType, NIDAQController controller)
             : base(name.Split('/').Last(), controller)
         {
             ChannelType = streamType;
-            MeasurementConversionTarget = (ChannelType == StreamType.DIGITAL_IN) ? Measurement.UNITLESS : "V";
+            MeasurementConversionTarget = (ChannelType == StreamType.DIGITAL_OUT) ? Measurement.UNITLESS : "V";
             Controller = controller;
             Clock = controller.Clock;
         }
@@ -41,7 +41,7 @@ namespace NI
         public override IMeasurement SampleRate
         {
             get { return Controller.SampleRate; }
-            set { throw new NotSupportedException("NIDAQInputStream.SampleRate set by DAQController."); }
+            set { throw new NotSupportedException("NIDAQOutputStream.SampleRate set by DAQController."); }
         }
 
         public override bool CanSetSampleRate
