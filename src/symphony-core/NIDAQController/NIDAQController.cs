@@ -17,7 +17,7 @@ namespace NI
     public interface NIDAQStream : IDAQStream
     {
         PhysicalChannelTypes PhysicalChannelType { get; }
-        string FullName { get; }
+        string PhysicalName { get; }
         NIChannelInfo ChannelInfo { get; }
     }
 
@@ -35,9 +35,10 @@ namespace NI
         void StopHardware();
 
         NIDeviceInfo DeviceInfo { get; }
-        NIChannelInfo ChannelInfo(ChannelType channelType, string channelName);
+        NIChannelInfo ChannelInfo(string channelName);
 
-        void Preload(IDictionary<string, double[]> output);
+        void PreloadAnalog(IDictionary<string, double[]> output);
+        void PreloadDigital(IDictionary<string, byte[]> output);
     }
 
     /// <summary>
@@ -241,28 +242,58 @@ namespace NI
 
         private void PreloadStreams()
         {
-            IDictionary<string, double[]> output = new Dictionary<string, double[]>();
+            IDictionary<string, double[]> analogOut = new Dictionary<string, double[]>();
+            IDictionary<string, byte[]> digitalOut = new Dictionary<string, byte[]>();
 
             foreach (var s in ActiveOutputStreams.Cast<NIDAQOutputStream>())
             {
                 s.Reset();
-                var outputSamples = new List<double>();
-                while (TimeSpanExtensions.FromSamples((uint)outputSamples.Count(), s.SampleRate) < ProcessInterval) // && s.HasMoreData
+
+                if (s.PhysicalChannelType == PhysicalChannelTypes.AO)
                 {
-                    var nextOutputDataForStream = NextOutputDataForStream(s);
-                    var nextSamples =
-                        nextOutputDataForStream.DataWithUnits("V").Data.Select(m => (double) m.QuantityInBaseUnits);
+                    var outputSamples = new List<double>();
+                    while (TimeSpanExtensions.FromSamples((uint)outputSamples.Count(), s.SampleRate) < ProcessInterval) // && s.HasMoreData
+                    {
+                        var nextOutputDataForStream = NextOutputDataForStream(s);
+                        var nextSamples =
+                            nextOutputDataForStream.DataWithUnits("V").Data.Select(m => (double) m.QuantityInBaseUnits);
 
-                    outputSamples = outputSamples.Concat(nextSamples).ToList();
+                        outputSamples = outputSamples.Concat(nextSamples).ToList();
+                    }
+
+                    if (!outputSamples.Any())
+                        throw new DAQException("Unable to pull data to preload stream " + s.Name);
+
+                    analogOut[s.PhysicalName] = outputSamples.ToArray();
                 }
+                else if (s.PhysicalChannelType == PhysicalChannelTypes.DOPort)
+                {
+                    var outputSamples = new List<byte>();
+                    while (TimeSpanExtensions.FromSamples((uint)outputSamples.Count(), s.SampleRate) < ProcessInterval) // && s.HasMoreData
+                    {
+                        var nextOutputDataForStream = NextOutputDataForStream(s);
+                        var nextSamples =
+                            nextOutputDataForStream.DataWithUnits(Measurement.UNITLESS)
+                                                   .Data.Select(m => (byte) m.QuantityInBaseUnits);
 
-                if (!outputSamples.Any())
-                    throw new DAQException("Unable to pull data to preload stream " + s.Name);
+                        outputSamples = outputSamples.Concat(nextSamples).ToList();
+                    }
 
-                output[s.FullName] = outputSamples.ToArray();
+                    if (!outputSamples.Any())
+                        throw new DAQException("Unable to pull data to preload stream " + s.Name);
+
+                    digitalOut[s.PhysicalName] = outputSamples.ToArray();
+                }
             }
 
-            Device.Preload(output);
+            if (analogOut.Any())
+            {
+                Device.PreloadAnalog(analogOut);
+            }
+            if (digitalOut.Any())
+            {
+                Device.PreloadDigital(digitalOut);   
+            }
         }
 
         public override void Start(bool waitForTrigger)
@@ -349,9 +380,9 @@ namespace NI
             Device.ConfigureChannels(ActiveStreams.Cast<NIDAQStream>());
         }
 
-        public NIChannelInfo ChannelInfo(ChannelType channelType, string channelName)
+        public NIChannelInfo ChannelInfo(string channelName)
         {
-            return Device.ChannelInfo(channelType, channelName);
+            return Device.ChannelInfo(channelName);
         }
     }
 }

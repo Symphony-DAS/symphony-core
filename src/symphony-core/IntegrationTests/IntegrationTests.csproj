@@ -72,6 +72,7 @@
     <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="ILNumerics, Version=4.7.5620.62680, Culture=neutral, PublicKeyToken=8d9bf50ef854734d" />
     <Reference Include="nunit.framework, Version=2.6.4.14350, Culture=neutral, PublicKeyToken=96d09a1eb7f44a77, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\NUnit.2.6.4\lib\nunit.framework.dll</HintPath>
@@ -84,6 +85,7 @@
       <Link>Properties\CommonAssemblyInfo.cs</Link>
     </Compile>
     <Compile Include="HekaIntegration.cs" />
+    <Compile Include="NIIntegration.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SimulationIntegration.cs" />
   </ItemGroup>
@@ -91,6 +93,10 @@
     <ProjectReference Include="..\HekaDAQController\HekaDAQController.csproj">
       <Project>{BC4ED219-1122-4148-8398-C869805F4BBA}</Project>
       <Name>HekaDAQController</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\NIDAQController\NIDAQController.csproj">
+      <Project>{B0651408-A3BE-42D0-A0D8-B07FD31C3D2C}</Project>
+      <Name>NIDAQController</Name>
     </ProjectReference>
     <ProjectReference Include="..\SimulationDAQController\Symphony.SimulationDAQController.csproj">
       <Project>{895EFC6D-8B2A-4B6E-8152-B391BA5000DE}</Project>

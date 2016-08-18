@@ -21,37 +21,54 @@ namespace NI
 
         public void SetStreamBackground(NIDAQOutputStream stream)
         {
-            if (stream != null)
+            if (stream == null) 
+                return;
+
+            switch (stream.PhysicalChannelType)
             {
-                WriteIO(stream, stream.Background);
+                case PhysicalChannelTypes.AO:
+                    WriteSingleAnalog(stream, (double) Converters.Convert(stream.Background, "V").QuantityInBaseUnits);
+                    break;
+                case PhysicalChannelTypes.DOPort:
+                    WriteSingleDigital(stream, (byte) Converters.Convert(stream.Background, Measurement.UNITLESS).QuantityInBaseUnits);
+                    break;
             }
         }
 
-        private void WriteIO(NIDAQOutputStream stream, IMeasurement value)
+        private void WriteSingleAnalog(NIDAQOutputStream stream, double value)
         {
             using (var t = new Task())
             {
-                t.AOChannels.CreateVoltageChannel(stream.FullName, "", Device.AOVoltageRanges.First(),
+                t.AOChannels.CreateVoltageChannel(stream.PhysicalName, "", Device.AOVoltageRanges.First(),
                                                   Device.AOVoltageRanges.Last(), AOVoltageUnits.Volts);
                 var writer = new AnalogSingleChannelWriter(t.Stream);
-                writer.WriteSingleSample(true, (double) Converters.Convert(value, "V").QuantityInBaseUnits);
+                writer.WriteSingleSample(true, value);
             }
         }
 
-        public void Preload(IDictionary<string, double[]> output)
+        private void WriteSingleDigital(NIDAQOutputStream stream, byte value)
         {
-            foreach (var kv in output)
+            using (var t = new Task())
             {
-
+                t.DOChannels.CreateChannel(stream.PhysicalName, "", ChannelLineGrouping.OneChannelForAllLines);
+                var writer = new DigitalSingleChannelWriter(t.Stream);
+                writer.WriteSingleSamplePort(true, value);
             }
+        }
 
-            //var aoNames = output.Keys.Where(s => s.ChannelType == StreamType.ANALOG_OUT).Select(s => s.FullName);
-            //if (aoNames.Any())
-            //{
-            //    _tasks.AnalogOut.AOChannels.All.PhysicalName
-            //    var writer = new AnalogMultiChannelWriter(_tasks.AnalogOut.Stream);
-            //    writer.WriteMultiSample(false, new double[1, 1]);
-            //}
+        public void PreloadAnalog(IDictionary<string, double[]> output)
+        {
+            var chans = _tasks.AnalogOut.AOChannels.Cast<AOChannel>().ToList();
+
+
+            var writer = new AnalogMultiChannelWriter(_tasks.AnalogOut.Stream);
+            writer.WriteMultiSample(false, new double[1,100]);
+        }
+
+        public void PreloadDigital(IDictionary<string, byte[]> output)
+        {
+            var writer = new DigitalMultiChannelWriter(_tasks.DigitalOut.Stream);
+            writer.WriteMultiSamplePort(false, new byte[1,100]);
         }
 
         public NIDeviceInfo DeviceInfo
@@ -89,7 +106,7 @@ namespace NI
                 throw new ArgumentException("Streams cannot be empty");
 
             var tasks = new Tasks();
-            var chanNames = streams.GroupBy(s => s.PhysicalChannelType).ToDictionary(g => g.Key, g => g.Select(s => s.FullName));
+            var chanNames = streams.GroupBy(s => s.PhysicalChannelType).ToDictionary(g => g.Key, g => g.Select(s => s.PhysicalName));
 
             // Create appropriate tasks
             if (chanNames.ContainsKey(PhysicalChannelTypes.AI))
@@ -157,27 +174,14 @@ namespace NI
             }
         }
 
-        public NIChannelInfo ChannelInfo(ChannelType channelType, string channelName)
+        public NIChannelInfo ChannelInfo(string channelName)
         {
-            ICollection channels;
-            switch (channelType)
-            {
-                case ChannelType.AI:
-                    channels = _tasks.AnalogIn.AIChannels;
-                    break;
-                case ChannelType.AO:
-                    channels = _tasks.AnalogOut.AOChannels;
-                    break;
-                case ChannelType.DI:
-                    channels = _tasks.DigitalIn.DIChannels;
-                    break;
-                case ChannelType.DO:
-                    channels = _tasks.DigitalOut.DOChannels;
-                    break;
-                default:
-                    throw new ArgumentException("Unsupported stream type");
-            }
-            foreach (Channel c in channels.Cast<Channel>().Where(c => c.VirtualName == channelName))
+            var channels = new List<Channel>();
+            channels.AddRange(_tasks.All.SelectMany(t => t.AIChannels.Cast<Channel>()));
+            channels.AddRange(_tasks.All.SelectMany(t => t.AOChannels.Cast<Channel>()));
+            channels.AddRange(_tasks.All.SelectMany(t => t.DIChannels.Cast<Channel>()));
+            channels.AddRange(_tasks.All.SelectMany(t => t.DOChannels.Cast<Channel>()));
+            foreach (Channel c in channels.Where(c => c.VirtualName == channelName))
             {
                 return NIChannelInfo.FromChannel(c);
             }
@@ -262,6 +266,23 @@ namespace NI
                     return "";
                 }
             }
+
+            public Task TaskForChannelType(ChannelType type)
+            {
+                switch (type)
+                {
+                    case ChannelType.AI:
+                        return AnalogIn;
+                    case ChannelType.AO:
+                        return AnalogOut;
+                    case ChannelType.DI:
+                        return DigitalIn;
+                    case ChannelType.DO:
+                        return DigitalOut;
+                    default:
+                        throw new ArgumentException("No task for channel type: " + type);
+                }
+            }
         }
     }
 
@@ -296,6 +317,32 @@ namespace NI
                 {
                     PhysicalName = channel.PhysicalName
                 };
+        }
+    }
+
+    public static class PhysicalChannelTypesExtensions
+    {
+        public static ChannelType ToChannelType(this PhysicalChannelTypes pct)
+        {
+            switch (pct)
+            {
+                case PhysicalChannelTypes.AI:
+                    return ChannelType.AI;
+                case PhysicalChannelTypes.AO:
+                    return ChannelType.AO;
+                case PhysicalChannelTypes.DILine:
+                case PhysicalChannelTypes.DIPort:
+                    return ChannelType.DI;
+                case PhysicalChannelTypes.DOLine:
+                case PhysicalChannelTypes.DOPort:
+                    return ChannelType.DO;
+                case PhysicalChannelTypes.CI:
+                    return ChannelType.CI;
+                case PhysicalChannelTypes.CO:
+                    return ChannelType.CO;
+                default:
+                    throw new ArgumentException();
+            }
         }
     }
 }

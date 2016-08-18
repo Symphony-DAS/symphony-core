@@ -37,7 +37,7 @@ namespace NI
             }
         }
 
-        public string FullName
+        public string PhysicalName
         {
             get { return Controller.DeviceName + '/' + Name; }
         }
@@ -55,7 +55,7 @@ namespace NI
 
         public NIChannelInfo ChannelInfo
         {
-            get { return new NIChannelInfo { PhysicalName = FullName }; }
+            get { return new NIChannelInfo { PhysicalName = PhysicalName }; }
         }
     }
 }

@@ -159,7 +159,7 @@ namespace NI
             OutStream = controller.OutputStreams
                                   .OfType<NIDAQOutputStream>().First(str => str.Name == "ao0");
             InputStream = controller.InputStreams
-                                    .OfType<NIDAQInputStream>().First(str => str.Name == "ai1");
+                                    .OfType<NIDAQInputStream>().First(str => str.Name == "ai0");
 
             InputStream.Configuration["SampleRate"] = InputStream.SampleRate;
 
@@ -195,7 +195,6 @@ namespace NI
             InputDevice.MeasurementConversionTarget = "V";
 
             BindStreams(controller, OutDevice, InputDevice);
-
         }
 
         [Test]
@@ -223,24 +222,7 @@ namespace NI
 
                     foreach (NIDAQStream s in daq.OutputStreams.Cast<NIDAQStream>())
                     {
-                        var type = (ChannelType) 0;
-                        switch (s.PhysicalChannelType)
-                        {
-                            case PhysicalChannelTypes.AI:
-                                type = ChannelType.AI;
-                                break;
-                            case PhysicalChannelTypes.AO:
-                                type = ChannelType.AO;
-                                break;
-                            case PhysicalChannelTypes.DOPort:
-                                type = ChannelType.DO;
-                                break;
-                            case PhysicalChannelTypes.DIPort:
-                                type = ChannelType.DI;
-                                break;
-                        }
-
-                        var actual = daq.ChannelInfo(type, s.FullName);
+                        var actual = daq.ChannelInfo(s.PhysicalName);
                         var expected = s.ChannelInfo;
 
                         Assert.AreEqual(expected.PhysicalName, actual.PhysicalName);
