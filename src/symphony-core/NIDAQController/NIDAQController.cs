@@ -48,6 +48,8 @@ namespace NI
     /// </summary>
     public sealed class NIDAQController : DAQControllerBase, IDisposable
     {
+        private const double DEFAULT_TRANSFER_BLOCK_SECONDS = 0.25;
+
         private INIDevice Device { get; set; }
 
         private const string SAMPLE_RATE_KEY = "SampleRate";
@@ -64,6 +66,17 @@ namespace NI
             }
             set
             {
+                // Set the ProcessInterval longer for high sampling rates
+                var rateProcessInterval = value.QuantityInBaseUnits > 10000m
+                                              ? TimeSpan.FromSeconds(2 * DEFAULT_TRANSFER_BLOCK_SECONDS)
+                                              : TimeSpan.FromSeconds(DEFAULT_TRANSFER_BLOCK_SECONDS);
+
+                if (rateProcessInterval != ProcessInterval)
+                {
+                    ProcessInterval = rateProcessInterval;
+                    log.Info("Updating process loop duration: " + ProcessInterval);
+                }
+
                 Configuration[SAMPLE_RATE_KEY] = value;
             }
         }
@@ -90,6 +103,11 @@ namespace NI
             private set { Configuration[DEVICE_NAME_KEY] = value; }
         }
 
+        public IEnumerable<IDAQStream> StreamsOfType(PhysicalChannelTypes streamType)
+        {
+            return Streams.Cast<NIDAQStream>().Where(x => x.PhysicalChannelType == streamType);
+        }
+
         /// <summary>
         /// Constructs a new NIDAQController for the given device name, using the system (CPU) clock.
         /// </summary>
@@ -108,6 +126,7 @@ namespace NI
         {
             DeviceName = deviceName;
             IsHardwareReady = false;
+            ProcessInterval = TimeSpan.FromSeconds(DEFAULT_TRANSFER_BLOCK_SECONDS);
             Clock = clock;
         }
 
@@ -224,7 +243,7 @@ namespace NI
         {
             IDictionary<string, double[]> output = new Dictionary<string, double[]>();
 
-            foreach (var s in ActiveStreams.Cast<NIDAQOutputStream>())
+            foreach (var s in ActiveOutputStreams.Cast<NIDAQOutputStream>())
             {
                 s.Reset();
                 var outputSamples = new List<double>();
@@ -257,6 +276,26 @@ namespace NI
             base.Start(waitForTrigger);
         }
 
+        protected override bool ShouldStop()
+        {
+            return IsStopRequested;
+        }
+
+        protected override void CommonStop()
+        {
+            Device.StopHardware();
+            base.CommonStop();
+        }
+
+        protected override void StopWithException(Exception e)
+        {
+            log.ErrorFormat("Hardware reset required due to exception: {0}", e);
+            ResetHardware();
+
+            base.StopWithException(e);
+
+        }
+
         public override IInputData ReadStreamAsync(IDAQInputStream s)
         {
             throw new NotImplementedException();
@@ -273,6 +312,31 @@ namespace NI
         public static IEnumerable<NIDAQController> AvailableControllers()
         {
             return NIHardwareDevice.AvailableControllers();
+        }
+
+        public override Maybe<string> Validate()
+        {
+            var result = base.Validate();
+
+            if (result)
+            {
+                if (Streams.Any(s => !s.SampleRate.Equals(SampleRate)))
+                    return Maybe<string>.No("All streams must have the same sample rate as controller.");
+
+                if (SampleRate == null)
+                    return Maybe<string>.No("Sample rate required.");
+
+                if (SampleRate.BaseUnits.ToLower() != "hz")
+                    return Maybe<string>.No("Sample rate must be in Hz.");
+
+                if (SampleRate.QuantityInBaseUnits <= 0)
+                    return Maybe<string>.No("Sample rate must be greater than 0");
+
+                if (!ActiveStreams.Any())
+                    return Maybe<string>.No("Must have at least one active stream (a stream with an associated device)");
+            }
+
+            return result;
         }
 
         public void ConfigureChannels()

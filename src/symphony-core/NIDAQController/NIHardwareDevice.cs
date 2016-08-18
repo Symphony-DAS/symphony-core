@@ -151,7 +151,10 @@ namespace NI
 
         public void StopHardware()
         {
-            _tasks.All.ForEach(t => t.Stop());
+            if (_tasks != null)
+            {
+                _tasks.All.ForEach(t => t.Stop());   
+            }
         }
 
         public NIChannelInfo ChannelInfo(ChannelType channelType, string channelName)
