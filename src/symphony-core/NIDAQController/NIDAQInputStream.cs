@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using NationalInstruments.DAQmx;
 using Symphony.Core;
 
 namespace NI
@@ -11,13 +12,16 @@ namespace NI
     {
         private NIDAQController Controller { get; set; }
 
-        public StreamType ChannelType { get; private set; }
+        public PhysicalChannelTypes PhysicalChannelType { get; private set; }
 
-        public NIDAQInputStream(string name, StreamType streamType, NIDAQController controller)
+        public NIDAQInputStream(string name, PhysicalChannelTypes channelType, NIDAQController controller)
             : base(name.Split('/').Last(), controller)
         {
-            ChannelType = streamType;
-            MeasurementConversionTarget = (ChannelType == StreamType.DIGITAL_IN) ? Measurement.UNITLESS : "V";
+            PhysicalChannelType = channelType;
+            MeasurementConversionTarget = (PhysicalChannelType == PhysicalChannelTypes.DIPort ||
+                                           PhysicalChannelType == PhysicalChannelTypes.DILine)
+                                              ? Measurement.UNITLESS
+                                              : "V";
             Controller = controller;
             Clock = controller.Clock;
         }
@@ -47,6 +51,11 @@ namespace NI
         public override bool CanSetSampleRate
         {
             get { return false; }
+        }
+
+        public NIChannelInfo ChannelInfo
+        {
+            get { return new NIChannelInfo {PhysicalName = FullName}; }
         }
     }
 }

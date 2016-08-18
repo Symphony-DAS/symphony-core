@@ -245,7 +245,6 @@ namespace Heka
             }
         }
 
-
         [Test]
         public void SetsChannelInfo()
         {

@@ -4,30 +4,21 @@ using System.Linq;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using NationalInstruments.DAQmx;
 using Symphony.Core;
 using log4net;
 
 namespace NI
 {
     /// <summary>
-    /// Channel (i.e. stream) types used by the NI DAQ hardware and driver.
-    /// </summary>
-    public enum StreamType
-    {
-        ANALOG_IN,
-        ANALOG_OUT,
-        DIGITAL_IN,
-        DIGITAL_OUT
-    }
-
-    /// <summary>
     /// National Instruments-specific details of a DAQ stream. Gives the 
     /// channel type and full physical channel name (e.g. Dev1/ai1) for this stream.
     /// </summary>
     public interface NIDAQStream : IDAQStream
     {
-        StreamType ChannelType { get; }
+        PhysicalChannelTypes PhysicalChannelType { get; }
         string FullName { get; }
+        NIChannelInfo ChannelInfo { get; }
     }
 
     /// <summary>
@@ -40,12 +31,13 @@ namespace NI
 
         void CloseDevice();
         void ConfigureChannels(IEnumerable<NIDAQStream> streams);
+        void StartHardware(bool waitForTrigger);
+        void StopHardware();
 
-        string DeviceID { get; }
-        string[] AIChannels { get; }
-        string[] AOChannels { get; }
-        string[] DIPorts { get; }
-        string[] DOPorts { get; }
+        NIDeviceInfo DeviceInfo { get; }
+        NIChannelInfo ChannelInfo(ChannelType channelType, string channelName);
+
+        void Preload(IDictionary<string, double[]> output);
     }
 
     /// <summary>
@@ -78,7 +70,7 @@ namespace NI
 
         public override string Name
         {
-            get { return string.Format("NI ITC Controller ({0})", DeviceName); }
+            get { return string.Format("NI DAQ Controller ({0})", DeviceName); }
         }
 
         public override void ApplyStreamBackgroundAsync(IDAQOutputStream s, IMeasurement background)
@@ -98,16 +90,20 @@ namespace NI
             private set { Configuration[DEVICE_NAME_KEY] = value; }
         }
 
-        public IEnumerable<IDAQStream> StreamsOfType(StreamType streamType)
-        {
-            return Streams.Cast<NIDAQStream>().Where(s => s.ChannelType == streamType);
-        }
-
+        /// <summary>
+        /// Constructs a new NIDAQController for the given device name, using the system (CPU) clock.
+        /// </summary>
+        /// <param name="deviceName">NI device name (e.g. "Dev1")</param>
         public NIDAQController(string deviceName)
             : this(deviceName, new SystemClock())
         {
         }
 
+        /// <summary>
+        /// Constructs a new NIDAQController for the given device name, using the given clock.
+        /// </summary>
+        /// <param name="deviceName"></param>
+        /// <param name="clock"></param>
         public NIDAQController(string deviceName, IClock clock)
         {
             DeviceName = deviceName;
@@ -115,6 +111,9 @@ namespace NI
             Clock = clock;
         }
 
+        /// <summary>
+        /// Initializes the National Instruments hardware.
+        /// </summary>
         public override void BeginSetup()
         {
             base.BeginSetup();
@@ -151,32 +150,36 @@ namespace NI
             Dispose(false);
         }
 
+        /// <summary>
+        /// Detects the streams present on this controller's NI Device and configures the available
+        /// IDAQStreams accordingly.
+        /// </summary>
         public void InitHardware()
         {
             if (!IsHardwareReady)
             {
-                OpenDevice();
+                var deviceInfo = OpenDevice();
 
                 if (!DAQStreams.Any())
                 {
-                    foreach (var c in Device.AIChannels)
+                    foreach (var c in deviceInfo.AIPhysicalChannels)
                     {
-                        DAQStreams.Add(new NIDAQInputStream(c, StreamType.ANALOG_IN, this));
+                        DAQStreams.Add(new NIDAQInputStream(c, PhysicalChannelTypes.AI, this));
                     }
 
-                    foreach (var c in Device.AOChannels)
+                    foreach (var c in deviceInfo.AOPhysicalChannels)
                     {
-                        DAQStreams.Add(new NIDAQOutputStream(c, StreamType.ANALOG_OUT, this));
+                        DAQStreams.Add(new NIDAQOutputStream(c, PhysicalChannelTypes.AO, this));
                     }
 
-                    foreach (var p in Device.DIPorts)
+                    foreach (var p in deviceInfo.DIPorts)
                     {
-                        DAQStreams.Add(new NIDAQInputStream(p, StreamType.DIGITAL_IN, this));
+                        DAQStreams.Add(new NIDAQInputStream(p, PhysicalChannelTypes.DIPort, this));
                     }
 
-                    foreach (var p in Device.DOPorts)
+                    foreach (var p in deviceInfo.DOPorts)
                     {
-                        DAQStreams.Add(new NIDAQInputStream(p, StreamType.DIGITAL_OUT, this));
+                        DAQStreams.Add(new NIDAQInputStream(p, PhysicalChannelTypes.DOPort, this));
                     }
                 }
                 
@@ -184,12 +187,17 @@ namespace NI
             }
         }
 
-        private void OpenDevice()
+        private NIDeviceInfo OpenDevice()
         {
-            Device = NIHardwareDevice.OpenDevice(DeviceName);
+            NIDeviceInfo deviceInfo;
+            Device = NIHardwareDevice.OpenDevice(DeviceName, out deviceInfo);
             IsHardwareReady = true;
+            return deviceInfo;
         }
 
+        /// <summary>
+        /// Closes the NI driver connection to this controller's NI device.
+        /// </summary>
         public void CloseHardware()
         {
             if (IsHardwareReady)
@@ -209,13 +217,42 @@ namespace NI
 
         protected override void StartHardware(bool waitForTrigger)
         {
+            Device.StartHardware(waitForTrigger);
+        }
 
+        private void PreloadStreams()
+        {
+            IDictionary<string, double[]> output = new Dictionary<string, double[]>();
+
+            foreach (var s in ActiveStreams.Cast<NIDAQOutputStream>())
+            {
+                s.Reset();
+                var outputSamples = new List<double>();
+                while (TimeSpanExtensions.FromSamples((uint)outputSamples.Count(), s.SampleRate) < ProcessInterval) // && s.HasMoreData
+                {
+                    var nextOutputDataForStream = NextOutputDataForStream(s);
+                    var nextSamples =
+                        nextOutputDataForStream.DataWithUnits("V").Data.Select(m => (double) m.QuantityInBaseUnits);
+
+                    outputSamples = outputSamples.Concat(nextSamples).ToList();
+                }
+
+                if (!outputSamples.Any())
+                    throw new DAQException("Unable to pull data to preload stream " + s.Name);
+
+                output[s.FullName] = outputSamples.ToArray();
+            }
+
+            Device.Preload(output);
         }
 
         public override void Start(bool waitForTrigger)
         {
             if (!IsHardwareReady)
                 OpenDevice();
+
+            Device.ConfigureChannels(ActiveStreams.Cast<NIDAQStream>());
+            PreloadStreams();
 
             base.Start(waitForTrigger);
         }
@@ -246,6 +283,11 @@ namespace NI
             }
 
             Device.ConfigureChannels(ActiveStreams.Cast<NIDAQStream>());
+        }
+
+        public NIChannelInfo ChannelInfo(ChannelType channelType, string channelName)
+        {
+            return Device.ChannelInfo(channelType, channelName);
         }
     }
 }
