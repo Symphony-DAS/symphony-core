@@ -37,38 +37,75 @@ namespace NI
 
         private void WriteSingleAnalog(NIDAQOutputStream stream, double value)
         {
-            using (var t = new Task())
-            {
-                t.AOChannels.CreateVoltageChannel(stream.PhysicalName, "", Device.AOVoltageRanges.First(),
-                                                  Device.AOVoltageRanges.Last(), AOVoltageUnits.Volts);
-                var writer = new AnalogSingleChannelWriter(t.Stream);
-                writer.WriteSingleSample(true, value);
-            }
+            //using (var t = new Task())
+            //{
+            //    t.AOChannels.CreateVoltageChannel(stream.PhysicalName, "", Device.AOVoltageRanges.First(),
+            //                                      Device.AOVoltageRanges.Last(), AOVoltageUnits.Volts);
+            //    var writer = new AnalogSingleChannelWriter(t.Stream);
+            //    writer.WriteSingleSample(true, value);
+            //}
         }
 
-        private void WriteSingleDigital(NIDAQOutputStream stream, byte value)
+        private void WriteSingleDigital(NIDAQOutputStream stream, uint value)
         {
-            using (var t = new Task())
-            {
-                t.DOChannels.CreateChannel(stream.PhysicalName, "", ChannelLineGrouping.OneChannelForAllLines);
-                var writer = new DigitalSingleChannelWriter(t.Stream);
-                writer.WriteSingleSamplePort(true, value);
-            }
+            //using (var t = new Task())
+            //{
+            //    t.DOChannels.CreateChannel(stream.PhysicalName, "", ChannelLineGrouping.OneChannelForAllLines);
+            //    var writer = new DigitalSingleChannelWriter(t.Stream);
+            //    writer.WriteSingleSamplePort(true, value);
+            //}
         }
 
         public void PreloadAnalog(IDictionary<string, double[]> output)
         {
+            if (!output.Any())
+                return;
+
+            var ns = output.Values.Select(v => v.Count()).Distinct().ToList();
+            if (ns.Count() > 1)
+                throw new ArgumentException("Preload sample buffers must be homogenous in length");
+            int nsamples = ns.First();
+
+            var data = new double[output.Count, nsamples];
             var chans = _tasks.AnalogOut.AOChannels.Cast<AOChannel>().ToList();
 
+            foreach (var o in output)
+            {
+                int chanIndex = chans.FindIndex(c => c.VirtualName == o.Key);
+                for (int i = 0; i < o.Value.Count(); i++)
+                {
+                    data[chanIndex, i] = o.Value[i];
+                }
+            }
 
             var writer = new AnalogMultiChannelWriter(_tasks.AnalogOut.Stream);
-            writer.WriteMultiSample(false, new double[1,100]);
+            writer.WriteMultiSample(false, data);
         }
 
-        public void PreloadDigital(IDictionary<string, byte[]> output)
+        public void PreloadDigital(IDictionary<string, UInt32[]> output)
         {
+            if (!output.Any())
+                return;
+
+            var ns = output.Values.Select(v => v.Count()).Distinct().ToList();
+            if (ns.Count() > 1)
+                throw new ArgumentException("Preload sample buffers must be homogenous in length");
+            int nsamples = ns.First();
+
+            var data = new UInt32[output.Count, nsamples];
+            var chans = _tasks.DigitalOut.DOChannels.Cast<DOChannel>().ToList();
+
+            foreach (var o in output)
+            {
+                int chanIndex = chans.FindIndex(c => c.VirtualName == o.Key);
+                for (int i = 0; i < o.Value.Count(); i++)
+                {
+                    data[chanIndex, i] = o.Value[i];
+                }
+            }
+
             var writer = new DigitalMultiChannelWriter(_tasks.DigitalOut.Stream);
-            writer.WriteMultiSamplePort(false, new byte[1,100]);
+            writer.WriteMultiSamplePort(false, data);
         }
 
         public NIDeviceInfo DeviceInfo
@@ -129,7 +166,7 @@ namespace NI
             // Setup master and slave timing
             var rates = streams.Select(s => s.SampleRate).Distinct().ToList();
             if (rates.Count() > 1)
-                throw new DaqException("Streams need a common sample rate");
+                throw new ArgumentException("Streams need a common sample rate");
             var sampleRate = (double)rates.First().QuantityInBaseUnits;
 
             string masterClock = "/" + Device.DeviceID + "/" + tasks.MasterType + "/SampleClock";

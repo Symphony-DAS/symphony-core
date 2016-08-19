@@ -38,7 +38,7 @@ namespace NI
         NIChannelInfo ChannelInfo(string channelName);
 
         void PreloadAnalog(IDictionary<string, double[]> output);
-        void PreloadDigital(IDictionary<string, byte[]> output);
+        void PreloadDigital(IDictionary<string, UInt32[]> output);
     }
 
     /// <summary>
@@ -243,7 +243,7 @@ namespace NI
         private void PreloadStreams()
         {
             IDictionary<string, double[]> analogOut = new Dictionary<string, double[]>();
-            IDictionary<string, byte[]> digitalOut = new Dictionary<string, byte[]>();
+            IDictionary<string, UInt32[]> digitalOut = new Dictionary<string, UInt32[]>();
 
             foreach (var s in ActiveOutputStreams.Cast<NIDAQOutputStream>())
             {
@@ -268,13 +268,13 @@ namespace NI
                 }
                 else if (s.PhysicalChannelType == PhysicalChannelTypes.DOPort)
                 {
-                    var outputSamples = new List<byte>();
+                    var outputSamples = new List<UInt32>();
                     while (TimeSpanExtensions.FromSamples((uint)outputSamples.Count(), s.SampleRate) < ProcessInterval) // && s.HasMoreData
                     {
                         var nextOutputDataForStream = NextOutputDataForStream(s);
                         var nextSamples =
                             nextOutputDataForStream.DataWithUnits(Measurement.UNITLESS)
-                                                   .Data.Select(m => (byte) m.QuantityInBaseUnits);
+                                                   .Data.Select(m => (UInt32) m.QuantityInBaseUnits);
 
                         outputSamples = outputSamples.Concat(nextSamples).ToList();
                     }
@@ -286,14 +286,8 @@ namespace NI
                 }
             }
 
-            if (analogOut.Any())
-            {
-                Device.PreloadAnalog(analogOut);
-            }
-            if (digitalOut.Any())
-            {
-                Device.PreloadDigital(digitalOut);   
-            }
+            Device.PreloadAnalog(analogOut);
+            Device.PreloadDigital(digitalOut);
         }
 
         public override void Start(bool waitForTrigger)
