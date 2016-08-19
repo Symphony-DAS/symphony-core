@@ -296,7 +296,7 @@ namespace NI
                 if (AnalogIn != null)
                     throw new InvalidOperationException();
 
-                var t = new Task("analogIn");
+                var t = new Task();
                 t.AIChannels.CreateVoltageChannel(string.Join(",", physicalNames), "", (AITerminalConfiguration) (-1),
                                                   min, max, AIVoltageUnits.Volts);
 
@@ -309,7 +309,7 @@ namespace NI
                 if (AnalogOut != null)
                     throw new InvalidOperationException();
 
-                var t = new Task("analogOut");
+                var t = new Task();
                 t.AOChannels.CreateVoltageChannel(string.Join(",", physicalNames), "", min, max, AOVoltageUnits.Volts);
 
                 AnalogOut = t;
@@ -321,7 +321,7 @@ namespace NI
                 if (DigitalIn != null)
                     throw new InvalidOperationException();
 
-                var t = new Task("digitalIn");
+                var t = new Task();
                 t.DIChannels.CreateChannel(string.Join(",", physicalNames), "",
                                            ChannelLineGrouping.OneChannelForAllLines);
 
@@ -334,7 +334,7 @@ namespace NI
                 if (DigitalOut != null)
                     throw new InvalidOperationException();
 
-                var t = new Task("digitalOut");
+                var t = new Task();
                 t.DOChannels.CreateChannel(string.Join(",", physicalNames), "",
                                            ChannelLineGrouping.OneChannelForAllLines);
 

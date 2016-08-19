@@ -235,6 +235,25 @@ namespace NI
         }
 
         [Test]
+        public void ReconfigureChannels()
+        {
+            foreach (var daq in NIDAQController.AvailableControllers())
+            {
+                try
+                {
+                    FixtureForController(daq);
+
+                    daq.ConfigureChannels();
+                    Assert.DoesNotThrow(daq.ConfigureChannels);
+                }
+                finally
+                {
+                    daq.CloseHardware();
+                }
+            }
+        }
+
+        [Test]
         public void ExceptionalStopOnPushException()
         {
             foreach (NIDAQController daq in NIDAQController.AvailableControllers())
