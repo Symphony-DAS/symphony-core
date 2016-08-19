@@ -37,23 +37,23 @@ namespace NI
 
         private void WriteSingleAnalog(NIDAQOutputStream stream, double value)
         {
-            //using (var t = new Task())
-            //{
-            //    t.AOChannels.CreateVoltageChannel(stream.PhysicalName, "", Device.AOVoltageRanges.First(),
-            //                                      Device.AOVoltageRanges.Last(), AOVoltageUnits.Volts);
-            //    var writer = new AnalogSingleChannelWriter(t.Stream);
-            //    writer.WriteSingleSample(true, value);
-            //}
+            using (var t = new Task())
+            {
+                t.AOChannels.CreateVoltageChannel(stream.PhysicalName, "", Device.AOVoltageRanges.First(),
+                                                  Device.AOVoltageRanges.Last(), AOVoltageUnits.Volts);
+                var writer = new AnalogSingleChannelWriter(t.Stream);
+                writer.WriteSingleSample(true, value);
+            }
         }
 
         private void WriteSingleDigital(NIDAQOutputStream stream, uint value)
         {
-            //using (var t = new Task())
-            //{
-            //    t.DOChannels.CreateChannel(stream.PhysicalName, "", ChannelLineGrouping.OneChannelForAllLines);
-            //    var writer = new DigitalSingleChannelWriter(t.Stream);
-            //    writer.WriteSingleSamplePort(true, value);
-            //}
+            using (var t = new Task())
+            {
+                t.DOChannels.CreateChannel(stream.PhysicalName, "", ChannelLineGrouping.OneChannelForAllLines);
+                var writer = new DigitalSingleChannelWriter(t.Stream);
+                writer.WriteSingleSamplePort(true, value);
+            }
         }
 
         public void PreloadAnalog(IDictionary<string, double[]> output)
@@ -207,7 +207,8 @@ namespace NI
         {
             if (_tasks != null)
             {
-                _tasks.All.ForEach(t => t.Stop());   
+                _tasks.All.ForEach(t => t.Stop());
+                _tasks.All.ForEach(t => t.Control(TaskAction.Unreserve));
             }
         }
 
@@ -292,15 +293,16 @@ namespace NI
             {
                 get
                 {
+                    string type = "";
                     if (Master == AnalogIn)
-                        return "ai";
+                        type = "ai";
                     if (Master == AnalogOut)
-                        return "ao";
+                        type = "ao";
                     if (Master == DigitalIn)
-                        return "di";
+                        type = "di";
                     if (Master == DigitalOut)
-                        return "do";
-                    return "";
+                        type = "do";
+                    return type;
                 }
             }
 
