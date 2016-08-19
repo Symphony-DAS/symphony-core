@@ -18,7 +18,6 @@ namespace NI
     {
         PhysicalChannelTypes PhysicalChannelType { get; }
         string PhysicalName { get; }
-        NIChannelInfo ChannelInfo { get; }
     }
 
     /// <summary>
@@ -35,7 +34,7 @@ namespace NI
         void StopHardware();
 
         NIDeviceInfo DeviceInfo { get; }
-        NIChannelInfo ChannelInfo(string channelName);
+        Channel Channel(string channelName);
 
         void PreloadAnalog(IDictionary<string, double[]> output);
         void PreloadDigital(IDictionary<string, UInt32[]> output);
@@ -308,7 +307,11 @@ namespace NI
 
         protected override void CommonStop()
         {
-            Device.StopHardware();
+            if (IsRunning)
+            {
+                Device.StopHardware();                
+            }
+            
             base.CommonStop();
         }
 
@@ -374,9 +377,9 @@ namespace NI
             Device.ConfigureChannels(ActiveStreams.Cast<NIDAQStream>());
         }
 
-        public NIChannelInfo ChannelInfo(string channelName)
+        public Channel Channel(string channelName)
         {
-            return Device.ChannelInfo(channelName);
+            return Device.Channel(channelName);
         }
     }
 }

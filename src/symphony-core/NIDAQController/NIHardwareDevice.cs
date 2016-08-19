@@ -212,18 +212,18 @@ namespace NI
             }
         }
 
-        public NIChannelInfo ChannelInfo(string channelName)
+        public Channel Channel(string channelName)
         {
-            var channels = new List<Channel>();
-            channels.AddRange(_tasks.All.SelectMany(t => t.AIChannels.Cast<Channel>()));
-            channels.AddRange(_tasks.All.SelectMany(t => t.AOChannels.Cast<Channel>()));
-            channels.AddRange(_tasks.All.SelectMany(t => t.DIChannels.Cast<Channel>()));
-            channels.AddRange(_tasks.All.SelectMany(t => t.DOChannels.Cast<Channel>()));
-            foreach (Channel c in channels.Where(c => c.VirtualName == channelName))
-            {
-                return NIChannelInfo.FromChannel(c);
-            }
-            throw new ArgumentException("Specified channel is not configured");
+            Channel chan = _tasks.All.SelectMany(t => t.AIChannels.Cast<Channel>()
+                                                       .Concat(t.AOChannels.Cast<Channel>())
+                                                       .Concat(t.DIChannels.Cast<Channel>())
+                                                       .Concat(t.DOChannels.Cast<Channel>()))
+                                 .FirstOrDefault(c => c.VirtualName == channelName);
+            
+            if (chan == null)
+                throw new ArgumentException("Channel " + channelName + " is not configured");
+
+            return chan;
         }
 
         private class Tasks
@@ -305,23 +305,6 @@ namespace NI
                     return type;
                 }
             }
-
-            public Task TaskForChannelType(ChannelType type)
-            {
-                switch (type)
-                {
-                    case ChannelType.AI:
-                        return AnalogIn;
-                    case ChannelType.AO:
-                        return AnalogOut;
-                    case ChannelType.DI:
-                        return DigitalIn;
-                    case ChannelType.DO:
-                        return DigitalOut;
-                    default:
-                        throw new ArgumentException("No task for channel type: " + type);
-                }
-            }
         }
     }
 
@@ -342,19 +325,6 @@ namespace NI
                     AOPhysicalChannels = device.AOPhysicalChannels,
                     DIPorts = device.DIPorts,
                     DOPorts = device.DOPorts
-                };
-        }
-    }
-
-    public struct NIChannelInfo
-    {
-        public string PhysicalName;
-
-        public static NIChannelInfo FromChannel(Channel channel)
-        {
-            return new NIChannelInfo
-                {
-                    PhysicalName = channel.PhysicalName
                 };
         }
     }

@@ -52,10 +52,5 @@ namespace NI
         {
             get { return false; }
         }
-
-        public NIChannelInfo ChannelInfo
-        {
-            get { return new NIChannelInfo {PhysicalName = PhysicalName}; }
-        }
     }
 }

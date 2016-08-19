@@ -198,7 +198,7 @@ namespace NI
         }
 
         [Test]
-        public void SetsChannelInfo()
+        public void SetsChannels()
         {
             foreach (var daq in NIDAQController.AvailableControllers())
             {
@@ -222,10 +222,9 @@ namespace NI
 
                     foreach (NIDAQStream s in daq.OutputStreams.Cast<NIDAQStream>())
                     {
-                        var actual = daq.ChannelInfo(s.PhysicalName);
-                        var expected = s.ChannelInfo;
+                        var chan = daq.Channel(s.PhysicalName);
 
-                        Assert.AreEqual(expected.PhysicalName, actual.PhysicalName);
+                        Assert.AreEqual(s.PhysicalName, chan.PhysicalName);
                     }
                 }
                 finally
