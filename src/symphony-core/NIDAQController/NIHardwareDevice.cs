@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using NationalInstruments.DAQmx;
 using Symphony.Core;
 using Task = NationalInstruments.DAQmx.Task;
@@ -19,6 +20,13 @@ namespace NI
             Device = device;
         }
 
+        public IEnumerable<KeyValuePair<string, double[]>> ReadWriteAnalog(IDictionary<string, double[]> output,
+                                                                           IList<string> input, int nsamples,
+                                                                           CancellationToken token)
+        {
+            throw new NotImplementedException();
+        }
+
         public void SetStreamBackground(NIDAQOutputStream stream)
         {
             if (stream == null) 
@@ -33,7 +41,7 @@ namespace NI
                     WriteSingleDigital(stream, (byte) Converters.Convert(stream.Background, Measurement.UNITLESS).QuantityInBaseUnits);
                     break;
                 default:
-                    throw new ArgumentException("Unsupported stream channel type");
+                    throw new NotSupportedException("Unsupported stream channel type");
             }
         }
 
@@ -74,7 +82,7 @@ namespace NI
                     units = Measurement.UNITLESS;
                     break;
                 default:
-                    throw new ArgumentException("Unsupported stream channel type");
+                    throw new NotSupportedException("Unsupported stream channel type");
             }
 
             var inData =
@@ -109,7 +117,7 @@ namespace NI
             }
         }
 
-        public void PreloadAnalog(IDictionary<string, double[]> output)
+        public void WriteAnalog(IDictionary<string, double[]> output)
         {
             if (!output.Any())
                 return;
@@ -135,7 +143,7 @@ namespace NI
             writer.WriteMultiSample(false, data);
         }
 
-        public void PreloadDigital(IDictionary<string, UInt32[]> output)
+        public void WriteDigital(IDictionary<string, UInt32[]> output)
         {
             if (!output.Any())
                 return;
@@ -403,7 +411,7 @@ namespace NI
                 case PhysicalChannelTypes.CO:
                     return ChannelType.CO;
                 default:
-                    throw new ArgumentException();
+                    throw new NotSupportedException();
             }
         }
     }
