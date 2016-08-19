@@ -36,6 +36,7 @@ namespace NI
         NIDeviceInfo DeviceInfo { get; }
         Channel Channel(string channelName);
 
+        IInputData ReadStream(NIDAQInputStream instream);
         void PreloadAnalog(IDictionary<string, double[]> output);
         void PreloadDigital(IDictionary<string, UInt32[]> output);
     }
@@ -103,9 +104,9 @@ namespace NI
             private set { Configuration[DEVICE_NAME_KEY] = value; }
         }
 
-        public IEnumerable<IDAQStream> StreamsOfType(PhysicalChannelTypes streamType)
+        public IEnumerable<IDAQStream> StreamsOfType(PhysicalChannelTypes channelType)
         {
-            return Streams.Cast<NIDAQStream>().Where(x => x.PhysicalChannelType == streamType);
+            return Streams.Cast<NIDAQStream>().Where(x => x.PhysicalChannelType == channelType);
         }
 
         /// <summary>
@@ -219,10 +220,17 @@ namespace NI
         /// </summary>
         public void CloseHardware()
         {
-            if (IsHardwareReady)
+            try
             {
-                IsHardwareReady = false;
-                Device.CloseDevice();
+                if (IsHardwareReady)
+                {
+                    IsHardwareReady = false;
+                    Device.CloseDevice();
+                }
+            }
+            catch (DaqException)
+            {
+                //pass
             }
         }
 
@@ -241,8 +249,8 @@ namespace NI
 
         private void PreloadStreams()
         {
-            IDictionary<string, double[]> analogOut = new Dictionary<string, double[]>();
-            IDictionary<string, UInt32[]> digitalOut = new Dictionary<string, UInt32[]>();
+            IDictionary<string, double[]> analogOutput = new Dictionary<string, double[]>();
+            IDictionary<string, UInt32[]> digitalOutput = new Dictionary<string, UInt32[]>();
 
             foreach (var s in ActiveOutputStreams.Cast<NIDAQOutputStream>())
             {
@@ -263,7 +271,7 @@ namespace NI
                     if (!outputSamples.Any())
                         throw new DAQException("Unable to pull data to preload stream " + s.Name);
 
-                    analogOut[s.PhysicalName] = outputSamples.ToArray();
+                    analogOutput[s.PhysicalName] = outputSamples.ToArray();
                 }
                 else if (s.PhysicalChannelType == PhysicalChannelTypes.DOPort)
                 {
@@ -281,12 +289,12 @@ namespace NI
                     if (!outputSamples.Any())
                         throw new DAQException("Unable to pull data to preload stream " + s.Name);
 
-                    digitalOut[s.PhysicalName] = outputSamples.ToArray();
+                    digitalOutput[s.PhysicalName] = outputSamples.ToArray();
                 }
             }
 
-            Device.PreloadAnalog(analogOut);
-            Device.PreloadDigital(digitalOut);
+            Device.PreloadAnalog(analogOutput);
+            Device.PreloadDigital(digitalOutput);
         }
 
         public override void Start(bool waitForTrigger)
@@ -324,22 +332,12 @@ namespace NI
 
         }
 
-        public override IInputData ReadStreamAsync(IDAQInputStream s)
-        {
-            throw new NotImplementedException();
-        }
-
         private static readonly ILog log = LogManager.GetLogger(typeof(NIDAQController));
         private bool _disposed = false;
 
         protected override IDictionary<IDAQInputStream, IInputData> ProcessLoopIteration(IDictionary<IDAQOutputStream, IOutputData> outData, TimeSpan deficit, CancellationToken token)
         {
             throw new NotImplementedException();
-        }
-
-        public static IEnumerable<NIDAQController> AvailableControllers()
-        {
-            return NIHardwareDevice.AvailableControllers();
         }
 
         public override Maybe<string> Validate()
@@ -367,6 +365,11 @@ namespace NI
             return result;
         }
 
+        public static IEnumerable<NIDAQController> AvailableControllers()
+        {
+            return NIHardwareDevice.AvailableControllers();
+        }
+
         public void ConfigureChannels()
         {
             if (IsRunning)
@@ -380,6 +383,27 @@ namespace NI
         public Channel Channel(string channelName)
         {
             return Device.Channel(channelName);
+        }
+
+        /// <summary>
+        /// Reads the given input stream. Should not be called while Running.
+        /// </summary>
+        /// <remarks>All output streams are automatically set to their associated ExternalDevice's Background value on stop</remarks>
+        /// <param name="daqInputStream">IDAQInputStream to read</param>
+        /// <returns>IInputData with a single read sample</returns>
+        /// <exception cref="ArgumentException">If the given stream is not an input stream belonging to this NIDAQController</exception>"
+        public override IInputData ReadStreamAsync(IDAQInputStream daqInputStream)
+        {
+            if (!InputStreams.Contains(daqInputStream))
+                throw new ArgumentException("Input stream is not present on this device.", "daqInputStream");
+
+            var instream = daqInputStream as NIDAQInputStream;
+            if (instream != null)
+            {
+                return Device.ReadStream(instream);
+            }
+
+            return null;
         }
     }
 }

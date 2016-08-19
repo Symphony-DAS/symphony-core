@@ -32,6 +32,8 @@ namespace NI
                 case PhysicalChannelTypes.DOPort:
                     WriteSingleDigital(stream, (byte) Converters.Convert(stream.Background, Measurement.UNITLESS).QuantityInBaseUnits);
                     break;
+                default:
+                    throw new ArgumentException("Unsupported stream channel type");
             }
         }
 
@@ -39,20 +41,71 @@ namespace NI
         {
             using (var t = new Task())
             {
-                t.AOChannels.CreateVoltageChannel(stream.PhysicalName, "", Device.AOVoltageRanges.First(),
-                                                  Device.AOVoltageRanges.Last(), AOVoltageUnits.Volts);
+                t.AOChannels.CreateVoltageChannel(stream.PhysicalName, "", Device.AOVoltageRanges.Min(),
+                                                  Device.AOVoltageRanges.Max(), AOVoltageUnits.Volts);
                 var writer = new AnalogSingleChannelWriter(t.Stream);
                 writer.WriteSingleSample(true, value);
             }
         }
 
-        private void WriteSingleDigital(NIDAQOutputStream stream, uint value)
+        private void WriteSingleDigital(NIDAQOutputStream stream, UInt32 value)
         {
             using (var t = new Task())
             {
                 t.DOChannels.CreateChannel(stream.PhysicalName, "", ChannelLineGrouping.OneChannelForAllLines);
                 var writer = new DigitalSingleChannelWriter(t.Stream);
                 writer.WriteSingleSamplePort(true, value);
+            }
+        }
+
+        public IInputData ReadStream(NIDAQInputStream stream)
+        {
+            double quantity;
+            string units;
+
+            switch (stream.PhysicalChannelType)
+            {
+                case PhysicalChannelTypes.AI:
+                    quantity = ReadSingleAnalog(stream);
+                    units = "V";
+                    break;
+                case PhysicalChannelTypes.DIPort:
+                    quantity = ReadSingleDigital(stream);
+                    units = Measurement.UNITLESS;
+                    break;
+                default:
+                    throw new ArgumentException("Unsupported stream channel type");
+            }
+
+            var inData =
+                new InputData(
+                    new List<IMeasurement> {new Measurement(quantity, 0, units)},
+                    new Measurement(0, 0, "Hz"),
+                    DateTimeOffset.Now)
+                    .DataWithStreamConfiguration(stream, stream.Configuration);
+
+            return inData.DataWithUnits(stream.MeasurementConversionTarget);
+        }
+
+        private double ReadSingleAnalog(NIDAQInputStream stream)
+        {
+            using (var t = new Task())
+            {
+                t.AIChannels.CreateVoltageChannel(stream.PhysicalName, "", (AITerminalConfiguration) (-1),
+                                                  Device.AIVoltageRanges.Min(), Device.AIVoltageRanges.Max(),
+                                                  AIVoltageUnits.Volts);
+                var reader = new AnalogSingleChannelReader(t.Stream);
+                return reader.ReadSingleSample();
+            }
+        }
+
+        private UInt32 ReadSingleDigital(NIDAQInputStream stream)
+        {
+            using (var t = new Task())
+            {
+                t.DIChannels.CreateChannel(stream.PhysicalName, "", ChannelLineGrouping.OneChannelForAllLines);
+                var reader = new DigitalSingleChannelReader(t.Stream);
+                return reader.ReadSingleSamplePortUInt32();
             }
         }
 
@@ -148,11 +201,11 @@ namespace NI
             // Create appropriate tasks
             if (chanNames.ContainsKey(PhysicalChannelTypes.AI))
             {
-                tasks.CreateAITask(chanNames[PhysicalChannelTypes.AI], Device.AIVoltageRanges.First(), Device.AIVoltageRanges.Last());
+                tasks.CreateAITask(chanNames[PhysicalChannelTypes.AI], Device.AIVoltageRanges.Min(), Device.AIVoltageRanges.Max());
             }
             if (chanNames.ContainsKey(PhysicalChannelTypes.AO))
             {
-                tasks.CreateAOTask(chanNames[PhysicalChannelTypes.AO], Device.AIVoltageRanges.First(), Device.AIVoltageRanges.Last());
+                tasks.CreateAOTask(chanNames[PhysicalChannelTypes.AO], Device.AOVoltageRanges.Min(), Device.AOVoltageRanges.Max());
             }
             if (chanNames.ContainsKey(PhysicalChannelTypes.DIPort))
             {
@@ -243,7 +296,7 @@ namespace NI
                 if (AnalogIn != null)
                     throw new InvalidOperationException();
 
-                var t = new Task();
+                var t = new Task("analogIn");
                 t.AIChannels.CreateVoltageChannel(string.Join(",", physicalNames), "", (AITerminalConfiguration) (-1),
                                                   min, max, AIVoltageUnits.Volts);
 
@@ -256,7 +309,7 @@ namespace NI
                 if (AnalogOut != null)
                     throw new InvalidOperationException();
 
-                var t = new Task();
+                var t = new Task("analogOut");
                 t.AOChannels.CreateVoltageChannel(string.Join(",", physicalNames), "", min, max, AOVoltageUnits.Volts);
 
                 AnalogOut = t;
@@ -268,7 +321,7 @@ namespace NI
                 if (DigitalIn != null)
                     throw new InvalidOperationException();
 
-                var t = new Task();
+                var t = new Task("digitalIn");
                 t.DIChannels.CreateChannel(string.Join(",", physicalNames), "",
                                            ChannelLineGrouping.OneChannelForAllLines);
 
@@ -281,7 +334,7 @@ namespace NI
                 if (DigitalOut != null)
                     throw new InvalidOperationException();
 
-                var t = new Task();
+                var t = new Task("digitalOut");
                 t.DOChannels.CreateChannel(string.Join(",", physicalNames), "",
                                            ChannelLineGrouping.OneChannelForAllLines);
 
