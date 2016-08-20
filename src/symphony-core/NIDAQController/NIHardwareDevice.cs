@@ -11,20 +11,80 @@ namespace NI
 {
     sealed class NIHardwareDevice : INIDevice
     {
-        private Device Device { get; set; }
+        private const int TRANSFER_BLOCK_SAMPLES = 512;
 
-        private Tasks _tasks;
+        private Device Device { get; set; }
+        private DAQTasks Tasks { get; set; }
 
         public NIHardwareDevice(Device device)
         {
             Device = device;
         }
 
-        public IEnumerable<KeyValuePair<string, double[]>> ReadWriteAnalog(IDictionary<string, double[]> output,
-                                                                           IList<string> input, int nsamples,
-                                                                           CancellationToken token)
+        public IEnumerable<KeyValuePair<string, double[]>> ReadAnalog(IList<string> input, int nsamples,
+                                                                             CancellationToken token)
         {
-            throw new NotImplementedException();
+            if (nsamples < 0)
+                throw new DaqException("nsamples may not be less than zero.");
+
+            if (input.Count != Tasks.AnalogIn.AIChannels.Count)
+                throw new DaqException("input count must match the number of configured channels.");
+
+            int nIn = 0;
+
+            var inputSamples = new double[input.Count, 2*nsamples];
+
+            int transferBlock = Math.Min(nsamples, TRANSFER_BLOCK_SAMPLES);
+            var inputData = new double[input.Count, transferBlock];
+
+            var stream = Tasks.AnalogIn.Stream;
+            var reader = new AnalogMultiChannelReader(stream);
+            var ar = reader.BeginMemoryOptimizedReadMultiSample(transferBlock, null, null, inputData);
+
+            while (nIn < nsamples && input.Any())
+            {
+                if (token.IsCancellationRequested)
+                    break;
+
+                bool blockAvailable = stream.AvailableSamplesPerChannel >= transferBlock;
+                if (blockAvailable)
+                {
+                    int nRead;
+                    inputData = reader.EndMemoryOptimizedReadMultiSample(ar, out nRead);
+
+                    for (int i = 0; i < input.Count; i++)
+                    {
+                        for (int j = 0; j < nRead; j++)
+                        {
+                            inputSamples[i, nIn + j] = inputData[i, j];
+                        }   
+                    }
+                    nIn += nRead;
+
+                    if (nIn < nsamples)
+                    {
+                        ar = reader.BeginMemoryOptimizedReadMultiSample(transferBlock, null, null, inputData);
+                    }
+                }
+            }
+
+            var result = new Dictionary<string, double[]>();
+            var chans = Tasks.AnalogIn.AIChannels.Cast<AIChannel>().ToList();
+
+            foreach (string i in input)
+            {
+                var inData = new double[nIn];
+                int chanIndex = chans.FindIndex(c => c.VirtualName == i);
+
+                for (int j = 0; j < nIn; j++)
+                {
+                    inData[j] = inputSamples[chanIndex, j];
+                }
+
+                result[i] = inData;
+            }
+
+            return result;
         }
 
         public void SetStreamBackground(NIDAQOutputStream stream)
@@ -128,7 +188,7 @@ namespace NI
             int nsamples = ns.First();
 
             var data = new double[output.Count, nsamples];
-            var chans = _tasks.AnalogOut.AOChannels.Cast<AOChannel>().ToList();
+            var chans = Tasks.AnalogOut.AOChannels.Cast<AOChannel>().ToList();
 
             foreach (var o in output)
             {
@@ -139,7 +199,7 @@ namespace NI
                 }
             }
 
-            var writer = new AnalogMultiChannelWriter(_tasks.AnalogOut.Stream);
+            var writer = new AnalogMultiChannelWriter(Tasks.AnalogOut.Stream);
             writer.WriteMultiSample(false, data);
         }
 
@@ -154,7 +214,7 @@ namespace NI
             int nsamples = ns.First();
 
             var data = new UInt32[output.Count, nsamples];
-            var chans = _tasks.DigitalOut.DOChannels.Cast<DOChannel>().ToList();
+            var chans = Tasks.DigitalOut.DOChannels.Cast<DOChannel>().ToList();
 
             foreach (var o in output)
             {
@@ -165,7 +225,7 @@ namespace NI
                 }
             }
 
-            var writer = new DigitalMultiChannelWriter(_tasks.DigitalOut.Stream);
+            var writer = new DigitalMultiChannelWriter(Tasks.DigitalOut.Stream);
             writer.WriteMultiSamplePort(false, data);
         }
 
@@ -190,9 +250,9 @@ namespace NI
 
         public void CloseDevice()
         {
-            if (_tasks != null)
+            if (Tasks != null)
             {
-                _tasks.All.ForEach(t => t.Dispose());
+                Tasks.All.ForEach(t => t.Dispose());
             }
             Device.Dispose();
         }
@@ -203,7 +263,7 @@ namespace NI
             if (!streams.Any())
                 throw new ArgumentException("Streams cannot be empty");
 
-            var tasks = new Tasks();
+            var tasks = new DAQTasks();
             var chanNames = streams.GroupBy(s => s.PhysicalChannelType).ToDictionary(g => g.Key, g => g.Select(s => s.PhysicalName));
 
             // Create appropriate tasks
@@ -241,11 +301,11 @@ namespace NI
             // Verify tasks
             tasks.All.ForEach(t => t.Control(TaskAction.Verify));
 
-            if (_tasks != null)
+            if (Tasks != null)
             {
-                _tasks.All.ForEach(t => t.Dispose());
+                Tasks.All.ForEach(t => t.Dispose());
             }
-            _tasks = tasks;
+            Tasks = tasks;
         }
 
         public void StartHardware(bool waitForTrigger)
@@ -253,29 +313,29 @@ namespace NI
             if (waitForTrigger)
             {
                 string source = "/" + Device.DeviceID + "/pfi0";
-                _tasks.Master.Triggers.StartTrigger.ConfigureDigitalEdgeTrigger(source, DigitalEdgeStartTriggerEdge.Rising);
+                Tasks.Master.Triggers.StartTrigger.ConfigureDigitalEdgeTrigger(source, DigitalEdgeStartTriggerEdge.Rising);
             }
             else
             {
-                _tasks.Master.Triggers.StartTrigger.ConfigureNone();
+                Tasks.Master.Triggers.StartTrigger.ConfigureNone();
             }
 
-            _tasks.Slaves.ForEach(t => t.Start());
-            _tasks.Master.Start();
+            Tasks.Slaves.ForEach(t => t.Start());
+            Tasks.Master.Start();
         }
 
         public void StopHardware()
         {
-            if (_tasks != null)
+            if (Tasks != null)
             {
-                _tasks.All.ForEach(t => t.Stop());
-                _tasks.All.ForEach(t => t.Control(TaskAction.Unreserve));
+                Tasks.All.ForEach(t => t.Stop());
+                Tasks.All.ForEach(t => t.Control(TaskAction.Unreserve));
             }
         }
 
         public Channel Channel(string channelName)
         {
-            Channel chan = _tasks.All.SelectMany(t => t.AIChannels.Cast<Channel>()
+            Channel chan = Tasks.All.SelectMany(t => t.AIChannels.Cast<Channel>()
                                                        .Concat(t.AOChannels.Cast<Channel>())
                                                        .Concat(t.DIChannels.Cast<Channel>())
                                                        .Concat(t.DOChannels.Cast<Channel>()))
@@ -287,7 +347,7 @@ namespace NI
             return chan;
         }
 
-        private class Tasks
+        private class DAQTasks
         {
             public Task AnalogIn { get; private set; }
             public Task AnalogOut { get; private set; }

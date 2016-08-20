@@ -27,9 +27,8 @@ namespace NI
     /// </summary>
     public interface INIDevice
     {
-        IEnumerable<KeyValuePair<string, double[]>> ReadWriteAnalog(IDictionary<string, double[]> output,
-                                                                    IList<string> input, int nsamples,
-                                                                    CancellationToken token);
+        IEnumerable<KeyValuePair<string, double[]>> ReadAnalog(IList<string> input, int nsamples,
+                                                               CancellationToken token);
 
         void SetStreamBackground(NIDAQOutputStream stream);
 
@@ -383,7 +382,8 @@ namespace NI
                 nsamples = (int)ProcessInterval.Samples(SampleRate);
             }
 
-            IEnumerable<KeyValuePair<string, double[]>> input = Device.ReadWriteAnalog(analogOutput, analogInputChannels, nsamples, token);
+            Device.WriteAnalog(analogOutput);
+            IEnumerable<KeyValuePair<string, double[]>> input = Device.ReadAnalog(analogInputChannels, nsamples, token);
 
             var result = new ConcurrentDictionary<IDAQInputStream, IInputData>();
             Parallel.ForEach(input, (kvp) =>

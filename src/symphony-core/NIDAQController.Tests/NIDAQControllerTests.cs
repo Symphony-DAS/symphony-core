@@ -293,29 +293,25 @@ namespace NI
         [Timeout(5 * 1000)]
         public void ExceptionalStopOnOutputUnderrun()
         {
-            foreach (var daq in NIDAQController.AvailableControllers())
+            var daq = NIDAQController.AvailableControllers().First();
+            try
             {
+                bool receivedExc = false;
 
-                try
-                {
-                    bool receivedExc = false;
+                FixtureForController(daq, durationSeconds: 1.0);
 
-                    FixtureForController(daq, durationSeconds: 1.0);
+                InputDevice.InputData[InputStream] = new List<IInputData>();
 
-                    InputDevice.InputData[InputStream] = new List<IInputData>();
+                daq.ExceptionalStop += (c, args) => receivedExc = true;
 
-                    daq.ExceptionalStop += (c, args) => receivedExc = true;
+                daq.Start(false);
 
-                    daq.Start(false);
-
-                    Assert.That(receivedExc, Is.True.After(1000, 10));
-                }
-                finally
-                {
-                    if (daq.IsHardwareReady)
-                        daq.CloseHardware();
-                }
-
+                Assert.That(receivedExc, Is.True.After(1000, 10));
+            }
+            finally
+            {
+                if (daq.IsHardwareReady)
+                    daq.CloseHardware();
             }
         }
 
