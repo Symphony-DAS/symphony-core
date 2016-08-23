@@ -211,22 +211,30 @@ namespace NI
                 {
                     foreach (var c in device.AIPhysicalChannels)
                     {
-                        DAQStreams.Add(new NIDAQInputStream(c, PhysicalChannelTypes.AI, this));
+                        string physicalName = c;
+                        string name = physicalName.Split('/').Last();
+                        DAQStreams.Add(new NIDAQInputStream(name, physicalName, PhysicalChannelTypes.AI, this));
                     }
 
                     foreach (var c in device.AOPhysicalChannels)
                     {
-                        DAQStreams.Add(new NIDAQOutputStream(c, PhysicalChannelTypes.AO, this));
+                        string physicalName = c;
+                        string name = physicalName.Split('/').Last();
+                        DAQStreams.Add(new NIDAQOutputStream(name, physicalName, PhysicalChannelTypes.AO, this));
                     }
 
                     foreach (var p in device.DIPorts)
                     {
-                        DAQStreams.Add(new NIDigitalDAQInputStream(p, this));
+                        string physicalName = p;
+                        string name = "di" + physicalName.Split('/').Last();
+                        DAQStreams.Add(new NIDigitalDAQInputStream(name, physicalName, this));
                     }
 
                     foreach (var p in device.DOPorts)
                     {
-                        DAQStreams.Add(new NIDigitalDAQInputStream(p, this));
+                        string physicalName = p;
+                        string name = "do" + physicalName.Split('/').Last();
+                        DAQStreams.Add(new NIDigitalDAQInputStream(name, physicalName, this));
                     }
                 }
                 

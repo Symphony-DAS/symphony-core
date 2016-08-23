@@ -67,7 +67,7 @@ namespace NI
 
             TimeSpan duration = TimeSpan.FromSeconds(0.5);
 
-            for (ushort bitPosition = 1; bitPosition < 16; bitPosition += 2)
+            for (ushort bitPosition = 1; bitPosition < 32; bitPosition += 2)
             {
                 var dataQueue = new Dictionary<IDAQOutputStream, Queue<IOutputData>>();
 

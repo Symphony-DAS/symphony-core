@@ -19,12 +19,19 @@ namespace NI
 
         private NIDAQController Controller { get; set; }
 
+        public string PhysicalName { get; private set; }
         public PhysicalChannelTypes PhysicalChannelType { get; private set; }
-        public string PhysicalName { get { return Controller.DeviceName + '/' + Name; } }
 
-        public NIDAQOutputStream(string name, PhysicalChannelTypes channelType, NIDAQController controller)
-            : base(name.Split('/').Last(), controller)
+        public NIDAQOutputStream(string physicalName, PhysicalChannelTypes channelType, NIDAQController controller)
+            : this(physicalName, physicalName, channelType, controller)
         {
+        }
+
+        public NIDAQOutputStream(string name, string physicalName, PhysicalChannelTypes channelType,
+                                 NIDAQController controller)
+            : base(name, controller)
+        {
+            PhysicalName = physicalName;
             PhysicalChannelType = channelType;
             MeasurementConversionTarget = (PhysicalChannelType == PhysicalChannelTypes.DIPort ||
                                            PhysicalChannelType == PhysicalChannelTypes.DILine)
@@ -79,8 +86,13 @@ namespace NI
     {
         public IDictionary<IExternalDevice, ushort> BitPositions { get; private set; }
 
-        public NIDigitalDAQOutputStream(string name, NIDAQController controller)
-            : base(name, PhysicalChannelTypes.DOPort, controller)
+        public NIDigitalDAQOutputStream(string physicalName, NIDAQController controller)
+            : this(physicalName, physicalName, controller)
+        {
+        }
+
+        public NIDigitalDAQOutputStream(string name, string physicalName, NIDAQController controller)
+            : base(name, physicalName, PhysicalChannelTypes.DOPort, controller)
         {
             BitPositions = new Dictionary<IExternalDevice, ushort>();
         }
