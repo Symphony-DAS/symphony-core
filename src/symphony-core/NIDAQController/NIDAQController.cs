@@ -28,9 +28,7 @@ namespace NI
     /// </summary>
     public interface INIDevice
     {
-        IEnumerable<KeyValuePair<Channel, double[]>> ReadWrite(IDictionary<Channel, double[]> output,
-                                                               IList<Channel> input, int nsamples,
-                                                               CancellationToken token);
+        IEnumerable<KeyValuePair<Channel, double[]>> Read(IList<Channel> input, int nsamples, CancellationToken token);
 
         void SetStreamBackground(NIDAQOutputStream stream);
 
@@ -362,7 +360,8 @@ namespace NI
                 nsamples = (int)ProcessInterval.Samples(SampleRate);
             }
 
-            IEnumerable<KeyValuePair<Channel, double[]>> input = Device.ReadWrite(output, inputChannels, nsamples, token);
+            Device.Write(output);
+            IEnumerable<KeyValuePair<Channel, double[]>> input = Device.Read(inputChannels, nsamples, token);
 
             var result = new ConcurrentDictionary<IDAQInputStream, IInputData>();
             Parallel.ForEach(input, (kvp) =>
@@ -394,11 +393,11 @@ namespace NI
         private NIDAQStream StreamWithChannel(Channel channel)
         {
             NIDAQStream result =
-                Streams.OfType<NIDAQStream>().First(s => s.GetChannel() == channel);
+                Streams.OfType<NIDAQStream>().First(s => s.GetChannel().PhysicalName == channel.PhysicalName);
 
             if (result == null)
             {
-                throw new DAQException("Unable to find stream with physical name " + channel);
+                throw new DAQException("Unable to find stream with channel " + channel);
             }
 
             return result;

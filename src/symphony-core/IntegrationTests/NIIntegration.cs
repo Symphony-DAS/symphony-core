@@ -25,6 +25,8 @@ namespace IntegrationTests
             Converters.Register("V", "V",
                 // just an identity conversion for now, to pass Validate()
                                 (IMeasurement m) => m);
+            NIDAQInputStream.RegisterConverters();
+            NIDAQOutputStream.RegisterConverters();
 
             Assert.That(NIDAQController.AvailableControllers().Count(), Is.GreaterThan(0));
             foreach (var daq in NIDAQController.AvailableControllers())

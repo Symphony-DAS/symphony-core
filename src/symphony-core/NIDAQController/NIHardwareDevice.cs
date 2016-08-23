@@ -21,62 +21,50 @@ namespace NI
             Device = device;
         }
 
-        public IEnumerable<KeyValuePair<Channel, double[]>> ReadWrite(IDictionary<Channel, double[]> output,
-                                                                      IList<Channel> input, int nsamples,
-                                                                      CancellationToken token)
+        public IEnumerable<KeyValuePair<Channel, double[]>> Read(IList<Channel> input, int nsamples,
+                                                                 CancellationToken token)
         {
             if (nsamples < 0)
-                throw new ArgumentException("nsamples may not be less than zero");
+                throw new DaqException("nsamples may not be less than zero.");
 
-            var outGroups = output.GroupBy(kv => kv.Key.Type).ToDictionary(g => g.Key, g => g.ToDictionary(kv => kv.Key, kv => kv.Value));
-            var inGroups = input.GroupBy(i => i.Type).ToDictionary(g => g.Key, g => g.ToList());
+            var groups = input.GroupBy(kv => kv.Type).ToDictionary(g => g.Key, g => g.ToList());
 
             var result = new List<KeyValuePair<Channel, double[]>>();
-            if (outGroups.ContainsKey(ChannelType.AI))
-                result.AddRange(ReadWriteAnalog(outGroups[ChannelType.AI], inGroups[ChannelType.AI], nsamples, token));
-            if (outGroups.ContainsKey(ChannelType.DI))
-                result.AddRange(ReadWriteDigital(outGroups[ChannelType.DI], inGroups[ChannelType.DI], nsamples, token));
+
+            if (groups.ContainsKey(ChannelType.AI))
+                result.AddRange(ReadAnalog(groups[ChannelType.AI], nsamples, token));
+            if (groups.ContainsKey(ChannelType.DI))
+                result.AddRange(ReadDigital(groups[ChannelType.DI], nsamples, token));
 
             return result;
         }
 
-        private IEnumerable<KeyValuePair<Channel, double[]>> ReadWriteAnalog(IDictionary<Channel, double[]> output,
-                                                                             IList<Channel> input, int nsamples,
-                                                                             CancellationToken token)
+        private IEnumerable<KeyValuePair<Channel, double[]>> ReadAnalog(IList<Channel> input, int nsamples,
+                                                                      CancellationToken token)
         {
+            if (input.Count != Tasks.AIChannels.Count)
+                throw new DaqException("Analog input count must match the number of configured analog channels.");
+
             int nIn = 0;
-            int nOut = 0;
 
-            var inputSamples = new double[input.Count, 2*nsamples];
-            var outputSamples = new double[output.Count, nsamples];
-
-            var outChans = Tasks.AIChannels.Cast<AOChannel>().ToList();
-            for (int i = 0; i < output.Count; i++)
-            {
-                for (int j = 0; j < nsamples; j++)
-                {
-                    outputSamples[i, j] = output[outChans[i]][j];
-                }
-            }
+            var inputSamples = new double[input.Count, 2 * nsamples];
 
             int transferBlock = Math.Min(nsamples, TRANSFER_BLOCK_SAMPLES);
             var inputData = new double[input.Count, transferBlock];
 
             var reader = new AnalogMultiChannelReader(Tasks.AIStream);
-            var readerResult = reader.BeginMemoryOptimizedReadMultiSample(transferBlock, null, null, inputData);
+            var ar = reader.BeginMemoryOptimizedReadMultiSample(transferBlock, null, null, inputData);
 
-            var writer = new AnalogMultiChannelWriter(Tasks.AOStream);
-
-            while ((nOut < nsamples && output.Any()) || (nIn < nsamples && input.Any()))
+            while (nIn < nsamples && input.Any())
             {
                 if (token.IsCancellationRequested)
                     break;
 
-                bool inBlockAvailable = Tasks.AIStream.AvailableSamplesPerChannel >= transferBlock;
-                if (inBlockAvailable)
+                bool blockAvailable = Tasks.AIStream.AvailableSamplesPerChannel >= transferBlock;
+                if (blockAvailable)
                 {
                     int nRead;
-                    inputData = reader.EndMemoryOptimizedReadMultiSample(readerResult, out nRead);
+                    inputData = reader.EndMemoryOptimizedReadMultiSample(ar, out nRead);
 
                     for (int i = 0; i < input.Count; i++)
                     {
@@ -89,54 +77,90 @@ namespace NI
 
                     if (nIn < nsamples)
                     {
-                        readerResult = reader.BeginMemoryOptimizedReadMultiSample(transferBlock, null, null, inputData);
-                    }
-                }
-
-                bool outBlockAvailable = Tasks.AOStream.OutputBufferSpaceAvailable >= transferBlock;
-                if (outBlockAvailable)
-                {
-                    if (nOut < nsamples)
-                    {
-                        int nWrite = Math.Min(transferBlock, nsamples - nOut);
-                        var outputData = new double[output.Count, nWrite];
-                        for (int i = 0; i < output.Count; i++)
-                        {
-                            for (int j = 0; j < nWrite; j++)
-                            {
-                                outputData[i, j] = outputSamples[i, nOut + j];
-                            }
-                        }
-                        writer.WriteMultiSample(false, outputData);
-                        nOut += nWrite;
+                        ar = reader.BeginMemoryOptimizedReadMultiSample(transferBlock, null, null, inputData);
                     }
                 }
             }
 
             var result = new Dictionary<Channel, double[]>();
-            var inChans = Tasks.AIChannels.Cast<AIChannel>().ToList();
+            var chans = Tasks.AIChannels.Cast<AIChannel>().ToList();
 
-            foreach (Channel chan in input)
+            foreach (Channel i in input)
             {
                 var inData = new double[nIn];
-                int chanIndex = inChans.FindIndex(c => c.PhysicalName == chan.PhysicalName);
+                int chanIndex = chans.FindIndex(c => c.PhysicalName == i.PhysicalName);
 
                 for (int j = 0; j < nIn; j++)
                 {
                     inData[j] = inputSamples[chanIndex, j];
                 }
 
-                result[chan] = inData;
+                result[i] = inData;
             }
 
             return result;
         }
 
-        private IEnumerable<KeyValuePair<Channel, double[]>> ReadWriteDigital(IDictionary<Channel, double[]> output,
-                                                                              IList<Channel> input, int nsamples,
-                                                                              CancellationToken token)
+        private IEnumerable<KeyValuePair<Channel, double[]>> ReadDigital(IList<Channel> input, int nsamples,
+                                                                         CancellationToken token)
         {
-            throw new NotImplementedException();
+            if (input.Count != Tasks.DIChannels.Count)
+                throw new DaqException("Digital input count must match the number of configured digital channels.");
+
+            int nIn = 0;
+
+            var inputSamples = new UInt32[input.Count, 2 * nsamples];
+
+            int transferBlock = Math.Min(nsamples, TRANSFER_BLOCK_SAMPLES);
+            var inputData = new UInt32[input.Count, transferBlock];
+
+            var reader = new DigitalMultiChannelReader(Tasks.DIStream);
+            var ar = reader.BeginMemoryOptimizedReadMultiSamplePortUInt32(transferBlock, null, null, inputData);
+
+            while (nIn < nsamples && input.Any())
+            {
+                if (token.IsCancellationRequested)
+                    break;
+
+                bool blockAvailable = Tasks.DIStream.AvailableSamplesPerChannel >= transferBlock;
+                if (blockAvailable)
+                {
+                    int nRead;
+                    inputData = reader.EndMemoryOptimizedReadMultiSamplePortUInt32(ar, out nRead);
+
+                    for (int i = 0; i < input.Count; i++)
+                    {
+                        for (int j = 0; j < nRead; j++)
+                        {
+                            inputSamples[i, nIn + j] = inputData[i, j];
+                        }
+                    }
+                    nIn += nRead;
+
+                    if (nIn < nsamples)
+                    {
+                        ar = reader.BeginMemoryOptimizedReadMultiSamplePortUInt32(transferBlock, null, null, inputData);
+                    }
+                }
+            }
+
+            var result = new Dictionary<Channel, double[]>();
+            var chans = Tasks.DIChannels.Cast<AIChannel>().ToList();
+
+            foreach (Channel i in input)
+            {
+                var inData = new double[nIn];
+                int chanIndex = chans.FindIndex(c => c.PhysicalName == i.PhysicalName);
+
+                for (int j = 0; j < nIn; j++)
+                {
+                    inData[j] = inputSamples[chanIndex, j];
+                }
+
+                result[i] = inData;
+            }
+
+            return result;
         }
 
         public void SetStreamBackground(NIDAQOutputStream stream)
