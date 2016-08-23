@@ -20,6 +20,7 @@ namespace NI
         string PhysicalName { get; }
         PhysicalChannelTypes PhysicalChannelType { get; }
         Channel GetChannel();
+        string DAQUnits { get; }
     }
 
     /// <summary>
@@ -292,7 +293,7 @@ namespace NI
                 while (TimeSpanExtensions.FromSamples((uint)outputSamples.Count(), s.SampleRate) < ProcessInterval) // && s.HasMoreData
                 {
                     var nextOutputDataForStream = NextOutputDataForStream(s);
-                    var nextSamples = nextOutputDataForStream.DataWithUnits(NIDAQOutputStream.DAQUnits).Data.
+                    var nextSamples = nextOutputDataForStream.DataWithUnits(s.DAQUnits).Data.
                         Select(
                             (m) => (double)m.QuantityInBaseUnits);
 
@@ -356,7 +357,7 @@ namespace NI
             {
                 var outputData = outData[s];
 
-                var cons = outputData.DataWithUnits(NIDAQOutputStream.DAQUnits).SplitData(deficit);
+                var cons = outputData.DataWithUnits(s.DAQUnits).SplitData(deficit);
 
                 double[] deficitOutputSamples = cons.Head.Data.Select((m) => (double)m.QuantityInBaseUnits).ToArray();
                 deficitOutput[s.GetChannel()] = deficitOutputSamples;
@@ -395,7 +396,7 @@ namespace NI
             var result = new ConcurrentDictionary<IDAQInputStream, IInputData>();
             Parallel.ForEach(input, (kvp) =>
                 {
-                    var s = StreamWithChannel(kvp.Key) as IDAQInputStream;
+                    var s = StreamWithChannel(kvp.Key) as NIDAQInputStream;
                     if (s == null)
                     {
                         throw new DAQException(
@@ -406,7 +407,7 @@ namespace NI
 
                     IInputData rawData = new InputData(
                         kvp.Value.Select(
-                            v => MeasurementPool.GetMeasurement((decimal) v, 0, NIDAQOutputStream.DAQUnits)).ToList(),
+                            v => MeasurementPool.GetMeasurement((decimal) v, 0, s.DAQUnits)).ToList(),
                         StreamWithChannel(kvp.Key).SampleRate,
                         Clock.Now
                         ).DataWithNodeConfiguration("NI.NIDAQController", Configuration);

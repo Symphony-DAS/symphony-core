@@ -15,8 +15,6 @@ namespace NI
     /// </summary>
     public class NIDAQInputStream : DAQInputStream, NIDAQStream
     {
-        public const string DAQUnits = "NIDAQUnits";
-
         private NIDAQController Controller { get; set; }
 
         public string PhysicalName { get; private set; }
@@ -33,10 +31,11 @@ namespace NI
         {
             PhysicalName = physicalName;
             PhysicalChannelType = channelType;
-            MeasurementConversionTarget = (PhysicalChannelType == PhysicalChannelTypes.DIPort ||
-                                           PhysicalChannelType == PhysicalChannelTypes.DILine)
-                                              ? Measurement.UNITLESS
-                                              : "V";
+            DAQUnits = (PhysicalChannelType == PhysicalChannelTypes.DIPort ||
+                        PhysicalChannelType == PhysicalChannelTypes.DILine)
+                           ? Measurement.UNITLESS
+                           : "V";
+            MeasurementConversionTarget = DAQUnits;
             Controller = controller;
             Clock = controller.Clock;
         }
@@ -68,15 +67,7 @@ namespace NI
             return Controller.Channel(PhysicalName);
         }
 
-        /// <summary>
-        /// Register ConversionProcs for V=>DAQUnits
-        /// </summary>
-        public static void RegisterConverters()
-        {
-            Converters.Register(DAQUnits, "V", m => m);
-
-            Converters.Register(DAQUnits, Measurement.UNITLESS, m => m);
-        }
+        public string DAQUnits { get; private set; }
     }
 
     /// <summary>

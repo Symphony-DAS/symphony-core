@@ -185,7 +185,7 @@ namespace NI
 
         private void WriteSingle(NIDAQOutputStream stream, IMeasurement value)
         {
-            var quantity = (double) Converters.Convert(value, NIDAQOutputStream.DAQUnits).QuantityInBaseUnits;
+            var quantity = (double) Converters.Convert(value, stream.DAQUnits).QuantityInBaseUnits;
             if (stream.PhysicalChannelType == PhysicalChannelTypes.AO)
                 WriteSingleAnalog(stream, quantity);
             else if (stream.PhysicalChannelType == PhysicalChannelTypes.DOPort)
@@ -225,7 +225,7 @@ namespace NI
 
             var inData =
                 new InputData(
-                    new List<IMeasurement> {new Measurement(quantity, 0, NIDAQOutputStream.DAQUnits)},
+                    new List<IMeasurement> {new Measurement(quantity, 0, stream.DAQUnits)},
                     new Measurement(0, 0, "Hz"),
                     DateTimeOffset.Now)
                     .DataWithStreamConfiguration(stream, stream.Configuration);

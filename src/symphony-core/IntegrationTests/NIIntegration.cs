@@ -32,8 +32,9 @@ namespace IntegrationTests
             )
         {
             Converters.Clear();
-            NIDAQInputStream.RegisterConverters();
-            NIDAQOutputStream.RegisterConverters();
+            Converters.Register("V", "V",
+                // just an identity conversion for now, to pass Validate()
+                                (IMeasurement m) => m);
 
             Assert.That(NIDAQController.AvailableControllers().Count(), Is.GreaterThan(0));
 
@@ -140,8 +141,6 @@ namespace IntegrationTests
             Converters.Register("V", "V",
                 // just an identity conversion for now, to pass Validate()
                                 (IMeasurement m) => m);
-            NIDAQInputStream.RegisterConverters();
-            NIDAQOutputStream.RegisterConverters();
 
             Assert.That(NIDAQController.AvailableControllers().Count(), Is.GreaterThan(0));
             foreach (var daq in NIDAQController.AvailableControllers())
@@ -245,8 +244,9 @@ namespace IntegrationTests
             [Values(20)] int nEpochs)
         {
             Converters.Clear();
-            NIDAQInputStream.RegisterConverters();
-            NIDAQOutputStream.RegisterConverters();
+            Converters.Register("V", "V",
+                // just an identity conversion for now, to pass Validate()
+                                (IMeasurement m) => m);
 
             Assert.That(NIDAQController.AvailableControllers().Count(), Is.GreaterThan(0));
             foreach (var daq in NIDAQController.AvailableControllers())
@@ -395,8 +395,6 @@ namespace IntegrationTests
             Converters.Register("V", "V",
                 // just an identity conversion for now, to pass Validate()
                                 (IMeasurement m) => m);
-            NIDAQInputStream.RegisterConverters();
-            NIDAQOutputStream.RegisterConverters();
 
             Assert.That(NIDAQController.AvailableControllers().Count(), Is.GreaterThan(0));
 
@@ -477,8 +475,6 @@ namespace IntegrationTests
             Converters.Register("V", "V",
                 // just an identity conversion for now, to pass Validate()
                                 (IMeasurement m) => m);
-            NIDAQInputStream.RegisterConverters();
-            NIDAQOutputStream.RegisterConverters();
 
             Assert.That(NIDAQController.AvailableControllers().Count(), Is.GreaterThan(0));
 
@@ -571,8 +567,6 @@ namespace IntegrationTests
             Converters.Register("V", "V",
                 // just an identity conversion for now, to pass Validate()
                                 (IMeasurement m) => m);
-            NIDAQInputStream.RegisterConverters();
-            NIDAQOutputStream.RegisterConverters();
 
             Assert.That(NIDAQController.AvailableControllers().Count(), Is.GreaterThan(0));
 

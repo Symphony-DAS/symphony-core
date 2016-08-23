@@ -30,8 +30,6 @@ namespace NI
             config["param2"] = 1;
 
             Converters.Clear();
-            NIDAQOutputStream.RegisterConverters();
-            NIDAQInputStream.RegisterConverters();
         }
 
         [TearDown]

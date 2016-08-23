@@ -11,15 +11,6 @@ using Symphony.Core;
 namespace NI
 {
     [TestFixture]
-    class NIDAQStreamTests
-    {
-        [Test]
-        public void DAQCountUnitsConsistent()
-        {
-            Assert.AreEqual(NIDAQInputStream.DAQUnits, NIDAQOutputStream.DAQUnits);
-        }
-    }
-    [TestFixture]
     class NIDAQOutputStreamTests
     {
         [Test]
@@ -116,7 +107,6 @@ namespace NI
         public void ShouldBitShiftAndMaskPushedInputData()
         {
             Converters.Clear();
-            NIDAQOutputStream.RegisterConverters();
 
             var controller = new NIDAQController();
             var s = new NIDigitalDAQInputStream("IN", controller);
