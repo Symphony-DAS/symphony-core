@@ -422,7 +422,7 @@ namespace NI
         private NIDAQStream StreamWithChannel(Channel channel)
         {
             NIDAQStream result =
-                Streams.OfType<NIDAQStream>().First(s => s.GetChannel().PhysicalName == channel.PhysicalName);
+                Streams.OfType<NIDAQStream>().First(s => s.PhysicalName == channel.PhysicalName);
 
             if (result == null)
             {
