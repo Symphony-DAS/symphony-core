@@ -469,21 +469,29 @@ namespace NI
 
         public double MinAIVoltage()
         {
+            if (!IsHardwareReady)
+                throw new DAQException("Hardware must be initialized before calling this method.");
             return Device.MinAIVoltage;
         }
 
         public double MaxAIVoltage()
         {
+            if (!IsHardwareReady)
+                throw new DAQException("Hardware must be initialized before calling this method.");
             return Device.MaxAIVoltage;
         }
 
         public double MinAOVoltage()
         {
+            if (!IsHardwareReady)
+                throw new DAQException("Hardware must be initialized before calling this method.");
             return Device.MinAOVoltage;
         }
 
         public double MaxAOVoltage()
         {
+            if (!IsHardwareReady)
+                throw new DAQException("Hardware must be initialized before calling this method.");
             return Device.MaxAOVoltage;
         }
 
