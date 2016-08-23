@@ -85,7 +85,7 @@ namespace Heka
                 (m) => MeasurementPool.GetMeasurement(m.QuantityInBaseUnits < 0 ?
                     m.QuantityInBaseUnits / (decimal)ITCMM.NEGATIVEVOLT / -(decimal)ITCMM.ANALOGVOLT :
                     m.QuantityInBaseUnits / (decimal)ITCMM.POSITIVEVOLT / +(decimal)ITCMM.ANALOGVOLT,
-                    0, DAQCountUnits));
+                    0, Measurement.NORMALIZED));
         }
     }
 
