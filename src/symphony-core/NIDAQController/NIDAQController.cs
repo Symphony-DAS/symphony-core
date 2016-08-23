@@ -25,7 +25,7 @@ namespace NI
 
     /// <summary>
     /// National Instruments-specific details of a digital DAQ stream. Each digital
-    /// DAQ stream groups 32-bits, where each bit represents a physical line on
+    /// DAQ stream groups some number of bits, where each bit represents a physical line on
     /// the device.
     /// 
     /// All devices associated with a NIDigitalDAQStream must indicate an

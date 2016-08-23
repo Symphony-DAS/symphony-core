@@ -125,8 +125,9 @@ namespace NI
             if (Devices.Any(d => !BitPositions.ContainsKey(d)))
                 return Maybe<string>.No("All devices must have an associated bit position");
 
-            if (BitPositions.Values.Any(n => n >= 32))
-                return Maybe<string>.No("No bit position can be greater than or equal to 16");
+            var width = DaqSystem.Local.LoadPhysicalChannel(PhysicalName).DIPortWidth;
+            if (BitPositions.Values.Any(n => n >= width))
+                return Maybe<string>.No("No bit position can be greater than or equal to " + width);
 
             return base.Validate();
         }
