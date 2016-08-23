@@ -23,6 +23,19 @@ namespace NI
     }
 
     /// <summary>
+    /// National Instruments-specific details of a digital DAQ stream. Each digital
+    /// DAQ stream groups 32-bits, where each bit represents a physical line on
+    /// the device.
+    /// 
+    /// All devices associated with a NIDigitalDAQStream must indicate an
+    /// associated bit position through which to push/pull data.
+    /// </summary>
+    public interface NIDigitalDAQStream : NIDAQStream
+    {
+        IDictionary<IExternalDevice, ushort> BitPositions { get; }
+    }
+
+    /// <summary>
     /// Encapsulates interaction with the NI-DAQmx driver. Client code should not use this interface
     /// directly; a INIDevice is managed by the NIDAQController.
     /// </summary>
@@ -116,9 +129,17 @@ namespace NI
         }
 
         /// <summary>
+        /// Constructs a NIDAQController for the "Dev0" device, using the system (CPU) clock.
+        /// </summary>
+        public NIDAQController()
+            : this("Dev0")
+        {
+        }
+
+        /// <summary>
         /// Constructs a new NIDAQController for the given device name, using the system (CPU) clock.
         /// </summary>
-        /// <param name="deviceName">NI device name (e.g. "Dev1")</param>
+        /// <param name="deviceName">NI device name (e.g. "Dev0")</param>
         public NIDAQController(string deviceName)
             : this(deviceName, new SystemClock())
         {
@@ -200,12 +221,12 @@ namespace NI
 
                     foreach (var p in device.DIPorts)
                     {
-                        DAQStreams.Add(new NIDAQInputStream(p, PhysicalChannelTypes.DIPort, this));
+                        DAQStreams.Add(new NIDigitalDAQInputStream(p, this));
                     }
 
                     foreach (var p in device.DOPorts)
                     {
-                        DAQStreams.Add(new NIDAQInputStream(p, PhysicalChannelTypes.DOPort, this));
+                        DAQStreams.Add(new NIDigitalDAQInputStream(p, this));
                     }
                 }
                 
