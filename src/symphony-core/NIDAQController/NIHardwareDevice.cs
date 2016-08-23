@@ -346,9 +346,9 @@ namespace NI
 
             // Create appropriate tasks
             if (chanNames.ContainsKey(PhysicalChannelTypes.AI))
-                tasks.CreateAITask(chanNames[PhysicalChannelTypes.AI], Device.AIVoltageRanges.Min(), Device.AIVoltageRanges.Max());
+                tasks.CreateAITask(chanNames[PhysicalChannelTypes.AI], MinAIVoltage, MaxAIVoltage);
             if (chanNames.ContainsKey(PhysicalChannelTypes.AO))
-                tasks.CreateAOTask(chanNames[PhysicalChannelTypes.AO], Device.AOVoltageRanges.Min(), Device.AOVoltageRanges.Max());
+                tasks.CreateAOTask(chanNames[PhysicalChannelTypes.AO], MinAOVoltage, MaxAOVoltage);
             if (chanNames.ContainsKey(PhysicalChannelTypes.DIPort))
                 tasks.CreateDITask(chanNames[PhysicalChannelTypes.DIPort]);
             if (chanNames.ContainsKey(PhysicalChannelTypes.DOPort))
@@ -421,6 +421,26 @@ namespace NI
         public string[] DOPorts
         {
             get { return Device.DOPorts; }
+        }
+
+        public double MinAIVoltage
+        {
+            get { return Device.AIVoltageRanges.Min(); }
+        }
+
+        public double MaxAIVoltage
+        {
+            get { return Device.AIVoltageRanges.Max(); }
+        }
+
+        public double MinAOVoltage
+        {
+            get { return Device.AOVoltageRanges.Min(); }
+        }
+
+        public double MaxAOVoltage
+        {
+            get { return Device.AOVoltageRanges.Max(); }
         }
 
         public Channel Channel(string channelName)

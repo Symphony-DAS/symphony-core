@@ -55,6 +55,10 @@ namespace NI
         string[] AOPhysicalChannels { get; }
         string[] DIPorts { get; }
         string[] DOPorts { get; }
+        double MinAIVoltage { get; }
+        double MaxAIVoltage { get; }
+        double MinAOVoltage { get; }
+        double MaxAOVoltage { get; }
         Channel Channel(string channelName);
 
         IInputData ReadStream(NIDAQInputStream instream);
@@ -461,6 +465,26 @@ namespace NI
         public static IEnumerable<NIDAQController> AvailableControllers()
         {
             return NIHardwareDevice.AvailableControllers();
+        }
+
+        public double MinAIVoltage()
+        {
+            return Device.MinAIVoltage;
+        }
+
+        public double MaxAIVoltage()
+        {
+            return Device.MaxAIVoltage;
+        }
+
+        public double MinAOVoltage()
+        {
+            return Device.MinAOVoltage;
+        }
+
+        public double MaxAOVoltage()
+        {
+            return Device.MaxAOVoltage;
         }
 
         public void ConfigureChannels()
