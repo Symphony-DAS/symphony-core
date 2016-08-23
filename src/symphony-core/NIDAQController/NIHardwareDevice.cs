@@ -157,7 +157,7 @@ namespace NI
             }
 
             var result = new Dictionary<Channel, double[]>();
-            var chans = DAQTasks.DIChannels.Cast<AIChannel>().ToList();
+            var chans = DAQTasks.DIChannels.Cast<DIChannel>().ToList();
 
             foreach (Channel i in input)
             {
