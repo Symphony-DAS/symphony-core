@@ -239,7 +239,7 @@ namespace NI
                     {
                         string physicalName = p;
                         string name = "do" + physicalName.Split('/').Last();
-                        DAQStreams.Add(new NIDigitalDAQInputStream(name, physicalName, this));
+                        DAQStreams.Add(new NIDigitalDAQOutputStream(name, physicalName, this));
                     }
                 }
                 

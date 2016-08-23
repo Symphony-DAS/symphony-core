@@ -415,12 +415,38 @@ namespace NI
 
         public string[] DIPorts
         {
-            get { return Device.DIPorts; }
+            get
+            {
+                var all = Device.DIPorts;
+                var supported = new List<string>();
+                foreach (var chan in all)
+                {
+                    var c = DaqSystem.Local.LoadPhysicalChannel(chan);
+                    if (c.DISampleModes.Contains(SampleQuantityMode.ContinuousSamples))
+                    {
+                        supported.Add(chan);
+                    }
+                }
+                return supported.ToArray();
+            }
         }
 
         public string[] DOPorts
         {
-            get { return Device.DOPorts; }
+            get
+            {
+                var all = Device.DOPorts;
+                var supported = new List<string>();
+                foreach (var chan in all)
+                {
+                    var c = DaqSystem.Local.LoadPhysicalChannel(chan);
+                    if (c.DOSampleModes.Contains(SampleQuantityMode.ContinuousSamples))
+                    {
+                        supported.Add(chan);
+                    }
+                }
+                return supported.ToArray();
+            }
         }
 
         public double MinAIVoltage
