@@ -13,12 +13,13 @@ namespace NI
 {
     /// <summary>
     /// National Instruments-specific details of a DAQ stream. Gives the 
-    /// channel type and full physical channel name (e.g. Dev1/ai1) for this stream.
+    /// full physical channel name (e.g. Dev1/ai1) and channel type for this stream.
     /// </summary>
     public interface NIDAQStream : IDAQStream
     {
-        PhysicalChannelTypes PhysicalChannelType { get; }
         string PhysicalName { get; }
+        PhysicalChannelTypes PhysicalChannelType { get; }
+        Channel GetChannel();
     }
 
     /// <summary>
@@ -27,7 +28,8 @@ namespace NI
     /// </summary>
     public interface INIDevice
     {
-        IEnumerable<KeyValuePair<string, double[]>> ReadAnalog(IList<string> input, int nsamples,
+        IEnumerable<KeyValuePair<Channel, double[]>> ReadWrite(IDictionary<Channel, double[]> output,
+                                                               IList<Channel> input, int nsamples,
                                                                CancellationToken token);
 
         void SetStreamBackground(NIDAQOutputStream stream);
@@ -37,12 +39,14 @@ namespace NI
         void StartHardware(bool waitForTrigger);
         void StopHardware();
 
-        NIDeviceInfo DeviceInfo { get; }
+        string[] AIPhysicalChannels { get; }
+        string[] AOPhysicalChannels { get; }
+        string[] DIPorts { get; }
+        string[] DOPorts { get; }
         Channel Channel(string channelName);
 
         IInputData ReadStream(NIDAQInputStream instream);
-        void WriteAnalog(IDictionary<string, double[]> output);
-        void WriteDigital(IDictionary<string, UInt32[]> output);
+        void Write(IDictionary<Channel, double[]> output);
     }
 
     /// <summary>
@@ -182,26 +186,26 @@ namespace NI
         {
             if (!IsHardwareReady)
             {
-                var deviceInfo = OpenDevice();
+                var device = OpenDevice();
 
                 if (!DAQStreams.Any())
                 {
-                    foreach (var c in deviceInfo.AIPhysicalChannels)
+                    foreach (var c in device.AIPhysicalChannels)
                     {
                         DAQStreams.Add(new NIDAQInputStream(c, PhysicalChannelTypes.AI, this));
                     }
 
-                    foreach (var c in deviceInfo.AOPhysicalChannels)
+                    foreach (var c in device.AOPhysicalChannels)
                     {
                         DAQStreams.Add(new NIDAQOutputStream(c, PhysicalChannelTypes.AO, this));
                     }
 
-                    foreach (var p in deviceInfo.DIPorts)
+                    foreach (var p in device.DIPorts)
                     {
                         DAQStreams.Add(new NIDAQInputStream(p, PhysicalChannelTypes.DIPort, this));
                     }
 
-                    foreach (var p in deviceInfo.DOPorts)
+                    foreach (var p in device.DOPorts)
                     {
                         DAQStreams.Add(new NIDAQInputStream(p, PhysicalChannelTypes.DOPort, this));
                     }
@@ -211,12 +215,11 @@ namespace NI
             }
         }
 
-        private NIDeviceInfo OpenDevice()
+        private INIDevice OpenDevice()
         {
-            NIDeviceInfo deviceInfo;
-            Device = NIHardwareDevice.OpenDevice(DeviceName, out deviceInfo);
+            Device = NIHardwareDevice.OpenDevice(DeviceName);
             IsHardwareReady = true;
-            return deviceInfo;
+            return Device;
         }
 
         /// <summary>
@@ -232,7 +235,7 @@ namespace NI
                     Device.CloseDevice();
                 }
             }
-            catch (DAQException)
+            catch (DaqException)
             {
                 //pass
             }
@@ -253,52 +256,30 @@ namespace NI
 
         private void PreloadStreams()
         {
-            IDictionary<string, double[]> analogOutput = new Dictionary<string, double[]>();
-            IDictionary<string, UInt32[]> digitalOutput = new Dictionary<string, UInt32[]>();
+            IDictionary<Channel, double[]> output = new Dictionary<Channel, double[]>();
 
             foreach (var s in ActiveOutputStreams.Cast<NIDAQOutputStream>())
             {
                 s.Reset();
-
-                if (s.PhysicalChannelType == PhysicalChannelTypes.AO)
+                var outputSamples = new List<double>();
+                while (TimeSpanExtensions.FromSamples((uint)outputSamples.Count(), s.SampleRate) < ProcessInterval) // && s.HasMoreData
                 {
-                    var outputSamples = new List<double>();
-                    while (TimeSpanExtensions.FromSamples((uint)outputSamples.Count(), s.SampleRate) < ProcessInterval) // && s.HasMoreData
-                    {
-                        var nextOutputDataForStream = NextOutputDataForStream(s);
-                        var nextSamples =
-                            nextOutputDataForStream.DataWithUnits("V").Data.Select(m => (double) m.QuantityInBaseUnits);
+                    var nextOutputDataForStream = NextOutputDataForStream(s);
+                    var nextSamples = nextOutputDataForStream.DataWithUnits(NIDAQOutputStream.DAQUnits).Data.
+                        Select(
+                            (m) => (double)m.QuantityInBaseUnits);
 
-                        outputSamples = outputSamples.Concat(nextSamples).ToList();
-                    }
+                    outputSamples = outputSamples.Concat(nextSamples).ToList();
 
-                    if (!outputSamples.Any())
-                        throw new DAQException("Unable to pull data to preload stream " + s.Name);
-
-                    analogOutput[s.PhysicalName] = outputSamples.ToArray();
                 }
-                else if (s.PhysicalChannelType == PhysicalChannelTypes.DOPort)
-                {
-                    var outputSamples = new List<UInt32>();
-                    while (TimeSpanExtensions.FromSamples((uint)outputSamples.Count(), s.SampleRate) < ProcessInterval) // && s.HasMoreData
-                    {
-                        var nextOutputDataForStream = NextOutputDataForStream(s);
-                        var nextSamples =
-                            nextOutputDataForStream.DataWithUnits(Measurement.UNITLESS)
-                                                   .Data.Select(m => (UInt32) m.QuantityInBaseUnits);
 
-                        outputSamples = outputSamples.Concat(nextSamples).ToList();
-                    }
+                if (!outputSamples.Any())
+                    throw new DaqException("Unable to pull data to preload stream " + s.Name);
 
-                    if (!outputSamples.Any())
-                        throw new DAQException("Unable to pull data to preload stream " + s.Name);
-
-                    digitalOutput[s.PhysicalName] = outputSamples.ToArray();
-                }
+                output[s.GetChannel()] = outputSamples.ToArray();
             }
 
-            Device.WriteAnalog(analogOutput);
-            Device.WriteDigital(digitalOutput);
+            Device.Write(output);
         }
 
         public override void Start(bool waitForTrigger)
@@ -341,66 +322,64 @@ namespace NI
 
         protected override IDictionary<IDAQInputStream, IInputData> ProcessLoopIteration(IDictionary<IDAQOutputStream, IOutputData> outData, TimeSpan deficit, CancellationToken token)
         {
-            IDictionary<string, double[]> analogOutput = new Dictionary<string, double[]>();
-            IDictionary<string, double[]> deficitAnalogOutput = new Dictionary<string, double[]>();
+            IDictionary<Channel, double[]> output = new Dictionary<Channel, double[]>();
+            IDictionary<Channel, double[]> deficitOutput = new Dictionary<Channel, double[]>();
 
             foreach (var s in ActiveOutputStreams.Cast<NIDAQOutputStream>())
             {
                 var outputData = outData[s];
 
-                var cons = outputData.DataWithUnits("V").SplitData(deficit);
+                var cons = outputData.DataWithUnits(NIDAQOutputStream.DAQUnits).SplitData(deficit);
 
                 double[] deficitOutputSamples = cons.Head.Data.Select((m) => (double)m.QuantityInBaseUnits).ToArray();
-                deficitAnalogOutput[s.PhysicalName] = deficitOutputSamples;
+                deficitOutput[s.GetChannel()] = deficitOutputSamples;
 
                 double[] outputSamples = cons.Rest.Data.Select((m) => (double)m.QuantityInBaseUnits).ToArray();
-                analogOutput[s.PhysicalName] = outputSamples;
+                output[s.GetChannel()] = outputSamples;
             }
 
-            if (deficitAnalogOutput.Any())
+            if (deficitOutput.Any())
             {
-                Device.WriteAnalog(deficitAnalogOutput);
+                Device.Write(deficitOutput);
             }
 
-            var analogInputChannels =
+            var inputChannels =
                 ActiveInputStreams.
                 Cast<NIDAQInputStream>().
-                Where(s => s.PhysicalChannelType == PhysicalChannelTypes.AI).
-                Select((s) => s.PhysicalName).
+                Select((s) => s.GetChannel()).
                 ToList();
 
             int nsamples;
-            if (analogOutput.Values.Any())
+            if (output.Values.Any())
             {
-                if (analogOutput.Values.Select(a => a.Length).Distinct().Count() > 1)
+                if (output.Values.Select(a => a.Length).Distinct().Count() > 1)
                     throw new DAQException("Output buffers are not equal length.");
 
-                nsamples = analogOutput.Values.Select((a) => a.Length).Distinct().First();
+                nsamples = output.Values.Select((a) => a.Length).Distinct().First();
             }
             else
             {
                 nsamples = (int)ProcessInterval.Samples(SampleRate);
             }
 
-            Device.WriteAnalog(analogOutput);
-            IEnumerable<KeyValuePair<string, double[]>> input = Device.ReadAnalog(analogInputChannels, nsamples, token);
+            IEnumerable<KeyValuePair<Channel, double[]>> input = Device.ReadWrite(output, inputChannels, nsamples, token);
 
             var result = new ConcurrentDictionary<IDAQInputStream, IInputData>();
             Parallel.ForEach(input, (kvp) =>
                 {
-                    var s = StreamWithPhysicalName(kvp.Key) as IDAQInputStream;
+                    var s = StreamWithChannel(kvp.Key) as IDAQInputStream;
                     if (s == null)
                     {
                         throw new DAQException(
-                            "Physical name does not specify an input stream.");
+                            "Channel does not specify an input stream.");
                     }
 
                     //Create the raw input data
 
                     IInputData rawData = new InputData(
                         kvp.Value.Select(
-                            v => MeasurementPool.GetMeasurement((decimal) v, 0, "V")).ToList(),
-                        StreamWithPhysicalName(kvp.Key).SampleRate,
+                            v => MeasurementPool.GetMeasurement((decimal) v, 0, NIDAQOutputStream.DAQUnits)).ToList(),
+                        StreamWithChannel(kvp.Key).SampleRate,
                         Clock.Now
                         ).DataWithNodeConfiguration("NI.NIDAQController", Configuration);
 
@@ -412,14 +391,14 @@ namespace NI
             return result;
         }
 
-        private NIDAQStream StreamWithPhysicalName(string physicalName)
+        private NIDAQStream StreamWithChannel(Channel channel)
         {
             NIDAQStream result =
-                Streams.OfType<NIDAQStream>().First(s => s.PhysicalName == physicalName);
+                Streams.OfType<NIDAQStream>().First(s => s.GetChannel() == channel);
 
             if (result == null)
             {
-                throw new DAQException("Unable to find stream with physical name " + physicalName);
+                throw new DAQException("Unable to find stream with physical name " + channel);
             }
 
             return result;

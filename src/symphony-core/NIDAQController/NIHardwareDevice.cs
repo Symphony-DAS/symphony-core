@@ -21,88 +21,139 @@ namespace NI
             Device = device;
         }
 
-        public IEnumerable<KeyValuePair<string, double[]>> ReadAnalog(IList<string> input, int nsamples,
-                                                                             CancellationToken token)
+        public IEnumerable<KeyValuePair<Channel, double[]>> ReadWrite(IDictionary<Channel, double[]> output,
+                                                                      IList<Channel> input, int nsamples,
+                                                                      CancellationToken token)
         {
             if (nsamples < 0)
-                throw new DaqException("nsamples may not be less than zero.");
+                throw new ArgumentException("nsamples may not be less than zero");
 
-            if (input.Count != Tasks.AnalogIn.AIChannels.Count)
-                throw new DaqException("input count must match the number of configured channels.");
+            var outGroups = output.GroupBy(kv => kv.Key.Type).ToDictionary(g => g.Key, g => g.ToDictionary(kv => kv.Key, kv => kv.Value));
+            var inGroups = input.GroupBy(i => i.Type).ToDictionary(g => g.Key, g => g.ToList());
 
+            var result = new List<KeyValuePair<Channel, double[]>>();
+            if (outGroups.ContainsKey(ChannelType.AI))
+                result.AddRange(ReadWriteAnalog(outGroups[ChannelType.AI], inGroups[ChannelType.AI], nsamples, token));
+            if (outGroups.ContainsKey(ChannelType.DI))
+                result.AddRange(ReadWriteDigital(outGroups[ChannelType.DI], inGroups[ChannelType.DI], nsamples, token));
+
+            return result;
+        }
+
+        private IEnumerable<KeyValuePair<Channel, double[]>> ReadWriteAnalog(IDictionary<Channel, double[]> output,
+                                                                             IList<Channel> input, int nsamples,
+                                                                             CancellationToken token)
+        {
             int nIn = 0;
+            int nOut = 0;
 
             var inputSamples = new double[input.Count, 2*nsamples];
+            var outputSamples = new double[output.Count, nsamples];
+
+            var outChans = Tasks.AIChannels.Cast<AOChannel>().ToList();
+            for (int i = 0; i < output.Count; i++)
+            {
+                for (int j = 0; j < nsamples; j++)
+                {
+                    outputSamples[i, j] = output[outChans[i]][j];
+                }
+            }
 
             int transferBlock = Math.Min(nsamples, TRANSFER_BLOCK_SAMPLES);
             var inputData = new double[input.Count, transferBlock];
 
-            var stream = Tasks.AnalogIn.Stream;
-            var reader = new AnalogMultiChannelReader(stream);
-            var ar = reader.BeginMemoryOptimizedReadMultiSample(transferBlock, null, null, inputData);
+            var reader = new AnalogMultiChannelReader(Tasks.AIStream);
+            var readerResult = reader.BeginMemoryOptimizedReadMultiSample(transferBlock, null, null, inputData);
 
-            while (nIn < nsamples && input.Any())
+            var writer = new AnalogMultiChannelWriter(Tasks.AOStream);
+
+            while ((nOut < nsamples && output.Any()) || (nIn < nsamples && input.Any()))
             {
                 if (token.IsCancellationRequested)
                     break;
 
-                bool blockAvailable = stream.AvailableSamplesPerChannel >= transferBlock;
-                if (blockAvailable)
+                bool inBlockAvailable = Tasks.AIStream.AvailableSamplesPerChannel >= transferBlock;
+                if (inBlockAvailable)
                 {
                     int nRead;
-                    inputData = reader.EndMemoryOptimizedReadMultiSample(ar, out nRead);
+                    inputData = reader.EndMemoryOptimizedReadMultiSample(readerResult, out nRead);
 
                     for (int i = 0; i < input.Count; i++)
                     {
                         for (int j = 0; j < nRead; j++)
                         {
                             inputSamples[i, nIn + j] = inputData[i, j];
-                        }   
+                        }
                     }
                     nIn += nRead;
 
                     if (nIn < nsamples)
                     {
-                        ar = reader.BeginMemoryOptimizedReadMultiSample(transferBlock, null, null, inputData);
+                        readerResult = reader.BeginMemoryOptimizedReadMultiSample(transferBlock, null, null, inputData);
+                    }
+                }
+
+                bool outBlockAvailable = Tasks.AOStream.OutputBufferSpaceAvailable >= transferBlock;
+                if (outBlockAvailable)
+                {
+                    if (nOut < nsamples)
+                    {
+                        int nWrite = Math.Min(transferBlock, nsamples - nOut);
+                        var outputData = new double[output.Count, nWrite];
+                        for (int i = 0; i < output.Count; i++)
+                        {
+                            for (int j = 0; j < nWrite; j++)
+                            {
+                                outputData[i, j] = outputSamples[i, nOut + j];
+                            }
+                        }
+                        writer.WriteMultiSample(false, outputData);
+                        nOut += nWrite;
                     }
                 }
             }
 
-            var result = new Dictionary<string, double[]>();
-            var chans = Tasks.AnalogIn.AIChannels.Cast<AIChannel>().ToList();
+            var result = new Dictionary<Channel, double[]>();
+            var inChans = Tasks.AIChannels.Cast<AIChannel>().ToList();
 
-            foreach (string i in input)
+            foreach (Channel chan in input)
             {
                 var inData = new double[nIn];
-                int chanIndex = chans.FindIndex(c => c.VirtualName == i);
+                int chanIndex = inChans.FindIndex(c => c.PhysicalName == chan.PhysicalName);
 
                 for (int j = 0; j < nIn; j++)
                 {
                     inData[j] = inputSamples[chanIndex, j];
                 }
 
-                result[i] = inData;
+                result[chan] = inData;
             }
 
             return result;
         }
 
+        private IEnumerable<KeyValuePair<Channel, double[]>> ReadWriteDigital(IDictionary<Channel, double[]> output,
+                                                                              IList<Channel> input, int nsamples,
+                                                                              CancellationToken token)
+        {
+            throw new NotImplementedException();
+        }
+
         public void SetStreamBackground(NIDAQOutputStream stream)
         {
-            if (stream == null) 
-                return;
-
-            switch (stream.PhysicalChannelType)
+            if (stream != null)
             {
-                case PhysicalChannelTypes.AO:
-                    WriteSingleAnalog(stream, (double) Converters.Convert(stream.Background, "V").QuantityInBaseUnits);
-                    break;
-                case PhysicalChannelTypes.DOPort:
-                    WriteSingleDigital(stream, (byte) Converters.Convert(stream.Background, Measurement.UNITLESS).QuantityInBaseUnits);
-                    break;
-                default:
-                    throw new NotSupportedException("Unsupported stream channel type");
+                WriteSingle(stream, stream.Background);
             }
+        }
+
+        private void WriteSingle(NIDAQOutputStream stream, IMeasurement value)
+        {
+            var quantity = (double) Converters.Convert(value, NIDAQOutputStream.DAQUnits).QuantityInBaseUnits;
+            if (stream.PhysicalChannelType == PhysicalChannelTypes.AO)
+                WriteSingleAnalog(stream, quantity);
+            else if (stream.PhysicalChannelType == PhysicalChannelTypes.DOPort)
+                WriteSingleDigital(stream, quantity);
         }
 
         private void WriteSingleAnalog(NIDAQOutputStream stream, double value)
@@ -116,38 +167,29 @@ namespace NI
             }
         }
 
-        private void WriteSingleDigital(NIDAQOutputStream stream, UInt32 value)
+        private void WriteSingleDigital(NIDAQOutputStream stream, double value)
         {
             using (var t = new Task())
             {
                 t.DOChannels.CreateChannel(stream.PhysicalName, "", ChannelLineGrouping.OneChannelForAllLines);
                 var writer = new DigitalSingleChannelWriter(t.Stream);
-                writer.WriteSingleSamplePort(true, value);
+                writer.WriteSingleSamplePort(true, (UInt32) value);
             }
         }
 
         public IInputData ReadStream(NIDAQInputStream stream)
         {
             double quantity;
-            string units;
-
-            switch (stream.PhysicalChannelType)
-            {
-                case PhysicalChannelTypes.AI:
-                    quantity = ReadSingleAnalog(stream);
-                    units = "V";
-                    break;
-                case PhysicalChannelTypes.DIPort:
-                    quantity = ReadSingleDigital(stream);
-                    units = Measurement.UNITLESS;
-                    break;
-                default:
-                    throw new NotSupportedException("Unsupported stream channel type");
-            }
+            if (stream.PhysicalChannelType == PhysicalChannelTypes.AI)
+                quantity = ReadSingleAnalog(stream);
+            else if (stream.PhysicalChannelType == PhysicalChannelTypes.DIPort)
+                quantity = ReadSingleDigital(stream);
+            else
+                throw new NotSupportedException("Unsupported stream channel type");
 
             var inData =
                 new InputData(
-                    new List<IMeasurement> {new Measurement(quantity, 0, units)},
+                    new List<IMeasurement> {new Measurement(quantity, 0, NIDAQOutputStream.DAQUnits)},
                     new Measurement(0, 0, "Hz"),
                     DateTimeOffset.Now)
                     .DataWithStreamConfiguration(stream, stream.Configuration);
@@ -167,7 +209,7 @@ namespace NI
             }
         }
 
-        private UInt32 ReadSingleDigital(NIDAQInputStream stream)
+        private double ReadSingleDigital(NIDAQInputStream stream)
         {
             using (var t = new Task())
             {
@@ -177,61 +219,54 @@ namespace NI
             }
         }
 
-        public void WriteAnalog(IDictionary<string, double[]> output)
+        public void Write(IDictionary<Channel, double[]> output)
         {
-            if (!output.Any())
-                return;
-
             var ns = output.Values.Select(v => v.Count()).Distinct().ToList();
             if (ns.Count() > 1)
                 throw new ArgumentException("Preload sample buffers must be homogenous in length");
             int nsamples = ns.First();
 
+            var groups = output.GroupBy(kv => kv.Key.Type).ToDictionary(g => g.Key, g => g.ToDictionary(kv => kv.Key, kv => kv.Value));
+            if (groups.ContainsKey(ChannelType.AO))
+                WriteAnalog(groups[ChannelType.AO], nsamples);
+            if (groups.ContainsKey(ChannelType.DO))
+                WriteDigital(groups[ChannelType.DO], nsamples);
+        }
+
+        private void WriteAnalog(IDictionary<Channel, double[]> output, int nsamples)
+        {
             var data = new double[output.Count, nsamples];
-            var chans = Tasks.AnalogOut.AOChannels.Cast<AOChannel>().ToList();
+            var chans = Tasks.AOChannels.Cast<AOChannel>().ToList();
 
             foreach (var o in output)
             {
-                int chanIndex = chans.FindIndex(c => c.VirtualName == o.Key);
+                int chanIndex = chans.FindIndex(c => c.PhysicalName == o.Key.PhysicalName);
                 for (int i = 0; i < o.Value.Count(); i++)
                 {
                     data[chanIndex, i] = o.Value[i];
                 }
             }
 
-            var writer = new AnalogMultiChannelWriter(Tasks.AnalogOut.Stream);
+            var writer = new AnalogMultiChannelWriter(Tasks.AOStream);
             writer.WriteMultiSample(false, data);
         }
 
-        public void WriteDigital(IDictionary<string, UInt32[]> output)
+        private void WriteDigital(IDictionary<Channel, double[]> output, int nsamples)
         {
-            if (!output.Any())
-                return;
-
-            var ns = output.Values.Select(v => v.Count()).Distinct().ToList();
-            if (ns.Count() > 1)
-                throw new ArgumentException("Preload sample buffers must be homogenous in length");
-            int nsamples = ns.First();
-
             var data = new UInt32[output.Count, nsamples];
-            var chans = Tasks.DigitalOut.DOChannels.Cast<DOChannel>().ToList();
+            var chans = Tasks.DOChannels.Cast<DOChannel>().ToList();
 
             foreach (var o in output)
             {
-                int chanIndex = chans.FindIndex(c => c.VirtualName == o.Key);
+                int chanIndex = chans.FindIndex(c => c.PhysicalName == o.Key.PhysicalName);
                 for (int i = 0; i < o.Value.Count(); i++)
                 {
-                    data[chanIndex, i] = o.Value[i];
+                    data[chanIndex, i] = (UInt32) o.Value[i];
                 }
             }
 
-            var writer = new DigitalMultiChannelWriter(Tasks.DigitalOut.Stream);
+            var writer = new DigitalMultiChannelWriter(Tasks.DOStream);
             writer.WriteMultiSamplePort(false, data);
-        }
-
-        public NIDeviceInfo DeviceInfo
-        {
-            get { return NIDeviceInfo.FromDevice(Device); }
         }
 
         public static IEnumerable<NIDAQController> AvailableControllers()
@@ -239,13 +274,9 @@ namespace NI
             return DaqSystem.Local.Devices.Select(d => new NIDAQController(d));
         }
 
-        internal static INIDevice OpenDevice(string deviceName, out NIDeviceInfo deviceInfo)
+        internal static INIDevice OpenDevice(string deviceName)
         {
-            Device dev = DaqSystem.Local.LoadDevice(deviceName);
-
-            deviceInfo = NIDeviceInfo.FromDevice(dev);
-
-            return new NIHardwareDevice(dev);
+            return new NIHardwareDevice(DaqSystem.Local.LoadDevice(deviceName));
         }
 
         public void CloseDevice()
@@ -268,21 +299,13 @@ namespace NI
 
             // Create appropriate tasks
             if (chanNames.ContainsKey(PhysicalChannelTypes.AI))
-            {
                 tasks.CreateAITask(chanNames[PhysicalChannelTypes.AI], Device.AIVoltageRanges.Min(), Device.AIVoltageRanges.Max());
-            }
             if (chanNames.ContainsKey(PhysicalChannelTypes.AO))
-            {
                 tasks.CreateAOTask(chanNames[PhysicalChannelTypes.AO], Device.AOVoltageRanges.Min(), Device.AOVoltageRanges.Max());
-            }
             if (chanNames.ContainsKey(PhysicalChannelTypes.DIPort))
-            {
                 tasks.CreateDITask(chanNames[PhysicalChannelTypes.DIPort]);
-            }
             if (chanNames.ContainsKey(PhysicalChannelTypes.DOPort))
-            {
                 tasks.CreateDOTask(chanNames[PhysicalChannelTypes.DOPort]);
-            }
 
             // Setup master and slave timing
             var rates = streams.Select(s => s.SampleRate).Distinct().ToList();
@@ -333,13 +356,33 @@ namespace NI
             }
         }
 
+        public string[] AIPhysicalChannels
+        {
+            get { return Device.AIPhysicalChannels; }
+        }
+
+        public string[] AOPhysicalChannels
+        {
+            get { return Device.AOPhysicalChannels; }
+        }
+
+        public string[] DIPorts
+        {
+            get { return Device.DIPorts; }
+        }
+
+        public string[] DOPorts
+        {
+            get { return Device.DOPorts; }
+        }
+
         public Channel Channel(string channelName)
         {
             Channel chan = Tasks.All.SelectMany(t => t.AIChannels.Cast<Channel>()
-                                                       .Concat(t.AOChannels.Cast<Channel>())
-                                                       .Concat(t.DIChannels.Cast<Channel>())
-                                                       .Concat(t.DOChannels.Cast<Channel>()))
-                                 .FirstOrDefault(c => c.VirtualName == channelName);
+                                                      .Concat(t.AOChannels.Cast<Channel>())
+                                                      .Concat(t.DIChannels.Cast<Channel>())
+                                                      .Concat(t.DOChannels.Cast<Channel>()))
+                                .FirstOrDefault(c => c.VirtualName == channelName);
             
             if (chan == null)
                 throw new ArgumentException("Channel " + channelName + " is not configured");
@@ -349,10 +392,10 @@ namespace NI
 
         private class DAQTasks
         {
-            public Task AnalogIn { get; private set; }
-            public Task AnalogOut { get; private set; }
-            public Task DigitalIn { get; private set; }
-            public Task DigitalOut { get; private set; }
+            private Task _analogIn;
+            private Task _analogOut;
+            private Task _digitalIn;
+            private Task _digitalOut;
 
             public readonly List<Task> All = new List<Task>();
 
@@ -361,117 +404,86 @@ namespace NI
 
             public void CreateAITask(IEnumerable<string> physicalNames, double min, double max)
             {
-                if (AnalogIn != null)
-                    throw new InvalidOperationException();
+                if (_analogIn != null)
+                    throw new InvalidOperationException("Analog input task already created");
 
                 var t = new Task();
                 t.AIChannels.CreateVoltageChannel(string.Join(",", physicalNames), "", (AITerminalConfiguration) (-1),
                                                   min, max, AIVoltageUnits.Volts);
-
-                AnalogIn = t;
+                
+                _analogIn = t;
                 All.Add(t);
             }
 
+            public AIChannelCollection AIChannels { get { return _analogIn.AIChannels; } }
+
+            public DaqStream AIStream { get { return _analogIn.Stream; } }
+
             public void CreateAOTask(IEnumerable<string> physicalNames, double min, double max)
             {
-                if (AnalogOut != null)
-                    throw new InvalidOperationException();
+                if (_analogOut != null)
+                    throw new InvalidOperationException("Analog output task already created");
 
                 var t = new Task();
                 t.AOChannels.CreateVoltageChannel(string.Join(",", physicalNames), "", min, max, AOVoltageUnits.Volts);
 
-                AnalogOut = t;
+                _analogOut = t;
                 All.Add(t);
             }
 
+            public AOChannelCollection AOChannels { get { return _analogOut.AOChannels; } }
+
+            public DaqStream AOStream { get { return _analogOut.Stream; } }
+
             public void CreateDITask(IEnumerable<string> physicalNames)
             {
-                if (DigitalIn != null)
-                    throw new InvalidOperationException();
+                if (_digitalIn != null)
+                    throw new InvalidOperationException("Digital input task already created");
 
                 var t = new Task();
                 t.DIChannels.CreateChannel(string.Join(",", physicalNames), "",
                                            ChannelLineGrouping.OneChannelForAllLines);
 
-                DigitalIn = t;
+                _digitalIn = t;
                 All.Add(t);
             }
 
+            public DIChannelCollection DIChannels { get { return _digitalIn.DIChannels; } }
+
+            public DaqStream DIStream { get { return _digitalIn.Stream; } }
+
             public void CreateDOTask(IEnumerable<string> physicalNames)
             {
-                if (DigitalOut != null)
-                    throw new InvalidOperationException();
+                if (_digitalOut != null)
+                    throw new InvalidOperationException("Digital output task already created");
 
                 var t = new Task();
                 t.DOChannels.CreateChannel(string.Join(",", physicalNames), "",
                                            ChannelLineGrouping.OneChannelForAllLines);
 
-                DigitalOut = t;
+                _digitalOut = t;
                 All.Add(t);
             }
+
+            public DOChannelCollection DOChannels { get { return _digitalOut.DOChannels; } }
+
+            public DaqStream DOStream { get { return _digitalOut.Stream; } }
 
             public string MasterType
             {
                 get
                 {
-                    string type = "";
-                    if (Master == AnalogIn)
+                    string type;
+                    if (Master == _analogIn)
                         type = "ai";
-                    if (Master == AnalogOut)
+                    else if (Master == _analogOut)
                         type = "ao";
-                    if (Master == DigitalIn)
+                    else if (Master == _digitalIn)
                         type = "di";
-                    if (Master == DigitalOut)
+                    else
                         type = "do";
                     return type;
                 }
-            }
-        }
-    }
-
-    public struct NIDeviceInfo
-    {
-        public string DeviceID;
-        public string[] AIPhysicalChannels;
-        public string[] AOPhysicalChannels;
-        public string[] DIPorts;
-        public string[] DOPorts;
-
-        public static NIDeviceInfo FromDevice(Device device)
-        {
-            return new NIDeviceInfo
-                {
-                    DeviceID = device.DeviceID,
-                    AIPhysicalChannels = device.AIPhysicalChannels,
-                    AOPhysicalChannels = device.AOPhysicalChannels,
-                    DIPorts = device.DIPorts,
-                    DOPorts = device.DOPorts
-                };
-        }
-    }
-
-    public static class PhysicalChannelTypesExtensions
-    {
-        public static ChannelType ToChannelType(this PhysicalChannelTypes pct)
-        {
-            switch (pct)
-            {
-                case PhysicalChannelTypes.AI:
-                    return ChannelType.AI;
-                case PhysicalChannelTypes.AO:
-                    return ChannelType.AO;
-                case PhysicalChannelTypes.DILine:
-                case PhysicalChannelTypes.DIPort:
-                    return ChannelType.DI;
-                case PhysicalChannelTypes.DOLine:
-                case PhysicalChannelTypes.DOPort:
-                    return ChannelType.DO;
-                case PhysicalChannelTypes.CI:
-                    return ChannelType.CI;
-                case PhysicalChannelTypes.CO:
-                    return ChannelType.CO;
-                default:
-                    throw new NotSupportedException();
             }
         }
     }

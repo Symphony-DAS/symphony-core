@@ -10,9 +10,7 @@ namespace NI
 {
     public class NIDAQInputStream : DAQInputStream, NIDAQStream
     {
-        private NIDAQController Controller { get; set; }
-
-        public PhysicalChannelTypes PhysicalChannelType { get; private set; }
+        public const string DAQUnits = "NIDAQUnits";
 
         public NIDAQInputStream(string name, PhysicalChannelTypes channelType, NIDAQController controller)
             : base(name.Split('/').Last(), controller)
@@ -42,6 +40,15 @@ namespace NI
             get { return Controller.DeviceName + '/' + Name; }
         }
 
+        public PhysicalChannelTypes PhysicalChannelType { get; private set; }
+
+        private NIDAQController Controller { get; set; }
+
+        public Channel GetChannel()
+        {
+            return Controller.Channel(PhysicalName);
+        }
+
         public override IMeasurement SampleRate
         {
             get { return Controller.SampleRate; }
@@ -51,6 +58,16 @@ namespace NI
         public override bool CanSetSampleRate
         {
             get { return false; }
+        }
+
+        /// <summary>
+        /// Register ConversionProcs for V=>DAQUnits
+        /// </summary>
+        public static void RegisterConverters()
+        {
+            Converters.Register(DAQUnits, "V", m => m);
+
+            Converters.Register(DAQUnits, Measurement.UNITLESS, m => m);
         }
     }
 }

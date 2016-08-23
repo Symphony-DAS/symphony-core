@@ -90,14 +90,14 @@ namespace IntegrationTests
 
                         Assert.That((bool)e.StartTime, Is.True);
                         Assert.That((DateTimeOffset)e.StartTime, Is.LessThanOrEqualTo(controller.Clock.Now));
-                        Assert.That(e.Responses[dev0].Duration, Is.EqualTo(((TimeSpan)e.Duration))
-                                                                      .Within(TimeSpanExtensions.FromSamples(1,
-                                                                                                             daq.
-                                                                                                                 SampleRate)));
-                        Assert.That(e.Responses[dev1].Duration, Is.EqualTo(((TimeSpan)e.Duration))
-                                                                      .Within(TimeSpanExtensions.FromSamples(1,
-                                                                                                             daq.
-                                                                                                                 SampleRate)));
+                        Assert.That(e.Responses[dev0].Duration, Is.EqualTo(((TimeSpan) e.Duration))
+                                                                  .Within(TimeSpanExtensions.FromSamples(1,
+                                                                                                         daq.
+                                                                                                             SampleRate)));
+                        Assert.That(e.Responses[dev1].Duration, Is.EqualTo(((TimeSpan) e.Duration))
+                                                                  .Within(TimeSpanExtensions.FromSamples(1,
+                                                                                                         daq.
+                                                                                                             SampleRate)));
                         Assert.That(fakeEpochPersistor.PersistedEpochs, Contains.Item(e));
 
                         var failures0 =
