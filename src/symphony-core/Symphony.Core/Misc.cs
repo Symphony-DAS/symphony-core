@@ -221,6 +221,14 @@ namespace Symphony.Core
         {
             return m => MeasurementPool.GetMeasurement(m.QuantityInBaseUnits * (decimal)factor, 0, baseUnit);
         }
+
+        public static ConvertProc Scale(double negFactor, double posFactor, string baseUnit)
+        {
+            return m => MeasurementPool.GetMeasurement(m.QuantityInBaseUnits < 0 ?
+                m.QuantityInBaseUnits * (decimal)negFactor :
+                m.QuantityInBaseUnits * (decimal)posFactor, 
+                0, baseUnit);
+        }
     }
 
     /// <summary>

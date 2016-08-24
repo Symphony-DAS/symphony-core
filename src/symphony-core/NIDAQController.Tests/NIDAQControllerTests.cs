@@ -1,18 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
+using System.Text;
 using System.Threading.Tasks;
-using HekkaDAQ.Tests.Properties;
+using NUnit.Framework;
+using NationalInstruments.DAQmx;
+using Symphony.Core;
 
-namespace Heka
+namespace NI
 {
-    using Heka.NativeInterop;
-    using NUnit.Framework;
-    using Symphony.Core;
-
     [TestFixture]
-    class HekaDAQControllerTests
+    class NIDAQControllerTests
     {
 
         Controller Controller { get; set; }
@@ -32,15 +30,12 @@ namespace Heka
             config["param2"] = 1;
 
             Converters.Clear();
-            HekaDAQOutputStream.RegisterConverters();
-            HekaDAQInputStream.RegisterConverters();
-
         }
 
         [TearDown]
         public void StopDAQControllers()
         {
-            foreach (HekaDAQController controller in HekaDAQController.AvailableControllers())
+            foreach (var controller in NIDAQController.AvailableControllers())
             {
                 if (controller.IsRunning)
                 {
@@ -66,14 +61,13 @@ namespace Heka
         [Test]
         public void AvailableControllers()
         {
-            Assert.GreaterOrEqual(HekaDAQController.AvailableControllers().Count(), 1);
+            Assert.GreaterOrEqual(NIDAQController.AvailableControllers().Count(), 1);
         }
-
 
         [Test]
         public void SampleRateMustBeGreaterThanZero()
         {
-            foreach (HekaDAQController c in HekaDAQController.AvailableControllers())
+            foreach (var c in NIDAQController.AvailableControllers())
             {
                 try
                 {
@@ -98,7 +92,7 @@ namespace Heka
         [Test]
         public void SampleRateMustBeInHz()
         {
-            foreach (HekaDAQController c in HekaDAQController.AvailableControllers())
+            foreach (var c in NIDAQController.AvailableControllers())
             {
                 try
                 {
@@ -120,7 +114,7 @@ namespace Heka
         [Test]
         public void InitializesHardware()
         {
-            foreach (HekaDAQController controller in HekaDAQController.AvailableControllers())
+            foreach (var controller in NIDAQController.AvailableControllers())
             {
                 Assert.False(controller.IsHardwareReady);
                 controller.InitHardware();
@@ -129,27 +123,26 @@ namespace Heka
                 {
                     Assert.True(controller.IsHardwareReady);
                 }
-                finally
+                finally 
                 {
                     controller.CloseHardware();
                     Assert.False(controller.IsHardwareReady);
                 }
             }
-
         }
 
         [Test]
         public void SegregatesStreams()
         {
-            foreach (HekaDAQController controller in HekaDAQController.AvailableControllers())
+            foreach (var controller in NIDAQController.AvailableControllers())
             {
                 Assert.False(controller.IsHardwareReady);
                 controller.InitHardware();
 
                 try
                 {
-                    CollectionAssert.AllItemsAreInstancesOfType(controller.StreamsOfType(StreamType.ANALOG_IN), typeof(HekaDAQInputStream));
-                    CollectionAssert.AllItemsAreInstancesOfType(controller.StreamsOfType(StreamType.ANALOG_OUT), typeof(HekaDAQOutputStream));
+                    CollectionAssert.AllItemsAreInstancesOfType(controller.StreamsOfType(PhysicalChannelTypes.AI), typeof(NIDAQInputStream));
+                    CollectionAssert.AllItemsAreInstancesOfType(controller.StreamsOfType(PhysicalChannelTypes.AO), typeof(NIDAQOutputStream));
                 }
                 finally
                 {
@@ -158,17 +151,15 @@ namespace Heka
             }
         }
 
-
-
-        private void FixtureForController(HekaDAQController controller, double durationSeconds = 10)
+        private void FixtureForController(NIDAQController controller, double durationSeconds = 10)
         {
             controller.SampleRate = new Measurement(10000, "Hz");
             controller.InitHardware();
 
             OutStream = controller.OutputStreams
-                                  .OfType<HekaDAQOutputStream>().First(str => str.ChannelNumber == 0);
+                                  .OfType<NIDAQOutputStream>().First(str => str.Name == "ao0");
             InputStream = controller.InputStreams
-                                    .OfType<HekaDAQInputStream>().First(str => str.ChannelNumber == 0);
+                                    .OfType<NIDAQInputStream>().First(str => str.Name == "ai0");
 
             InputStream.Configuration["SampleRate"] = InputStream.SampleRate;
 
@@ -204,38 +195,42 @@ namespace Heka
             InputDevice.MeasurementConversionTarget = "V";
 
             BindStreams(controller, OutDevice, InputDevice);
-
         }
 
-
-
-
         [Test]
-        public void RoundTripStreamITChannelInfo()
+        public void SetsChannels()
         {
-            foreach (HekaDAQController daq in HekaDAQController.AvailableControllers())
+            foreach (var daq in NIDAQController.AvailableControllers())
             {
+                const decimal srate = 10000;
+
                 daq.InitHardware();
+                Assert.True(daq.IsHardwareReady);
+                Assert.False(daq.IsRunning);
+
                 try
                 {
-                    daq.ExceptionalStop += (c, arg) =>
+                    foreach (IDAQOutputStream s in daq.OutputStreams)
                     {
-                        throw arg.Exception;
-                    };
+                        if (s is NIDigitalDAQStream && !((NIDigitalDAQStream)s).SupportsContinuousSampling)
+                            continue;
 
-                    foreach (HekaDAQStream stream in daq.Streams.Cast<HekaDAQStream>())
+                        daq.SampleRate = new Measurement(srate, "Hz");
+                        var externalDevice = new TestDevice("OUT-DEVICE", null);
+
+                        s.Devices.Add(externalDevice);
+                    }
+
+                    daq.ConfigureChannels();
+
+                    foreach (NIDAQStream s in daq.OutputStreams.Cast<NIDAQStream>())
                     {
-                        daq.SampleRate = new Measurement(stream.ChannelNumber, 1, "Hz");
-                        ITCMM.ITCChannelInfo info = stream.ChannelInfo;
+                        if (s is NIDigitalDAQStream && !((NIDigitalDAQStream)s).SupportsContinuousSampling)
+                            continue;
 
-                        Assert.AreEqual(stream.ChannelNumber, info.ChannelNumber);
-                        Assert.AreEqual((uint)stream.ChannelType, info.ChannelType);
+                        var chan = daq.Channel(s.PhysicalName);
 
-                        //NO_SCALE is seconds scale (Hz)
-                        Assert.AreEqual(ITCMM.USE_FREQUENCY & ITCMM.NO_SCALE & ITCMM.ADJUST_RATE, info.SamplingIntervalFlag);
-                        Assert.That(info.SamplingRate, Is.EqualTo(stream.SampleRate.QuantityInBaseUnits));
-                        Assert.AreEqual(IntPtr.Zero, info.FIFOPointer);
-                        Assert.AreEqual(0, info.Gain);
+                        Assert.AreEqual(s.PhysicalName, chan.PhysicalName);
                     }
                 }
                 finally
@@ -246,40 +241,16 @@ namespace Heka
         }
 
         [Test]
-        public void SetsChannelInfo()
+        public void ReconfigureChannels()
         {
-            foreach (HekaDAQController daq in HekaDAQController.AvailableControllers())
+            foreach (var daq in NIDAQController.AvailableControllers())
             {
-                const decimal srate = 10000;
-
-                daq.InitHardware();
-                Assert.True(daq.IsHardwareReady);
-                Assert.False(daq.HardwareRunning);
-
                 try
                 {
-                    foreach (IDAQOutputStream s in daq.OutputStreams)
-                    {
-                        daq.SampleRate = new Measurement(srate, "Hz");
-                        TestDevice externalDevice = new TestDevice("OUT-DEVICE", null);
-
-                        s.Devices.Add(externalDevice);
-                    }
+                    FixtureForController(daq);
 
                     daq.ConfigureChannels();
-
-                    foreach (HekaDAQStream s in daq.OutputStreams.Cast<HekaDAQStream>())
-                    {
-                        ITCMM.ITCChannelInfo actual = daq.ChannelInfo(s.ChannelType, s.ChannelNumber);
-
-                        ITCMM.ITCChannelInfo expected = s.ChannelInfo;
-
-                        Assert.AreEqual(expected.ChannelNumber, actual.ChannelNumber);
-                        Assert.AreEqual(expected.ChannelType, actual.ChannelType);
-                        Assert.AreEqual(expected.SamplingIntervalFlag, actual.SamplingIntervalFlag);
-                        Assert.AreEqual(expected.SamplingRate, actual.SamplingRate);
-                        // Gain set by hardware.
-                    }
+                    Assert.DoesNotThrow(daq.ConfigureChannels);
                 }
                 finally
                 {
@@ -291,7 +262,7 @@ namespace Heka
         [Test]
         public void ExceptionalStopOnPushException()
         {
-            foreach (HekaDAQController daq in HekaDAQController.AvailableControllers())
+            foreach (NIDAQController daq in NIDAQController.AvailableControllers())
             {
                 try
                 {
@@ -302,9 +273,9 @@ namespace Heka
                     InputDevice.InputData[InputStream] = new List<IInputData>();
 
                     daq.ProcessIteration += (c, args) =>
-                                                {
-                                                    throw new Exception("bam!");
-                                                };
+                    {
+                        throw new Exception("bam!");
+                    };
 
                     daq.ExceptionalStop += (c, args) => receivedExc = true;
 
@@ -314,7 +285,7 @@ namespace Heka
                 }
                 finally
                 {
-                    if(daq.IsHardwareReady)
+                    if (daq.IsHardwareReady)
                         daq.CloseHardware();
                 }
 
@@ -328,36 +299,32 @@ namespace Heka
         [Timeout(5 * 1000)]
         public void ExceptionalStopOnOutputUnderrun()
         {
-            foreach (HekaDAQController daq in HekaDAQController.AvailableControllers())
+            var daq = NIDAQController.AvailableControllers().First();
+            try
             {
-        
-                try
-                {
-                    bool receivedExc = false;
-        
-                    FixtureForController(daq, durationSeconds: 1.0);
-        
-                    InputDevice.InputData[InputStream] = new List<IInputData>();
-        
-                    daq.ExceptionalStop += (c, args) => receivedExc = true;
-        
-                    daq.Start(false);
-        
-                    Assert.That(receivedExc, Is.True.After(1000,10));
-                }
-                finally
-                {
-                    if(daq.IsHardwareReady)
-                        daq.CloseHardware();
-                }
-        
+                bool receivedExc = false;
+
+                FixtureForController(daq, durationSeconds: 1.0);
+
+                InputDevice.InputData[InputStream] = new List<IInputData>();
+
+                daq.ExceptionalStop += (c, args) => receivedExc = true;
+
+                daq.Start(false);
+
+                Assert.That(receivedExc, Is.True.After(1000, 10));
+            }
+            finally
+            {
+                if (daq.IsHardwareReady)
+                    daq.CloseHardware();
             }
         }
 
         [Test]
         public void ShouldResetHardwareWhenStopsWithException()
         {
-            foreach (HekaDAQController daq in HekaDAQController.AvailableControllers())
+            foreach (NIDAQController daq in NIDAQController.AvailableControllers())
             {
                 bool receivedExc = false;
 
@@ -375,28 +342,28 @@ namespace Heka
 
                 daq.Start(false);
 
-                Assert.That(receivedExc, Is.True.After(1000,10));
-                
+                Assert.That(receivedExc, Is.True.After(1000, 10));
+
                 daq.CloseHardware();
 
                 //Should be ready to initialize again
                 try
                 {
-                    Assert.That(()=>daq.InitHardware(), Throws.Nothing);
+                    Assert.That(() => daq.InitHardware(), Throws.Nothing);
                 }
                 finally
                 {
-                    if(daq.IsHardwareReady)
-                        daq.CloseHardware();    
+                    if (daq.IsHardwareReady)
+                        daq.CloseHardware();
                 }
-                
+
             }
         }
 
         [Test]
         public void ShouldOpenHardwareOnStart()
         {
-            foreach (HekaDAQController daq in HekaDAQController.AvailableControllers())
+            foreach (var daq in NIDAQController.AvailableControllers())
             {
                 try
                 {
@@ -425,11 +392,10 @@ namespace Heka
             }
         }
 
-
         [Test]
         public void ShouldStoreSampleRateInConfiguration()
         {
-            var c = new HekaDAQController();
+            var c = NIDAQController.AvailableControllers().First();
 
             var expected = new Measurement(1000, "Hz");
             c.SampleRate = expected;
@@ -439,5 +405,4 @@ namespace Heka
         }
 
     }
-
 }

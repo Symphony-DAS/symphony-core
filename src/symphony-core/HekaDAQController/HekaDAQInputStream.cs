@@ -85,7 +85,7 @@ namespace Heka
                 (m) => MeasurementPool.GetMeasurement(m.QuantityInBaseUnits < 0 ?
                     m.QuantityInBaseUnits / (decimal)ITCMM.NEGATIVEVOLT / -(decimal)ITCMM.ANALOGVOLT :
                     m.QuantityInBaseUnits / (decimal)ITCMM.POSITIVEVOLT / +(decimal)ITCMM.ANALOGVOLT,
-                    0, DAQCountUnits));
+                    0, Measurement.NORMALIZED));
         }
     }
 
@@ -129,7 +129,7 @@ namespace Heka
                 data = new InputData(data,
                                      data.Data.Select(
                                          m =>
-                                         MeasurementPool.GetMeasurement(((short) m.QuantityInBaseUnits >> bitPosition) & 1, 0, Measurement.UNITLESS)));
+                                         MeasurementPool.GetMeasurement(((long) m.QuantityInBaseUnits >> bitPosition) & 1, 0, Measurement.UNITLESS)));
                 ed.PushInputData(this, data.DataWithStreamConfiguration(this, this.Configuration));
             }
         }
