@@ -117,7 +117,7 @@ namespace Symphony.Core
         }
 
         /// <summary>
-        /// An Epoch's duration is the duration of its longest stimulus. If
+        /// An Epoch's duration is the duration of its longest stimulus or response. If
         /// this Epoch is indefinite, result is a Option.None.
         /// </summary>
         public Option<TimeSpan> Duration
@@ -127,12 +127,10 @@ namespace Symphony.Core
                 if (IsIndefinite)
                     return Option<TimeSpan>.None();
 
-                if (!Stimuli.Any())
-                    return Option<TimeSpan>.Some(TimeSpan.Zero);
+                TimeSpan d1 = Stimuli.Any() ? Stimuli.Values.Max(s => (TimeSpan) s.Duration) : TimeSpan.Zero;
+                TimeSpan d2 = Responses.Any() ? Responses.Values.Max(r => r.Duration) : TimeSpan.Zero;
 
-                return Option<TimeSpan>.Some(Stimuli
-                    .Values
-                    .Max(s => (TimeSpan)s.Duration));
+                return Option<TimeSpan>.Some(d1 > d2 ? d1 : d2);
             }
         }
 
