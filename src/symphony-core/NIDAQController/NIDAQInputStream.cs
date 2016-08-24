@@ -77,6 +77,15 @@ namespace NI
     {
         public IDictionary<IExternalDevice, ushort> BitPositions { get; private set; }
 
+        public bool SupportsContinuousSampling
+        {
+            get
+            {
+                return DaqSystem.Local.LoadPhysicalChannel(PhysicalName)
+                                .DOSampleModes.Contains(SampleQuantityMode.ContinuousSamples);
+            }
+        }
+
         public NIDigitalDAQInputStream(string physicalName, NIDAQController controller)
             : this(physicalName, physicalName, controller)
         {
@@ -128,6 +137,9 @@ namespace NI
             var width = DaqSystem.Local.LoadPhysicalChannel(PhysicalName).DIPortWidth;
             if (BitPositions.Values.Any(n => n >= width))
                 return Maybe<string>.No("No bit position can be greater than or equal to " + width);
+
+            if (!SupportsContinuousSampling && Devices.Any())
+                return Maybe<string>.No("A stream that does not support continuous sampling cannot be bound to a device");
 
             return base.Validate();
         }

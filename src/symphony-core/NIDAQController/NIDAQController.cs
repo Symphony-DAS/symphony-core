@@ -34,6 +34,7 @@ namespace NI
     public interface NIDigitalDAQStream : NIDAQStream
     {
         IDictionary<IExternalDevice, ushort> BitPositions { get; }
+        bool SupportsContinuousSampling { get; }
     }
 
     /// <summary>

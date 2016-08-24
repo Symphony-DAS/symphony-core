@@ -212,6 +212,9 @@ namespace NI
                 {
                     foreach (IDAQOutputStream s in daq.OutputStreams)
                     {
+                        if (s is NIDigitalDAQStream && !((NIDigitalDAQStream)s).SupportsContinuousSampling)
+                            continue;
+
                         daq.SampleRate = new Measurement(srate, "Hz");
                         var externalDevice = new TestDevice("OUT-DEVICE", null);
 
@@ -222,6 +225,9 @@ namespace NI
 
                     foreach (NIDAQStream s in daq.OutputStreams.Cast<NIDAQStream>())
                     {
+                        if (s is NIDigitalDAQStream && !((NIDigitalDAQStream)s).SupportsContinuousSampling)
+                            continue;
+
                         var chan = daq.Channel(s.PhysicalName);
 
                         Assert.AreEqual(s.PhysicalName, chan.PhysicalName);
