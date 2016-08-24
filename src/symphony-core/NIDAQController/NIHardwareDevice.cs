@@ -335,7 +335,7 @@ namespace NI
             Device.Dispose();
         }
 
-        public void ConfigureChannels(IEnumerable<NIDAQStream> daqStreams)
+        public void ConfigureChannels(IEnumerable<NIDAQStream> daqStreams, long bufferSizePerChannel)
         {
             var streams = daqStreams.ToList();
             if (!streams.Any())
@@ -346,13 +346,25 @@ namespace NI
 
             // Create appropriate tasks
             if (chanNames.ContainsKey(PhysicalChannelTypes.AI))
+            {
                 tasks.CreateAITask(chanNames[PhysicalChannelTypes.AI], MinAIVoltage, MaxAIVoltage);
+                tasks.AIStream.Buffer.InputBufferSize = bufferSizePerChannel;
+            }
             if (chanNames.ContainsKey(PhysicalChannelTypes.AO))
+            {
                 tasks.CreateAOTask(chanNames[PhysicalChannelTypes.AO], MinAOVoltage, MaxAOVoltage);
+                tasks.AOStream.Buffer.OutputBufferSize = bufferSizePerChannel;
+            }
             if (chanNames.ContainsKey(PhysicalChannelTypes.DIPort))
+            {
                 tasks.CreateDITask(chanNames[PhysicalChannelTypes.DIPort]);
+                tasks.DIStream.Buffer.InputBufferSize = bufferSizePerChannel;
+            }
             if (chanNames.ContainsKey(PhysicalChannelTypes.DOPort))
+            {
                 tasks.CreateDOTask(chanNames[PhysicalChannelTypes.DOPort]);
+                tasks.DOStream.Buffer.OutputBufferSize = bufferSizePerChannel;
+            }
 
             // Setup master and slave timing
             var rates = streams.Select(s => s.SampleRate).Distinct().ToList();
@@ -483,7 +495,6 @@ namespace NI
                 var t = new DAQTask();
                 t.AIChannels.CreateVoltageChannel(string.Join(",", physicalNames), "", (AITerminalConfiguration) (-1),
                                                   min, max, AIVoltageUnits.Volts);
-                
                 _analogIn = t;
                 All.Add(t);
             }
@@ -499,7 +510,6 @@ namespace NI
 
                 var t = new DAQTask();
                 t.AOChannels.CreateVoltageChannel(string.Join(",", physicalNames), "", min, max, AOVoltageUnits.Volts);
-
                 _analogOut = t;
                 All.Add(t);
             }
@@ -516,7 +526,6 @@ namespace NI
                 var t = new DAQTask();
                 t.DIChannels.CreateChannel(string.Join(",", physicalNames), "",
                                            ChannelLineGrouping.OneChannelForAllLines);
-
                 _digitalIn = t;
                 All.Add(t);
             }
@@ -533,7 +542,6 @@ namespace NI
                 var t = new DAQTask();
                 t.DOChannels.CreateChannel(string.Join(",", physicalNames), "",
                                            ChannelLineGrouping.OneChannelForAllLines);
-
                 _digitalOut = t;
                 All.Add(t);
             }

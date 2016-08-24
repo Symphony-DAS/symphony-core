@@ -48,7 +48,7 @@ namespace NI
         void SetStreamBackground(NIDAQOutputStream stream);
 
         void CloseDevice();
-        void ConfigureChannels(IEnumerable<NIDAQStream> streams);
+        void ConfigureChannels(IEnumerable<NIDAQStream> streams, long bufferSizePerChannel);
         void StartHardware(bool waitForTrigger);
         void StopHardware();
 
@@ -320,7 +320,7 @@ namespace NI
             if (!IsHardwareReady)
                 OpenDevice();
 
-            Device.ConfigureChannels(ActiveStreams.Cast<NIDAQStream>());
+            ConfigureChannels();
             PreloadStreams();
 
             base.Start(waitForTrigger);
@@ -503,7 +503,8 @@ namespace NI
                 throw new DAQException("Cannot configure channels while hardware is running.");
             }
 
-            Device.ConfigureChannels(ActiveStreams.Cast<NIDAQStream>());
+            long bufferSize = (long) Math.Max(ProcessInterval.Samples(SampleRate) * 4, 10000);
+            Device.ConfigureChannels(ActiveStreams.Cast<NIDAQStream>(), bufferSize);
         }
 
         public Channel Channel(string channelName)
