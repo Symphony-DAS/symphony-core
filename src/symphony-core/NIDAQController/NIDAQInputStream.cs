@@ -115,7 +115,7 @@ namespace NI
                 data = new InputData(data,
                                      data.Data.Select(
                                          m =>
-                                         MeasurementPool.GetMeasurement(((int)m.QuantityInBaseUnits >> bitPosition) & 1, 0, Measurement.UNITLESS)));
+                                         MeasurementPool.GetMeasurement(((long)m.QuantityInBaseUnits >> bitPosition) & 1, 0, Measurement.UNITLESS)));
                 ed.PushInputData(this, data.DataWithStreamConfiguration(this, this.Configuration));
             }
         }

@@ -43,8 +43,8 @@ namespace NI
                 s.BitPositions[dev] = bitPosition;
             }
 
-            uint q = 0xaaaaaaaa;
-            var expected = new Measurement((int)q, Measurement.UNITLESS);
+            ulong q = 0xaaaaaaaa;
+            var expected = new Measurement((long)q, Measurement.UNITLESS);
 
             Assert.AreEqual(expected, s.Background);
         }
@@ -74,7 +74,7 @@ namespace NI
                 s.BitPositions[dev] = bitPosition;
             }
 
-            var expected = Enumerable.Range(0, 10000).Select(i => new Measurement((int)(i % 2 * 0xaaaaaaaa), Measurement.UNITLESS)).ToList();
+            var expected = Enumerable.Range(0, 10000).Select(i => new Measurement((long)(i % 2 * 0xaaaaaaaa), Measurement.UNITLESS)).ToList();
 
             var pull1 = s.PullOutputData(duration);
             Assert.AreEqual(expected, pull1.Data);

@@ -153,11 +153,11 @@ namespace Heka
                         throw new DAQException(ed.Name + " background must contain a value of 0 or 1");
 
                     ushort bitPosition = BitPositions[ed];
-                    m = MeasurementPool.GetMeasurement((short)((short)m.QuantityInBaseUnits << bitPosition), 0, m.BaseUnits);
+                    m = MeasurementPool.GetMeasurement((long)((long)m.QuantityInBaseUnits << bitPosition), 0, m.BaseUnits);
 
                     background = background == null
                         ? m
-                        : MeasurementPool.GetMeasurement((short)background.QuantityInBaseUnits | (short)m.QuantityInBaseUnits, 0, background.BaseUnits);
+                        : MeasurementPool.GetMeasurement((long)background.QuantityInBaseUnits | (long)m.QuantityInBaseUnits, 0, background.BaseUnits);
                 }
                 return background;
             }
@@ -179,14 +179,14 @@ namespace Heka
                     if (m.QuantityInBaseUnits != 0 && m.QuantityInBaseUnits != 1)
                         throw new DAQException(ed.Name + " output data must contain only values of 0 and 1");
 
-                    return MeasurementPool.GetMeasurement((short)((short)m.QuantityInBaseUnits << bitPosition), 0, m.BaseUnits);
+                    return MeasurementPool.GetMeasurement((long)((long)m.QuantityInBaseUnits << bitPosition), 0, m.BaseUnits);
                 }));
 
                 outData = outData == null
                               ? pulled
                               : outData.Zip(pulled,
                                             (m1, m2) =>
-                                            MeasurementPool.GetMeasurement((short) m1.QuantityInBaseUnits | (short) m2.QuantityInBaseUnits, 0, m1.BaseUnits));
+                                            MeasurementPool.GetMeasurement((long) m1.QuantityInBaseUnits | (long) m2.QuantityInBaseUnits, 0, m1.BaseUnits));
             }
 
             if (!outData.SampleRate.Equals(this.SampleRate))
