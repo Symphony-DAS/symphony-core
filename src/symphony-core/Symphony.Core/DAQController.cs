@@ -1,7 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Collections.Concurrent;
+using System.Runtime;
 using System.Threading;
 using System.Threading.Tasks;
 using log4net;
@@ -316,10 +318,12 @@ namespace Symphony.Core
             var cts = new CancellationTokenSource();
 
             EventHandler<TimeStampedEventArgs> stopRequested = (c, args) => cts.Cancel();
+            GCLatencyMode currentMode = GCSettings.LatencyMode;
 
             try
             {
                 RequestedStop += stopRequested;
+                GCSettings.LatencyMode = GCLatencyMode.SustainedLowLatency;
 
                 while (IsRunning && !ShouldStop())
                 {
@@ -389,6 +393,7 @@ namespace Symphony.Core
             }
             finally
             {
+                GCSettings.LatencyMode = currentMode;
                 RequestedStop -= stopRequested;
 
                 if (startedHardwareTask != null)
