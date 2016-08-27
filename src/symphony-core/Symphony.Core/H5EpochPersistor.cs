@@ -303,7 +303,7 @@ namespace Symphony.Core
             catch (Exception x)
             {
                 group.Delete();
-                throw new PersistanceException(x.Message);
+                throw new PersistanceException("An error occurred while persisting entity group: " + uuid, x);
             }
         }
 
@@ -554,7 +554,7 @@ namespace Symphony.Core
             catch (Exception x)
             {
                 group.Delete();
-                throw new PersistanceException(x.Message);
+                throw new PersistanceException("An error occurred while persisting device: " + name, x);
             }
         }
 
@@ -616,7 +616,7 @@ namespace Symphony.Core
             catch (Exception x)
             {
                 group.Delete();
-                throw new PersistanceException(x.Message);
+                throw new PersistanceException("An error occurred while persisting source: " + label, x);
             }
         }
 
@@ -726,7 +726,7 @@ namespace Symphony.Core
             catch (Exception x)
             {
                 group.Delete();
-                throw new PersistanceException(x.Message);
+                throw new PersistanceException("An error occurred while persisting timeline entity: " + startTime, x);
             }
         }
 
@@ -744,7 +744,7 @@ namespace Symphony.Core
             catch (Exception x)
             {
                 group.Delete();
-                throw new PersistanceException(x.Message);
+                throw new PersistanceException("An error occurred while persisting timeline entity: " + startTime, x);
             }
         }
 
@@ -801,7 +801,7 @@ namespace Symphony.Core
             catch (Exception x)
             {
                 group.Delete();
-                throw new PersistanceException(x.Message);
+                throw new PersistanceException("An error occurred while persisting experiment: " + purpose, x);
             }
         }
 
@@ -832,7 +832,7 @@ namespace Symphony.Core
 
         public H5PersistentDevice Device(string name, string manufacture)
         {
-            return (H5PersistentDevice) (Devices.FirstOrDefault(d => d.Name == name && d.Manufacturer == manufacture) ??
+            return (H5PersistentDevice)(Devices.ToList().FirstOrDefault(d => d.Name == name && d.Manufacturer == manufacture) ??
                                          InsertDevice(name, manufacture));
         }
 
@@ -932,7 +932,7 @@ namespace Symphony.Core
             {
                 source.RemoveEpochGroup(epochGroup);
                 group.Delete();
-                throw new PersistanceException(x.Message);
+                throw new PersistanceException("An error occurred while persisting epoch group: " + label, x);
             }
         }
 
@@ -1067,7 +1067,7 @@ namespace Symphony.Core
             catch (Exception x)
             {
                 group.Delete();
-                throw new PersistanceException(x.Message);
+                throw new PersistanceException("An error occurred while persisting epoch block: " + protocolID, x);
             }
         }
 
@@ -1185,7 +1185,7 @@ namespace Symphony.Core
             catch (Exception x)
             {
                 group.Delete();
-                throw new PersistanceException(x.Message);
+                throw new PersistanceException("An error occurred while persisting epoch: " + epoch.StartTime, x);
             }
         }
 
@@ -1239,7 +1239,7 @@ namespace Symphony.Core
         private readonly H5Group _dataConfigurationSpansGroup;
         private readonly H5Group _epochGroup;
 
-        protected static H5Group InsertIOBaseGroup(H5Group container, H5PersistentEpoch epoch, H5PersistentDevice device, IEnumerable<IConfigurationSpan> configSpans)
+        protected static H5Group InsertIOBaseGroup(H5Group container, H5PersistentEpoch epoch, H5PersistentDevice device, IList<IConfigurationSpan> configSpans)
         {
             var group = InsertEntityGroup(container, device.Name);
             try
@@ -1293,7 +1293,7 @@ namespace Symphony.Core
             catch (Exception x)
             {
                 group.Delete();
-                throw new PersistanceException(x.Message);
+                throw new PersistanceException("An error occurred while persisting iobase entity for epoch: " + epoch.StartTime, x);
             }
         }
 
@@ -1351,7 +1351,7 @@ namespace Symphony.Core
 
         public static H5PersistentResponse InsertResponse(H5Group container, H5PersistentEntityFactory factory, H5PersistentEpoch epoch, H5PersistentDevice device, Response response, uint compression)
         {
-            var group = InsertIOBaseGroup(container, epoch, device, response.DataConfigurationSpans);
+            var group = InsertIOBaseGroup(container, epoch, device, response.DataConfigurationSpans.ToList());
             try
             {
                 group.Attributes[SampleRateKey] = (double)response.SampleRate.Quantity;
@@ -1359,14 +1359,14 @@ namespace Symphony.Core
                 group.Attributes[InputTimeTicksKey] = response.InputTime.Ticks;
                 group.Attributes[InputTimeOffsetHoursKey] = response.InputTime.Offset.TotalHours;
 
-                group.AddDataset(DataDatasetName, H5Map.GetMeasurementType(container.File), response.Data.Select(H5Map.Convert).ToArray(), compression);
+                group.AddDataset(DataDatasetName, H5Map.GetMeasurementType(container.File), response.Data.ToList().Select(H5Map.Convert).ToArray(), compression);
 
                 return factory.Create<H5PersistentResponse>(group);
             }
             catch (Exception x)
             {
                 group.Delete();
-                throw new PersistanceException(x.Message);
+                throw new PersistanceException("An error occurred while persisting response for device: " + device.Name, x);
             }
         }
 
@@ -1408,7 +1408,7 @@ namespace Symphony.Core
 
         public static H5PersistentStimulus InsertStimulus(H5Group container, H5PersistentEntityFactory factory, H5PersistentEpoch epoch, H5PersistentDevice device, IStimulus stimulus, uint compression)
         {
-            var group = InsertIOBaseGroup(container, epoch, device, stimulus.OutputConfigurationSpans);
+            var group = InsertIOBaseGroup(container, epoch, device, stimulus.OutputConfigurationSpans.ToList());
             try
             {
                 group.Attributes[StimulusIDKey] = stimulus.StimulusID;
@@ -1439,7 +1439,7 @@ namespace Symphony.Core
 
                 if (stimulus.Data.IsSome())
                 {
-                    IEnumerable<IMeasurement> data = stimulus.Data.Get();
+                    IList<IMeasurement> data = stimulus.Data.Get().ToList();
                     group.AddDataset(DataDatasetName, H5Map.GetMeasurementType(container.File), data.Select(H5Map.Convert).ToArray(), compression);
                 }
 
@@ -1448,7 +1448,7 @@ namespace Symphony.Core
             catch (Exception x)
             {
                 group.Delete();
-                throw new PersistanceException(x.Message);
+                throw new PersistanceException("An error occurred while persisting stimulus: " + stimulus.StimulusID, x);
             }
         }
 
@@ -1502,7 +1502,7 @@ namespace Symphony.Core
 
         public static H5PersistentBackground InsertBackground(H5Group container, H5PersistentEntityFactory factory, H5PersistentEpoch epoch, H5PersistentDevice device, Background background)
         {
-            var group = InsertIOBaseGroup(container, epoch, device, background.OutputConfigurationSpans);
+            var group = InsertIOBaseGroup(container, epoch, device, background.OutputConfigurationSpans.ToList());
             try
             {
                 group.Attributes[ValueKey] = (double)background.Value.Quantity;
@@ -1515,7 +1515,7 @@ namespace Symphony.Core
             catch (Exception x)
             {
                 group.Delete();
-                throw new PersistanceException(x.Message);
+                throw new PersistanceException("An error occurred while persisting background for device: " + device.Name, x);
             }
         }
 
@@ -1559,7 +1559,7 @@ namespace Symphony.Core
             catch (Exception x)
             {
                 group.Delete();
-                throw new PersistanceException(x.Message);
+                throw new PersistanceException("An error occurred while persisting resource: " + name, x);
             }
         }
 

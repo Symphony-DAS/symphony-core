@@ -11,6 +11,6 @@ namespace Symphony.Core
     /// </summary>
     public class PersistanceException : SymphonyException
     {
-        public PersistanceException(string msg) : base(msg) { }
+        public PersistanceException(string msg, Exception inner) : base(msg, inner) { }
     }
 }
