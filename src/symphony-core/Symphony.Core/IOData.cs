@@ -120,7 +120,8 @@ namespace Symphony.Core
                 for (int j = 1; j < configSpanList.Count(); j++)
                 {
                     var span = configSpanList[j];
-                    if (span.Nodes.SequenceEqual(cNodes))
+                    var nodes = span.Nodes.ToList();
+                    if (nodes.SequenceEqual(cNodes.ToList()))
                     {
                         cTime += span.Time;
                     }
@@ -128,7 +129,7 @@ namespace Symphony.Core
                     {
                         spans.Add(new ConfigurationSpan(cTime, cNodes));
                         cTime = span.Time;
-                        cNodes = span.Nodes.ToList();
+                        cNodes = nodes;
                     }
                 }
 
