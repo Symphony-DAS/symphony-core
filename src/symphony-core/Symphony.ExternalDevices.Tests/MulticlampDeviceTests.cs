@@ -935,6 +935,7 @@ namespace Symphony.ExternalDevices
         {
             SerialNumber = 0;
             Channel = 0;
+            HardwareType = MultiClampHardwareType.MULTICLAMP_700B;
         }
 
         /// <summary>
@@ -948,8 +949,11 @@ namespace Symphony.ExternalDevices
         public event EventHandler<MultiClampParametersChangedArgs> ParametersChanged;
 
         public uint SerialNumber { get; set; }
-
+        public uint COMPort { get; private set; }
+        public uint DeviceNumber { get; private set; }
         public uint Channel { get; set; }
+        public MultiClampHardwareType HardwareType { get; private set; }
+
         public void RequestTelegraphValue()
         {
             // pass

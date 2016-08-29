@@ -15,14 +15,29 @@ namespace Symphony.ExternalDevices
         event EventHandler<MultiClampParametersChangedArgs> ParametersChanged;
 
         /// <summary>
-        /// Attached MC device serial number
+        /// Attached MC device serial number (700B only)
         /// </summary>
         uint SerialNumber { get; }
+
+        /// <summary>
+        /// Attached MC COM port (700A only)
+        /// </summary>
+        uint COMPort { get; }
+
+        /// <summary>
+        /// Attached MC device number, AKA AxoBus ID (700A only)
+        /// </summary>
+        uint DeviceNumber { get; }
 
         /// <summary>
         /// Listens for parameter changes on this device channel
         /// </summary>
         uint Channel { get; }
+
+        /// <summary>
+        /// Attached MC type (e.g. 700A or 700B)
+        /// </summary>
+        MultiClampHardwareType HardwareType { get; }
 
         /// <summary>
         /// Requests a new parameter set from the MultiClamp Commander

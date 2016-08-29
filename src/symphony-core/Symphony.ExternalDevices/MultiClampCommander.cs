@@ -24,6 +24,11 @@ namespace Symphony.ExternalDevices
         public MultiClampInterop.MulticlampData Data { get; private set; }
     }
 
+    public enum MultiClampHardwareType
+    {
+        MULTICLAMP_700A,
+        MULTICLAMP_700B
+    }
 
     /// <summary>
     /// Implementation of the IMultiClampCommander interface for Windows.
@@ -43,7 +48,10 @@ namespace Symphony.ExternalDevices
         private readonly object _eventLock = new object();
 
         public uint SerialNumber { get; private set; }
+        public uint COMPort { get; set; }
+        public uint DeviceNumber { get; set; }
         public uint Channel { get; private set; }
+        public MultiClampHardwareType HardwareType { get; private set; }
 
         public event EventHandler<MultiClampParametersChangedArgs> ParametersChanged;
 
@@ -69,10 +77,28 @@ namespace Symphony.ExternalDevices
             return availableSerialNumbers;
         }
 
-        private static HashSet<uint> availableSerialNumbers; 
+        private static HashSet<uint> availableSerialNumbers;
 
         /// <summary>
-        /// Constructs a new MultiClampCommander for a given serial number and channel.
+        /// Constructs a new 700A MultiClampCommander for a given COM port, device number (AKA AxoBus ID), and channel.
+        /// </summary>
+        /// <param name="comPort"></param>
+        /// <param name="deviceNumber"></param>
+        /// <param name="channel"></param>
+        /// <param name="clock"></param>
+        public MultiClampCommander(uint comPort, uint deviceNumber, uint channel, IClock clock)
+        {
+            COMPort = comPort;
+            DeviceNumber = deviceNumber;
+            Channel = channel;
+            Clock = clock;
+            HardwareType = MultiClampHardwareType.MULTICLAMP_700A;
+
+            Init();
+        }
+
+        /// <summary>
+        /// Constructs a new 700B MultiClampCommander for a given serial number and channel.
         /// </summary>
         /// <param name="serialNumber">MultiClamp device serial number</param>
         /// <param name="channel">MultiClamp channel</param>
@@ -82,7 +108,13 @@ namespace Symphony.ExternalDevices
             SerialNumber = serialNumber;
             Channel = channel;
             Clock = clock;
+            HardwareType = MultiClampHardwareType.MULTICLAMP_700B;
 
+            Init();
+        }
+
+        private void Init()
+        {
             var lParam = DeviceLParam();
             OpenMultiClampConversation(lParam);
             RegisterForWmCopyDataEvents();
@@ -91,9 +123,9 @@ namespace Symphony.ExternalDevices
 
         private uint DeviceLParam()
         {
-            UInt32 lParam = MultiClampInterop.MCTG_Pack700BSignalIDs(this.SerialNumber, this.Channel);
-                // Pack the above two into an UInt32
-            return lParam;
+            return HardwareType == MultiClampHardwareType.MULTICLAMP_700A ? 
+                MultiClampInterop.MCTG_Pack700ASignalIDs(this.COMPort, this.DeviceNumber, this.Channel) : 
+                MultiClampInterop.MCTG_Pack700BSignalIDs(this.SerialNumber, this.Channel);
         }
 
         private static void RegisterForIdEvents()

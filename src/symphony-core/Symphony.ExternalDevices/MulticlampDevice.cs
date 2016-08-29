@@ -84,7 +84,7 @@ namespace Symphony.ExternalDevices
         }
 
         /// <summary>
-        /// Constructs a new MultiClampDevice
+        /// Constructs a new 700B MultiClampDevice
         /// </summary>
         /// <param name="serialNumber">MultiClamp serial number</param>
         /// <param name="channel">MultiClamp channel</param>
@@ -108,7 +108,7 @@ namespace Symphony.ExternalDevices
         }
 
         /// <summary>
-        /// Constructs a new MultiClampDevice.
+        /// Constructs a new 700B MultiClampDevice.
         /// 
         /// This constructor is provided as a convenience for Matlab clients. .Net clients should use the typed version.
         /// </summary>
@@ -125,6 +125,66 @@ namespace Symphony.ExternalDevices
             IEnumerable<string> backgroundModes,
             IEnumerable<IMeasurement> backgroundMeasurements)
             : this(serialNumber,
+            channel,
+            clock,
+            c,
+            backgroundModes.Select(k =>
+            {
+                MultiClampInterop.OperatingMode mode;
+                Enum.TryParse(k, false, out mode);
+                return mode;
+            }),
+            backgroundMeasurements)
+        {
+        }
+
+        /// <summary>
+        /// Constructs a new 700A MultiClampDevice
+        /// </summary>
+        /// <param name="comPort">MultiClamp COM port</param>
+        /// <param name="deviceNumber">MultiClamp device number (AKA AxoBus ID)</param>
+        /// <param name="channel">MultiClamp channel</param>
+        /// <param name="clock">Clock instance defining cononical time</param>
+        /// <param name="c">Controller instance for this device</param>
+        /// <param name="backgroundModes">Enumerable of operating modes</param>
+        /// <param name="backgroundMeasurements">Corresponding background Measurement for each operating mode in backgroundModes</param>
+        public MultiClampDevice(uint comPort,
+            uint deviceNumber,
+            uint channel,
+            IClock clock,
+            Controller c,
+            IEnumerable<MultiClampInterop.OperatingMode> backgroundModes,
+            IEnumerable<IMeasurement> backgroundMeasurements)
+            : this(new MultiClampCommander(comPort, deviceNumber, channel, clock),
+            c,
+            backgroundModes.Zip(backgroundMeasurements,
+            (k, v) => new { Key = k, Value = v })
+            .ToDictionary(x => x.Key, x => x.Value))
+        {
+            this.Clock = clock;
+        }
+
+        /// <summary>
+        /// Constructs a new 700A MultiClampDevice.
+        /// 
+        /// This constructor is provided as a convenience for Matlab clients. .Net clients should use the typed version.
+        /// </summary>
+        /// <param name="comPort">MultiClamp COM port</param>
+        /// <param name="deviceNumber">MultiClamp device number (AKA AxoBus ID)</param>
+        /// <param name="channel">MultiClamp channel</param>
+        /// <param name="clock">Clock instance defining cononical time</param>
+        /// <param name="c">Controller instance for this device</param>
+        /// <param name="backgroundModes">Enumerable of operating mode names. Allowed values are "VClamp", "IClamp", and "I0".</param>
+        /// <param name="backgroundMeasurements">Corresponding background Measurement for each operating mode in backgroundModes</param>
+        public MultiClampDevice(uint comPort,
+            uint deviceNumber,
+            uint channel,
+            IClock clock,
+            Controller c,
+            IEnumerable<string> backgroundModes,
+            IEnumerable<IMeasurement> backgroundMeasurements)
+            : this(comPort,
+            deviceNumber,
             channel,
             clock,
             c,
