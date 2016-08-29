@@ -32,6 +32,24 @@ namespace Symphony.ExternalDevices
         public static readonly int MCTG_REQUEST_MESSAGE = Win32Interop.RegisterWindowMessage(MultiClampInterop.MCTG_REQUEST_MESSAGE_STR);
         public static readonly int MCTG_ID_MESSAGE = Win32Interop.RegisterWindowMessage(MultiClampInterop.MCTG_ID_MESSAGE_STR);
 
+        public static uint MCTG_Pack700ASignalIDs(uint uComPortID, uint uAxoBusID, uint uChannelID)
+        {
+            uint lparamSignalIDs = 0;
+            lparamSignalIDs |= (uComPortID);
+            lparamSignalIDs |= (uAxoBusID << 8);
+            lparamSignalIDs |= (uChannelID << 16);
+            return lparamSignalIDs;
+        }
+
+        public static bool MCTG_Unpack700ASignalIDs(uint lparamSignalIDs, out uint uComPortID, out uint uAxoBusID,
+                                                    out uint uChannelID)
+        {
+            uComPortID = (lparamSignalIDs) & 0x000000FF;
+            uAxoBusID = (lparamSignalIDs >> 8) & 0x000000FF;
+            uChannelID = (lparamSignalIDs >> 16) & 0x0000FFFF;
+            return true;
+        }
+
         public static uint MCTG_Pack700BSignalIDs(uint uSerialNum, uint uChannelID)
         {
             uint lparamSignalIDs = 0;
@@ -42,7 +60,7 @@ namespace Symphony.ExternalDevices
 
         public static bool MCTG_Unpack700BSignalIDs(uint lparamSignalIDs, out uint uSerialNum, out uint uChannelID)
         {
-            uSerialNum = lparamSignalIDs & 0x0FFFFFFF;
+            uSerialNum = (lparamSignalIDs) & 0x0FFFFFFF;
             uChannelID = (lparamSignalIDs >> 28) & 0x0000000F;
             return true;
         }
