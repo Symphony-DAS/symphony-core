@@ -37,7 +37,7 @@ namespace Symphony.ExternalDevices
         /// <summary>
         /// Attached MC type (e.g. 700A or 700B)
         /// </summary>
-        MultiClampHardwareType HardwareType { get; }
+        MultiClampInterop.HardwareType HardwareType { get; }
 
         /// <summary>
         /// Requests a new parameter set from the MultiClamp Commander

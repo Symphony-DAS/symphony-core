@@ -105,6 +105,16 @@ namespace Symphony.ExternalDevices
 
             /// <summary>
             /// UINT;  use constants defined:
+            /// // 700A
+            /// const UINT MCTG_OUT_MUX_COMMAND = 0;
+            /// const UINT MCTG_OUT_MUX_I_MEMBRANE = 1;
+            /// const UINT MCTG_OUT_MUX_V_MEMBRANE = 2;
+            /// const UINT MCTG_OUT_MUX_V_MEMBRANEx100 = 3;
+            /// const UINT MCTG_OUT_MUX_I_BATH = 4;
+            /// const UINT MCTG_OUT_MUX_V_BATH = 5;
+            /// const UINT MCTG_OUT_MUX_NUMCHOICES = 6;
+            /// 
+            /// // 700B
             /// // VC Primary
             /// const long AXMCD_OUT_PRI_VC_GLDR_MIN = 0;
             /// const long AXMCD_OUT_PRI_VC_GLDR_MAX = 6;
@@ -243,9 +253,26 @@ namespace Symphony.ExternalDevices
             I0
         }
 
-        public enum SignalIdentifier
+        public enum SignalIdentifier700A
         {
-            //See "700B Primary and Secondary Output Signal Constants" section in MCTelegrpahs.hpp
+            //See "700A Telegraph Output Signal Mux Identifiers" section in MultiClampBroadcastMsg.hpp
+            MCTG_OUT_MUX_I_CMD_SUMMED = 0,
+            MCTG_OUT_MUX_V_CMD_SUMMED = 1,
+            MCTG_OUT_MUX_I_CMD_EXT = 2,
+            MCTG_OUT_MUX_V_CMD_EXT = 3,
+            MCTG_OUT_MUX_I_MEMBRANE = 4,
+            MCTG_OUT_MUX_V_MEMBRANE = 5,
+            MCTG_OUT_MUX_V_MEMBRANEx100 = 6,
+            MCTG_OUT_MUX_I_AUX1 = 7,
+            MCTG_OUT_MUX_V_AUX1 = 8,
+            MCTG_OUT_MUX_I_AUX2 = 9,
+            MCTG_OUT_MUX_V_AUX2 = 10,
+            MCTG_OUT_MUX_NUMCHOICES = 11
+        }
+
+        public enum SignalIdentifier700B
+        {
+            //See "700B Primary and Secondary Output Signal Constants" section in MultiClampBroadcastMsg.hpp
             // VC Primary
             AXMCD_OUT_PRI_VC_GLDR_MIN = 0,
             AXMCD_OUT_PRI_VC_GLDR_MAX = 6,
@@ -315,9 +342,26 @@ namespace Symphony.ExternalDevices
             OFF,
         }
 
-        public enum RawOutputSignalIdentifier
+        public enum RawOutputSignalIdentifier700A
         {
-            //See "700B Primary and Secondary Output Signal Constants" section in MCTelegrpahs.hpp
+            //See "700A Telegraph Output Signal Mux Identifiers" section in MultiClampBroadcastMsg.hpp
+            MCTG_OUT_MUX_I_CMD_SUMMED = 0,
+            MCTG_OUT_MUX_V_CMD_SUMMED = 1,
+            MCTG_OUT_MUX_I_CMD_EXT = 2,
+            MCTG_OUT_MUX_V_CMD_EXT = 3,
+            MCTG_OUT_MUX_I_MEMBRANE = 4,
+            MCTG_OUT_MUX_V_MEMBRANE = 5,
+            MCTG_OUT_MUX_V_MEMBRANEx100 = 6,
+            MCTG_OUT_MUX_I_AUX1 = 7,
+            MCTG_OUT_MUX_V_AUX1 = 8,
+            MCTG_OUT_MUX_I_AUX2 = 9,
+            MCTG_OUT_MUX_V_AUX2 = 10,
+            MCTG_OUT_MUX_NUMCHOICES = 11
+        }
+
+        public enum RawOutputSignalIdentifier700B
+        {
+            //See "700B Primary and Secondary Output Signal Constants" section in MultiClampBroadcastMsg.hpp
             // VC Primary
             AXMCD_OUT_PRI_VC_GLDR_MIN = 0,
             AXMCD_OUT_PRI_VC_GLDR_MAX = 6,
@@ -401,14 +445,27 @@ namespace Symphony.ExternalDevices
                 LPFCutoff = mtd.dLPFCutoff;
                 MembraneCapacitance = mtd.dMembraneCap;
                 OperatingMode = (OperatingMode)mtd.uOperatingMode;
-                RawOutputSignal = (RawOutputSignalIdentifier)mtd.uRawOutSignal;
                 RawScaleFactor = mtd.dRawScaleFactor;
                 RawScaleFactorUnits = (ScaleFactorUnits)mtd.uRawScaleFactorUnits;
-                ScaledOutputSignal = (SignalIdentifier)mtd.uScaledOutSignal;
                 ScaleFactor = mtd.dScaleFactor;
                 ScaleFactorUnits = (ScaleFactorUnits)mtd.uScaleFactorUnits;
                 SecondaryAlpha = mtd.dSecondaryAlpha;
                 SecondaryLPFCutoff = mtd.dSecondaryLPFCutoff;
+
+                if (HardwareType == HardwareType.MCTG_HW_TYPE_MC700A)
+                {
+                    RawOutputSignal700A = (RawOutputSignalIdentifier700A)mtd.uRawOutSignal;
+                    ScaledOutputSignal700A = (SignalIdentifier700A)mtd.uScaledOutSignal;
+                    RawOutputSignal700B = null;
+                    ScaledOutputSignal700B = null;
+                }
+                else
+                {
+                    RawOutputSignal700A = null;
+                    ScaledOutputSignal700A = null;
+                    RawOutputSignal700B = (RawOutputSignalIdentifier700B)mtd.uRawOutSignal;
+                    ScaledOutputSignal700B = (SignalIdentifier700B)mtd.uScaledOutSignal;
+                }
 
                 switch(OperatingMode)
                 {
@@ -433,7 +490,8 @@ namespace Symphony.ExternalDevices
             }
 
             public OperatingMode OperatingMode { get; set; } //uOperatingMode
-            public SignalIdentifier ScaledOutputSignal { get; set; } //uScaledOutSignal
+            public SignalIdentifier700A? ScaledOutputSignal700A { get; set; } //uScaledOutSignal (700A only)
+            public SignalIdentifier700B? ScaledOutputSignal700B { get; set; } //uScaledOutSignal (700B only)
             public double Alpha { get; set; } //dAlpha
             public double ScaleFactor { get; set; } //dScaleFactor
             public ScaleFactorUnits ScaleFactorUnits { get; set; } //uScaleFactorUnits
@@ -441,21 +499,32 @@ namespace Symphony.ExternalDevices
             public double MembraneCapacitance { get; set; } //dMembraneCap
             public ExternalCommandSensitivityUnits ExternalCommandSensitivityUnits { get; set; }
             public double ExternalCommandSensitivity { get; set; } //dExtCmdSens
-            public RawOutputSignalIdentifier RawOutputSignal { get; set; } //uRawOutSignal
+            public RawOutputSignalIdentifier700A? RawOutputSignal700A { get; set; } //uRawOutSignal (700A only)
+            public RawOutputSignalIdentifier700B? RawOutputSignal700B { get; set; } //uRawOutSignal (700B only)
             public double RawScaleFactor { get; set; } //dRawScaleFactor
             public ScaleFactorUnits RawScaleFactorUnits { get; set; } //uRawScaleFactorUnits
             public HardwareType HardwareType { get; set; } //uHardwareType
-            public double SecondaryAlpha { get; set; } //dSecondaryAlpha
-            public double SecondaryLPFCutoff { get; set; } //dSecondaryLPFCutoff
-            public string AppVersion { get; set; } //szAppVersion
-            public string FirmwareVersion { get; set; } //szFirmwareVersion
-            public string DSPVersion { get; set; } //szDSPVersion
-            public string SerialNumber { get; set; } //szSerialNumber
+            public double SecondaryAlpha { get; set; } //dSecondaryAlpha (700B only)
+            public double SecondaryLPFCutoff { get; set; } //dSecondaryLPFCutoff (700B only)
+            public string AppVersion { get; set; } //szAppVersion (700B only)
+            public string FirmwareVersion { get; set; } //szFirmwareVersion (700B only)
+            public string DSPVersion { get; set; } //szDSPVersion (700B only)
+            public string SerialNumber { get; set; } //szSerialNumber (700B only)
 
             public override string ToString()
             {
-                return String.Format("{{ OperatingMode={0}, ScaledOutputSignal={1}, Alpha={2}, ... }}",
-                    OperatingMode, ScaledOutputSignal, Alpha);
+                string result;
+                if (HardwareType == HardwareType.MCTG_HW_TYPE_MC700A)
+                {
+                    result = String.Format("{{ OperatingMode={0}, ScaledOutputSignal={1}, Alpha={2}, ... }}",
+                                           OperatingMode, ScaledOutputSignal700A, Alpha);
+                }
+                else
+                {
+                    result = String.Format("{{ OperatingMode={0}, ScaledOutputSignal={1}, Alpha={2}, ... }}",
+                                           OperatingMode, ScaledOutputSignal700B, Alpha);
+                }
+                return result;
             }
         }
 

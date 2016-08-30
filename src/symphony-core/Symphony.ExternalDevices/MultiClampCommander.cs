@@ -24,12 +24,6 @@ namespace Symphony.ExternalDevices
         public MultiClampInterop.MulticlampData Data { get; private set; }
     }
 
-    public enum MultiClampHardwareType
-    {
-        MULTICLAMP_700A,
-        MULTICLAMP_700B
-    }
-
     /// <summary>
     /// Implementation of the IMultiClampCommander interface for Windows.
     /// 
@@ -51,7 +45,7 @@ namespace Symphony.ExternalDevices
         public uint COMPort { get; set; }
         public uint DeviceNumber { get; set; }
         public uint Channel { get; private set; }
-        public MultiClampHardwareType HardwareType { get; private set; }
+        public MultiClampInterop.HardwareType HardwareType { get; private set; }
 
         public event EventHandler<MultiClampParametersChangedArgs> ParametersChanged;
 
@@ -92,7 +86,7 @@ namespace Symphony.ExternalDevices
             DeviceNumber = deviceNumber;
             Channel = channel;
             Clock = clock;
-            HardwareType = MultiClampHardwareType.MULTICLAMP_700A;
+            HardwareType = MultiClampInterop.HardwareType.MCTG_HW_TYPE_MC700A;
 
             Init();
         }
@@ -108,7 +102,7 @@ namespace Symphony.ExternalDevices
             SerialNumber = serialNumber;
             Channel = channel;
             Clock = clock;
-            HardwareType = MultiClampHardwareType.MULTICLAMP_700B;
+            HardwareType = MultiClampInterop.HardwareType.MCTG_HW_TYPE_MC700B;
 
             Init();
         }
@@ -123,7 +117,7 @@ namespace Symphony.ExternalDevices
 
         private uint DeviceLParam()
         {
-            return HardwareType == MultiClampHardwareType.MULTICLAMP_700A ? 
+            return HardwareType == MultiClampInterop.HardwareType.MCTG_HW_TYPE_MC700A ? 
                 MultiClampInterop.MCTG_Pack700ASignalIDs(this.COMPort, this.DeviceNumber, this.Channel) : 
                 MultiClampInterop.MCTG_Pack700BSignalIDs(this.SerialNumber, this.Channel);
         }
@@ -146,6 +140,9 @@ namespace Symphony.ExternalDevices
         {
             log.DebugFormat("Received MCTG_ID_MESSAGE: {0}", evtArgs.Message);
 
+            // Not aware of a good way to determine if this is a 700A or 700B messsage. We'll assume 700B and let
+            // the user do some bitwise operators on the serial number to get the COM port and device number if they
+            // know the message is coming from a 700A Commander.
             uint serialNumber;
             uint channel;
             MultiClampInterop.MCTG_Unpack700BSignalIDs((uint)evtArgs.Message.LParam, out serialNumber, out channel);
@@ -225,7 +222,7 @@ namespace Symphony.ExternalDevices
             // lpData -- MC_TELEGRAPH_DATA*
             try
             {
-                if (cds.lpData == IntPtr.Zero || cds.cbData != Marshal.SizeOf(typeof(MultiClampInterop.MC_TELEGRAPH_DATA)) || cds.dwData.ToInt64() != MultiClampInterop.MCTG_REQUEST_MESSAGE) 
+                if (cds.lpData == IntPtr.Zero || (cds.cbData != 128 /* 700A */ && cds.cbData != 256 /* 700B */) || (long)cds.dwData != MultiClampInterop.MCTG_REQUEST_MESSAGE)
                     return;
 
                 var mtd = (MultiClampInterop.MC_TELEGRAPH_DATA)Marshal.PtrToStructure(cds.lpData, typeof(MultiClampInterop.MC_TELEGRAPH_DATA));
