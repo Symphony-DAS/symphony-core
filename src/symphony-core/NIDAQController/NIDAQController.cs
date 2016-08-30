@@ -503,7 +503,7 @@ namespace NI
                 throw new DAQException("Cannot configure channels while hardware is running.");
             }
 
-            long bufferSize = (long) Math.Max(ProcessInterval.Samples(SampleRate) * 4, 10000);
+            long bufferSize = SampleRate.QuantityInBaseUnits > 1000000 ? 1000000 : 100000;
             Device.ConfigureChannels(ActiveStreams.Cast<NIDAQStream>(), bufferSize);
         }
 

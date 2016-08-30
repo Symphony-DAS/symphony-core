@@ -362,7 +362,7 @@ namespace Heka
             {
                 s.Reset();
                 var outputSamples = new List<short>();
-                while (TimeSpanExtensions.FromSamples((uint)outputSamples.Count(), s.SampleRate) < ProcessInterval) // && s.HasMoreData
+                while (TimeSpanExtensions.FromSamples((uint)outputSamples.Count(), s.SampleRate).Ticks < ProcessInterval.Ticks * 2) // && s.HasMoreData
                 {
                     var nextOutputDataForStream = NextOutputDataForStream(s);
                     var nextSamples = nextOutputDataForStream.DataWithUnits(HekaDAQOutputStream.DAQCountUnits).Data.
