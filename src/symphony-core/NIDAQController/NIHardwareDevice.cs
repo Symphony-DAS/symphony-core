@@ -414,7 +414,17 @@ namespace NI
         {
             if (DAQTasks != null)
             {
-                DAQTasks.All.ForEach(t => t.Stop());
+                DAQTasks.All.ForEach(t =>
+                    {
+                        try
+                        {
+                            t.Stop();
+                        }
+                        catch(DaqException x)
+                        {
+                            // pass
+                        }
+                    });
                 DAQTasks.All.ForEach(t => t.Control(TaskAction.Unreserve));
             }
         }
