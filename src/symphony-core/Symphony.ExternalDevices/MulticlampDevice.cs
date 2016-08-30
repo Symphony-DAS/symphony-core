@@ -84,7 +84,7 @@ namespace Symphony.ExternalDevices
         }
 
         /// <summary>
-        /// Constructs a new MultiClampDevice
+        /// Constructs a new 700B MultiClampDevice
         /// </summary>
         /// <param name="serialNumber">MultiClamp serial number</param>
         /// <param name="channel">MultiClamp channel</param>
@@ -108,7 +108,7 @@ namespace Symphony.ExternalDevices
         }
 
         /// <summary>
-        /// Constructs a new MultiClampDevice.
+        /// Constructs a new 700B MultiClampDevice.
         /// 
         /// This constructor is provided as a convenience for Matlab clients. .Net clients should use the typed version.
         /// </summary>
@@ -138,12 +138,72 @@ namespace Symphony.ExternalDevices
         {
         }
 
+        /// <summary>
+        /// Constructs a new 700A MultiClampDevice
+        /// </summary>
+        /// <param name="comPort">MultiClamp COM port</param>
+        /// <param name="deviceNumber">MultiClamp device number (AKA AxoBus ID)</param>
+        /// <param name="channel">MultiClamp channel</param>
+        /// <param name="clock">Clock instance defining cononical time</param>
+        /// <param name="c">Controller instance for this device</param>
+        /// <param name="backgroundModes">Enumerable of operating modes</param>
+        /// <param name="backgroundMeasurements">Corresponding background Measurement for each operating mode in backgroundModes</param>
+        public MultiClampDevice(uint comPort,
+            uint deviceNumber,
+            uint channel,
+            IClock clock,
+            Controller c,
+            IEnumerable<MultiClampInterop.OperatingMode> backgroundModes,
+            IEnumerable<IMeasurement> backgroundMeasurements)
+            : this(new MultiClampCommander(comPort, deviceNumber, channel, clock),
+            c,
+            backgroundModes.Zip(backgroundMeasurements,
+            (k, v) => new { Key = k, Value = v })
+            .ToDictionary(x => x.Key, x => x.Value))
+        {
+            this.Clock = clock;
+        }
+
+        /// <summary>
+        /// Constructs a new 700A MultiClampDevice.
+        /// 
+        /// This constructor is provided as a convenience for Matlab clients. .Net clients should use the typed version.
+        /// </summary>
+        /// <param name="comPort">MultiClamp COM port</param>
+        /// <param name="deviceNumber">MultiClamp device number (AKA AxoBus ID)</param>
+        /// <param name="channel">MultiClamp channel</param>
+        /// <param name="clock">Clock instance defining cononical time</param>
+        /// <param name="c">Controller instance for this device</param>
+        /// <param name="backgroundModes">Enumerable of operating mode names. Allowed values are "VClamp", "IClamp", and "I0".</param>
+        /// <param name="backgroundMeasurements">Corresponding background Measurement for each operating mode in backgroundModes</param>
+        public MultiClampDevice(uint comPort,
+            uint deviceNumber,
+            uint channel,
+            IClock clock,
+            Controller c,
+            IEnumerable<string> backgroundModes,
+            IEnumerable<IMeasurement> backgroundMeasurements)
+            : this(comPort,
+            deviceNumber,
+            channel,
+            clock,
+            c,
+            backgroundModes.Select(k =>
+            {
+                MultiClampInterop.OperatingMode mode;
+                Enum.TryParse(k, false, out mode);
+                return mode;
+            }),
+            backgroundMeasurements)
+        {
+        }
+
         public static IEnumerable<uint> AvailableSerialNumbers()
         {
             return MultiClampCommander.AvailableSerialNumbers();
         }
 
-        private static IDictionary<string, object> MergeDeviceParametersIntoConfiguration(IDictionary<string, object> config,
+        private IDictionary<string, object> MergeDeviceParametersIntoConfiguration(IDictionary<string, object> config,
             MultiClampInterop.MulticlampData deviceParameters)
         {
 
@@ -152,24 +212,33 @@ namespace Symphony.ExternalDevices
                 new Dictionary<string, object>(config);
 
             result["Alpha"] = deviceParameters.Alpha;
-            result["AppVersion"] = deviceParameters.AppVersion;
-            result["DSPVersion"] = deviceParameters.DSPVersion;
             result["ExternalCommandSensitivity"] = deviceParameters.ExternalCommandSensitivity;
             result["ExternalCommandSensitivityUnits"] = deviceParameters.ExternalCommandSensitivityUnits.ToString();
-            result["FirmwareVersion"] = deviceParameters.FirmwareVersion;
             result["HardwareType"] = deviceParameters.HardwareType.ToString();
             result["LPFCutoff"] = deviceParameters.LPFCutoff;
             result["MembraneCapacitance"] = deviceParameters.MembraneCapacitance;
             result["OperatingMode"] = deviceParameters.OperatingMode.ToString();
-            result["RawOutputSignal"] = deviceParameters.RawOutputSignal.ToString();
             result["RawScaleFactor"] = deviceParameters.RawScaleFactor;
             result["RawScaleFactorUnits"] = deviceParameters.RawScaleFactorUnits.ToString();
-            result["ScaledOutputSignal"] = deviceParameters.ScaledOutputSignal.ToString();
             result["ScaleFactor"] = deviceParameters.ScaleFactor;
             result["ScaleFactorUnits"] = deviceParameters.ScaleFactorUnits.ToString();
-            result["SecondaryAlpha"] = deviceParameters.SecondaryAlpha;
-            result["SecondaryLPFCutoff"] = deviceParameters.SecondaryLPFCutoff;
-            result["SerialNumber"] = deviceParameters.SerialNumber;
+
+            if (Commander.HardwareType == MultiClampInterop.HardwareType.MCTG_HW_TYPE_MC700A)
+            {
+                result["RawOutputSignal"] = deviceParameters.RawOutputSignal700A.ToString();
+                result["ScaledOutputSignal"] = deviceParameters.ScaledOutputSignal700A.ToString();
+            }
+            else
+            {
+                result["AppVersion"] = deviceParameters.AppVersion;
+                result["DSPVersion"] = deviceParameters.DSPVersion;
+                result["FirmwareVersion"] = deviceParameters.FirmwareVersion;
+                result["RawOutputSignal"] = deviceParameters.RawOutputSignal700B.ToString();
+                result["ScaledOutputSignal"] = deviceParameters.ScaledOutputSignal700B.ToString();
+                result["SecondaryAlpha"] = deviceParameters.SecondaryAlpha;
+                result["SecondaryLPFCutoff"] = deviceParameters.SecondaryLPFCutoff;
+                result["SerialNumber"] = deviceParameters.SerialNumber;
+            }
 
             return result;
         }
@@ -370,41 +439,78 @@ namespace Symphony.ExternalDevices
 
         private static IMeasurement ConvertIClampInput(IMeasurement sample, MultiClampInterop.MulticlampData deviceParams)
         {
-            //MultiClampInterop.SignalIdentifier.AXMCD_OUT_PRI_IC_GLDR_I_CMD_MEMB,
-            //              MultiClampInterop.SignalIdentifier.AXMCD_OUT_PRI_IC_GLDR_I_CMD_SUMMED
-            switch (deviceParams.ScaledOutputSignal)
+            if (deviceParams.HardwareType == MultiClampInterop.HardwareType.MCTG_HW_TYPE_MC700A)
             {
-                case MultiClampInterop.SignalIdentifier.AXMCD_OUT_PRI_IC_GLDR_I_CMD_MEMB:
-                case MultiClampInterop.SignalIdentifier.AXMCD_OUT_PRI_IC_GLDR_I_CMD_SUMMED:
-                case MultiClampInterop.SignalIdentifier.AXMCD_OUT_SEC_IC_GLDR_I_CMD_MEMB:
-                    CheckScaleFactorUnits(deviceParams, new[] {
-                            MultiClampInterop.ScaleFactorUnits.V_A,
-                            MultiClampInterop.ScaleFactorUnits.V_mA,
-                            MultiClampInterop.ScaleFactorUnits.V_nA,
-                            MultiClampInterop.ScaleFactorUnits.V_uA,
-                            MultiClampInterop.ScaleFactorUnits.V_pA
-                        });
-
-                    break;
-                case MultiClampInterop.SignalIdentifier.AXMCD_OUT_PRI_IC_GLDR_MIN:
-                case MultiClampInterop.SignalIdentifier.AXMCD_OUT_PRI_IC_GLDR_MAX:
-                case MultiClampInterop.SignalIdentifier.AXMCD_OUT_PRI_IC_GLDR_V_MEMBx100:
-                case MultiClampInterop.SignalIdentifier.AXMCD_OUT_PRI_IC_GLDR_I_CMD_EXT:
-                case MultiClampInterop.SignalIdentifier.AXMCD_OUT_PRI_IC_GLDR_AUX1:
-                case MultiClampInterop.SignalIdentifier.AXMCD_OUT_SEC_IC_GLDR_MIN:
-                case MultiClampInterop.SignalIdentifier.AXMCD_OUT_SEC_IC_GLDR_MAX:
-                case MultiClampInterop.SignalIdentifier.AXMCD_OUT_SEC_IC_GLDR_V_MEMB:
-                case MultiClampInterop.SignalIdentifier.AXMCD_OUT_SEC_IC_GLDR_V_MEMBx100:
-                case MultiClampInterop.SignalIdentifier.AXMCD_OUT_SEC_IC_GLDR_I_CMD_EXT:
-                    CheckScaleFactorUnits(deviceParams, new[] {
-                            MultiClampInterop.ScaleFactorUnits.V_mV,
-                            MultiClampInterop.ScaleFactorUnits.V_uV,
-                            MultiClampInterop.ScaleFactorUnits.V_V
-                        });
-                    break;
-                default:
-                    log.ErrorFormat("MultiClamp scaled output signal is not a valid IClamp mode: {0}", deviceParams.ScaledOutputSignal);
-                    throw new ArgumentOutOfRangeException();
+                switch (deviceParams.ScaledOutputSignal700A)
+                {
+                    case MultiClampInterop.SignalIdentifier700A.MCTG_OUT_MUX_I_CMD_SUMMED:
+                    case MultiClampInterop.SignalIdentifier700A.MCTG_OUT_MUX_V_CMD_SUMMED:
+                        CheckScaleFactorUnits(deviceParams, new[]
+                            {
+                                MultiClampInterop.ScaleFactorUnits.V_A,
+                                MultiClampInterop.ScaleFactorUnits.V_mA,
+                                MultiClampInterop.ScaleFactorUnits.V_nA,
+                                MultiClampInterop.ScaleFactorUnits.V_uA,
+                                MultiClampInterop.ScaleFactorUnits.V_pA
+                            });
+                        break;
+                    case MultiClampInterop.SignalIdentifier700A.MCTG_OUT_MUX_I_CMD_EXT:
+                    case MultiClampInterop.SignalIdentifier700A.MCTG_OUT_MUX_V_CMD_EXT:
+                    case MultiClampInterop.SignalIdentifier700A.MCTG_OUT_MUX_V_MEMBRANE:
+                    case MultiClampInterop.SignalIdentifier700A.MCTG_OUT_MUX_V_MEMBRANEx100:
+                        CheckScaleFactorUnits(deviceParams, new[]
+                            {
+                                MultiClampInterop.ScaleFactorUnits.V_mV,
+                                MultiClampInterop.ScaleFactorUnits.V_uV,
+                                MultiClampInterop.ScaleFactorUnits.V_V
+                            });
+                        break;
+                    default:
+                        log.ErrorFormat("MultiClamp scaled output signal is not a valid IClamp mode: {0}",
+                                        deviceParams.ScaledOutputSignal700A);
+                        throw new ArgumentOutOfRangeException();
+                }
+            }
+            else
+            {
+                //MultiClampInterop.SignalIdentifier.AXMCD_OUT_PRI_IC_GLDR_I_CMD_MEMB,
+                //              MultiClampInterop.SignalIdentifier.AXMCD_OUT_PRI_IC_GLDR_I_CMD_SUMMED
+                switch (deviceParams.ScaledOutputSignal700B)
+                {
+                    case MultiClampInterop.SignalIdentifier700B.AXMCD_OUT_PRI_IC_GLDR_I_CMD_MEMB:
+                    case MultiClampInterop.SignalIdentifier700B.AXMCD_OUT_PRI_IC_GLDR_I_CMD_SUMMED:
+                    case MultiClampInterop.SignalIdentifier700B.AXMCD_OUT_SEC_IC_GLDR_I_CMD_MEMB:
+                        CheckScaleFactorUnits(deviceParams, new[]
+                            {
+                                MultiClampInterop.ScaleFactorUnits.V_A,
+                                MultiClampInterop.ScaleFactorUnits.V_mA,
+                                MultiClampInterop.ScaleFactorUnits.V_nA,
+                                MultiClampInterop.ScaleFactorUnits.V_uA,
+                                MultiClampInterop.ScaleFactorUnits.V_pA
+                            });
+                        break;
+                    case MultiClampInterop.SignalIdentifier700B.AXMCD_OUT_PRI_IC_GLDR_MIN:
+                    case MultiClampInterop.SignalIdentifier700B.AXMCD_OUT_PRI_IC_GLDR_MAX:
+                    case MultiClampInterop.SignalIdentifier700B.AXMCD_OUT_PRI_IC_GLDR_V_MEMBx100:
+                    case MultiClampInterop.SignalIdentifier700B.AXMCD_OUT_PRI_IC_GLDR_I_CMD_EXT:
+                    case MultiClampInterop.SignalIdentifier700B.AXMCD_OUT_PRI_IC_GLDR_AUX1:
+                    case MultiClampInterop.SignalIdentifier700B.AXMCD_OUT_SEC_IC_GLDR_MIN:
+                    case MultiClampInterop.SignalIdentifier700B.AXMCD_OUT_SEC_IC_GLDR_MAX:
+                    case MultiClampInterop.SignalIdentifier700B.AXMCD_OUT_SEC_IC_GLDR_V_MEMB:
+                    case MultiClampInterop.SignalIdentifier700B.AXMCD_OUT_SEC_IC_GLDR_V_MEMBx100:
+                    case MultiClampInterop.SignalIdentifier700B.AXMCD_OUT_SEC_IC_GLDR_I_CMD_EXT:
+                        CheckScaleFactorUnits(deviceParams, new[]
+                            {
+                                MultiClampInterop.ScaleFactorUnits.V_mV,
+                                MultiClampInterop.ScaleFactorUnits.V_uV,
+                                MultiClampInterop.ScaleFactorUnits.V_V
+                            });
+                        break;
+                    default:
+                        log.ErrorFormat("MultiClamp scaled output signal is not a valid IClamp mode: {0}",
+                                        deviceParams.ScaledOutputSignal700B);
+                        throw new ArgumentOutOfRangeException();
+                }
             }
 
             return ConvertInputMeasurement(sample, deviceParams);
@@ -427,38 +533,67 @@ namespace Symphony.ExternalDevices
 
         private static IMeasurement ConvertVClampInput(IMeasurement sample, MultiClampInterop.MulticlampData deviceParams)
         {
-            switch (deviceParams.ScaledOutputSignal)
+            if (deviceParams.HardwareType == MultiClampInterop.HardwareType.MCTG_HW_TYPE_MC700A)
             {
-
-                case MultiClampInterop.SignalIdentifier.AXMCD_OUT_PRI_VC_GLDR_I_MEMB:
-                case MultiClampInterop.SignalIdentifier.AXMCD_OUT_SEC_VC_GLDR_I_MEMB:
-
-                    CheckScaleFactorUnits(deviceParams, new[] {
+                switch (deviceParams.ScaledOutputSignal700A)
+                {
+                    case MultiClampInterop.SignalIdentifier700A.MCTG_OUT_MUX_V_CMD_SUMMED:
+                        CheckScaleFactorUnits(deviceParams, new[] {
                             MultiClampInterop.ScaleFactorUnits.V_A,
                             MultiClampInterop.ScaleFactorUnits.V_mA,
                             MultiClampInterop.ScaleFactorUnits.V_nA,
                             MultiClampInterop.ScaleFactorUnits.V_uA,
                             MultiClampInterop.ScaleFactorUnits.V_pA
                         });
-                    break;
-
-                case MultiClampInterop.SignalIdentifier.AXMCD_OUT_PRI_VC_GLDR_V_CMD_SUMMED:
-                case MultiClampInterop.SignalIdentifier.AXMCD_OUT_PRI_VC_GLDR_V_CMD_MEMB:
-                case MultiClampInterop.SignalIdentifier.AXMCD_OUT_PRI_VC_GLDR_V_CMD_MEMBx100:
-                case MultiClampInterop.SignalIdentifier.AXMCD_OUT_PRI_VC_GLDR_V_CMD_EXT:
-                case MultiClampInterop.SignalIdentifier.AXMCD_OUT_SEC_VC_GLDR_V_CMD_MEMBx10:
-                case MultiClampInterop.SignalIdentifier.AXMCD_OUT_SEC_VC_GLDR_V_CMD_SUMMED:
-                case MultiClampInterop.SignalIdentifier.AXMCD_OUT_SEC_VC_GLDR_V_CMD_MEMBx100:
-                case MultiClampInterop.SignalIdentifier.AXMCD_OUT_SEC_VC_GLDR_V_CMD_EXT:
-                    CheckScaleFactorUnits(deviceParams, new[] {
+                        break;
+                    case MultiClampInterop.SignalIdentifier700A.MCTG_OUT_MUX_I_CMD_SUMMED:
+                    case MultiClampInterop.SignalIdentifier700A.MCTG_OUT_MUX_I_CMD_EXT:
+                    case MultiClampInterop.SignalIdentifier700A.MCTG_OUT_MUX_V_CMD_EXT:
+                    case MultiClampInterop.SignalIdentifier700A.MCTG_OUT_MUX_V_MEMBRANE:
+                        CheckScaleFactorUnits(deviceParams, new[] {
                             MultiClampInterop.ScaleFactorUnits.V_mV,
                             MultiClampInterop.ScaleFactorUnits.V_uV,
                             MultiClampInterop.ScaleFactorUnits.V_V
                         });
-                    break;
-                default:
-                    log.ErrorFormat("MultiClamp scaled output signal is not a valid VClamp mode: {0}", deviceParams.ScaledOutputSignal);
-                    throw new ArgumentOutOfRangeException();
+                        break;
+                    default:
+                        log.ErrorFormat("MultiClamp scaled output signal is not a valid VClamp mode: {0}", deviceParams.ScaledOutputSignal700A);
+                        throw new ArgumentOutOfRangeException();
+                }
+            }
+            else
+            {
+                switch (deviceParams.ScaledOutputSignal700B)
+                {
+
+                    case MultiClampInterop.SignalIdentifier700B.AXMCD_OUT_PRI_VC_GLDR_I_MEMB:
+                    case MultiClampInterop.SignalIdentifier700B.AXMCD_OUT_SEC_VC_GLDR_I_MEMB:
+                        CheckScaleFactorUnits(deviceParams, new[] {
+                            MultiClampInterop.ScaleFactorUnits.V_A,
+                            MultiClampInterop.ScaleFactorUnits.V_mA,
+                            MultiClampInterop.ScaleFactorUnits.V_nA,
+                            MultiClampInterop.ScaleFactorUnits.V_uA,
+                            MultiClampInterop.ScaleFactorUnits.V_pA
+                        });
+                        break;
+                    case MultiClampInterop.SignalIdentifier700B.AXMCD_OUT_PRI_VC_GLDR_V_CMD_SUMMED:
+                    case MultiClampInterop.SignalIdentifier700B.AXMCD_OUT_PRI_VC_GLDR_V_CMD_MEMB:
+                    case MultiClampInterop.SignalIdentifier700B.AXMCD_OUT_PRI_VC_GLDR_V_CMD_MEMBx100:
+                    case MultiClampInterop.SignalIdentifier700B.AXMCD_OUT_PRI_VC_GLDR_V_CMD_EXT:
+                    case MultiClampInterop.SignalIdentifier700B.AXMCD_OUT_SEC_VC_GLDR_V_CMD_MEMBx10:
+                    case MultiClampInterop.SignalIdentifier700B.AXMCD_OUT_SEC_VC_GLDR_V_CMD_SUMMED:
+                    case MultiClampInterop.SignalIdentifier700B.AXMCD_OUT_SEC_VC_GLDR_V_CMD_MEMBx100:
+                    case MultiClampInterop.SignalIdentifier700B.AXMCD_OUT_SEC_VC_GLDR_V_CMD_EXT:
+                        CheckScaleFactorUnits(deviceParams, new[] {
+                            MultiClampInterop.ScaleFactorUnits.V_mV,
+                            MultiClampInterop.ScaleFactorUnits.V_uV,
+                            MultiClampInterop.ScaleFactorUnits.V_V
+                        });
+                        break;
+                    default:
+                        log.ErrorFormat("MultiClamp scaled output signal is not a valid VClamp mode: {0}", deviceParams.ScaledOutputSignal700B);
+                        throw new ArgumentOutOfRangeException();
+                }
             }
 
             return ConvertInputMeasurement(sample, deviceParams);

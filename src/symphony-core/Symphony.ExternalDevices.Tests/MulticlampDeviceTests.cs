@@ -46,10 +46,10 @@ namespace Symphony.ExternalDevices
                         })] MultiClampInterop.ScaleFactorUnits scaleFactorUnits,
             [Values(new object[]
                         {
-                            MultiClampInterop.SignalIdentifier.AXMCD_OUT_PRI_VC_GLDR_I_MEMB,
-                            MultiClampInterop.SignalIdentifier.AXMCD_OUT_PRI_IC_GLDR_I_CMD_MEMB,
-                            MultiClampInterop.SignalIdentifier.AXMCD_OUT_PRI_IC_GLDR_I_CMD_SUMMED
-                        })] MultiClampInterop.SignalIdentifier signalIdentifier
+                            MultiClampInterop.SignalIdentifier700B.AXMCD_OUT_PRI_VC_GLDR_I_MEMB,
+                            MultiClampInterop.SignalIdentifier700B.AXMCD_OUT_PRI_IC_GLDR_I_CMD_MEMB,
+                            MultiClampInterop.SignalIdentifier700B.AXMCD_OUT_PRI_IC_GLDR_I_CMD_SUMMED
+                        })] MultiClampInterop.SignalIdentifier700B signalIdentifier
             )
         {
             var mc = new FakeMulticlampCommander();
@@ -57,11 +57,11 @@ namespace Symphony.ExternalDevices
             MultiClampInterop.OperatingMode mode;
             switch (signalIdentifier)
             {
-                case MultiClampInterop.SignalIdentifier.AXMCD_OUT_PRI_VC_GLDR_I_MEMB:
+                case MultiClampInterop.SignalIdentifier700B.AXMCD_OUT_PRI_VC_GLDR_I_MEMB:
                     mode = MultiClampInterop.OperatingMode.VClamp;
                     break;
-                case MultiClampInterop.SignalIdentifier.AXMCD_OUT_PRI_IC_GLDR_I_CMD_MEMB:
-                case MultiClampInterop.SignalIdentifier.AXMCD_OUT_PRI_IC_GLDR_I_CMD_SUMMED:
+                case MultiClampInterop.SignalIdentifier700B.AXMCD_OUT_PRI_IC_GLDR_I_CMD_MEMB:
+                case MultiClampInterop.SignalIdentifier700B.AXMCD_OUT_PRI_IC_GLDR_I_CMD_SUMMED:
                     mode = MultiClampInterop.OperatingMode.IClamp;
                     break;
                 default:
@@ -70,7 +70,8 @@ namespace Symphony.ExternalDevices
 
             var data = new MultiClampInterop.MulticlampData()
                            {
-                               ScaledOutputSignal = signalIdentifier,
+                               HardwareType = MultiClampInterop.HardwareType.MCTG_HW_TYPE_MC700B,
+                               ScaledOutputSignal700B = signalIdentifier,
                                ScaleFactorUnits = scaleFactorUnits,
                                OperatingMode = mode
                            };
@@ -92,25 +93,25 @@ namespace Symphony.ExternalDevices
                         })] MultiClampInterop.ScaleFactorUnits scaleFactorUnits,
             [Values(new object[]
                         {
-                            MultiClampInterop.SignalIdentifier.AXMCD_OUT_PRI_IC_GLDR_V_MEMBx10,
-                            MultiClampInterop.SignalIdentifier.AXMCD_OUT_PRI_IC_GLDR_V_MEMBx100,
-                            MultiClampInterop.SignalIdentifier.AXMCD_OUT_PRI_VC_GLDR_V_CMD_EXT,
-                            MultiClampInterop.SignalIdentifier.AXMCD_OUT_PRI_VC_GLDR_V_CMD_MEMB,
-                            MultiClampInterop.SignalIdentifier.AXMCD_OUT_PRI_VC_GLDR_V_CMD_SUMMED
-                        })] MultiClampInterop.SignalIdentifier signalIdentifier
+                            MultiClampInterop.SignalIdentifier700B.AXMCD_OUT_PRI_IC_GLDR_V_MEMBx10,
+                            MultiClampInterop.SignalIdentifier700B.AXMCD_OUT_PRI_IC_GLDR_V_MEMBx100,
+                            MultiClampInterop.SignalIdentifier700B.AXMCD_OUT_PRI_VC_GLDR_V_CMD_EXT,
+                            MultiClampInterop.SignalIdentifier700B.AXMCD_OUT_PRI_VC_GLDR_V_CMD_MEMB,
+                            MultiClampInterop.SignalIdentifier700B.AXMCD_OUT_PRI_VC_GLDR_V_CMD_SUMMED
+                        })] MultiClampInterop.SignalIdentifier700B signalIdentifier
             )
         {
 
             MultiClampInterop.OperatingMode mode;
             switch (signalIdentifier)
             {
-                case MultiClampInterop.SignalIdentifier.AXMCD_OUT_PRI_VC_GLDR_V_CMD_EXT:
-                case MultiClampInterop.SignalIdentifier.AXMCD_OUT_PRI_VC_GLDR_V_CMD_MEMB:
-                case MultiClampInterop.SignalIdentifier.AXMCD_OUT_PRI_VC_GLDR_V_CMD_SUMMED:
+                case MultiClampInterop.SignalIdentifier700B.AXMCD_OUT_PRI_VC_GLDR_V_CMD_EXT:
+                case MultiClampInterop.SignalIdentifier700B.AXMCD_OUT_PRI_VC_GLDR_V_CMD_MEMB:
+                case MultiClampInterop.SignalIdentifier700B.AXMCD_OUT_PRI_VC_GLDR_V_CMD_SUMMED:
                     mode = MultiClampInterop.OperatingMode.VClamp;
                     break;
-                case MultiClampInterop.SignalIdentifier.AXMCD_OUT_PRI_IC_GLDR_V_MEMBx10:
-                case MultiClampInterop.SignalIdentifier.AXMCD_OUT_PRI_IC_GLDR_V_MEMBx100:
+                case MultiClampInterop.SignalIdentifier700B.AXMCD_OUT_PRI_IC_GLDR_V_MEMBx10:
+                case MultiClampInterop.SignalIdentifier700B.AXMCD_OUT_PRI_IC_GLDR_V_MEMBx100:
                     mode = MultiClampInterop.OperatingMode.IClamp;
                     break;
                 default:
@@ -119,7 +120,8 @@ namespace Symphony.ExternalDevices
 
             var data = new MultiClampInterop.MulticlampData()
                            {
-                               ScaledOutputSignal = signalIdentifier,
+                               HardwareType = MultiClampInterop.HardwareType.MCTG_HW_TYPE_MC700B,
+                               ScaledOutputSignal700B = signalIdentifier,
                                ScaleFactorUnits = scaleFactorUnits,
                                OperatingMode = mode
                            };
@@ -234,10 +236,11 @@ namespace Symphony.ExternalDevices
         {
             var data = new MultiClampInterop.MulticlampData()
                            {
+                               HardwareType = MultiClampInterop.HardwareType.MCTG_HW_TYPE_MC700B,
                                OperatingMode = operatingMode,
                                ScaleFactor = 2.5,
                                ScaleFactorUnits = scaleFactorUnits,
-                               ScaledOutputSignal = MultiClampInterop.SignalIdentifier.AXMCD_OUT_SEC_VC_GLDR_I_MEMB,
+                               ScaledOutputSignal700B = MultiClampInterop.SignalIdentifier700B.AXMCD_OUT_SEC_VC_GLDR_I_MEMB,
                                Alpha = alpha
                            };
 
@@ -296,10 +299,11 @@ namespace Symphony.ExternalDevices
         {
             var data = new MultiClampInterop.MulticlampData()
                            {
+                               HardwareType = MultiClampInterop.HardwareType.MCTG_HW_TYPE_MC700B,
                                OperatingMode = operatingMode,
                                ScaleFactor = 2.5,
                                ScaleFactorUnits = scaleFactorUnits,
-                               ScaledOutputSignal = MultiClampInterop.SignalIdentifier.AXMCD_OUT_PRI_IC_GLDR_V_MEMBx10,
+                               ScaledOutputSignal700B = MultiClampInterop.SignalIdentifier700B.AXMCD_OUT_PRI_IC_GLDR_V_MEMBx10,
                                Alpha = alpha
                            };
 
@@ -584,7 +588,7 @@ namespace Symphony.ExternalDevices
             var mcd = new MultiClampDevice(mc, c, UNUSED_BACKGROUND_DICTIONARY);
             mcd.BindStream(new DAQInputStream(UNUSED_NAME));
 
-            mc.FireParametersChanged(DateTimeOffset.Now.Subtract(TimeSpan.FromHours(1)), new MultiClampInterop.MulticlampData());
+            mc.FireParametersChanged(DateTimeOffset.Now.Subtract(TimeSpan.FromHours(1)), new MultiClampInterop.MulticlampData() { HardwareType = MultiClampInterop.HardwareType.MCTG_HW_TYPE_MC700B });
 
 
             Assert.Throws<MultiClampDeviceException>(() => mcd.ConvertInput(new Measurement(0, "V"), DateTimeOffset.Now));
@@ -935,6 +939,7 @@ namespace Symphony.ExternalDevices
         {
             SerialNumber = 0;
             Channel = 0;
+            HardwareType = MultiClampInterop.HardwareType.MCTG_HW_TYPE_MC700B;
         }
 
         /// <summary>
@@ -948,8 +953,11 @@ namespace Symphony.ExternalDevices
         public event EventHandler<MultiClampParametersChangedArgs> ParametersChanged;
 
         public uint SerialNumber { get; set; }
-
+        public uint COMPort { get; private set; }
+        public uint DeviceNumber { get; private set; }
         public uint Channel { get; set; }
+        public MultiClampInterop.HardwareType HardwareType { get; private set; }
+
         public void RequestTelegraphValue()
         {
             // pass
