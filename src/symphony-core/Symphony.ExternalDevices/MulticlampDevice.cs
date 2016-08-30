@@ -444,6 +444,7 @@ namespace Symphony.ExternalDevices
                 switch (deviceParams.ScaledOutputSignal700A)
                 {
                     case MultiClampInterop.SignalIdentifier700A.MCTG_OUT_MUX_I_CMD_SUMMED:
+                    case MultiClampInterop.SignalIdentifier700A.MCTG_OUT_MUX_V_CMD_SUMMED:
                         CheckScaleFactorUnits(deviceParams, new[]
                             {
                                 MultiClampInterop.ScaleFactorUnits.V_A,
@@ -453,9 +454,10 @@ namespace Symphony.ExternalDevices
                                 MultiClampInterop.ScaleFactorUnits.V_pA
                             });
                         break;
+                    case MultiClampInterop.SignalIdentifier700A.MCTG_OUT_MUX_I_CMD_EXT:
+                    case MultiClampInterop.SignalIdentifier700A.MCTG_OUT_MUX_V_CMD_EXT:
                     case MultiClampInterop.SignalIdentifier700A.MCTG_OUT_MUX_V_MEMBRANE:
                     case MultiClampInterop.SignalIdentifier700A.MCTG_OUT_MUX_V_MEMBRANEx100:
-                    case MultiClampInterop.SignalIdentifier700A.MCTG_OUT_MUX_I_CMD_EXT:
                         CheckScaleFactorUnits(deviceParams, new[]
                             {
                                 MultiClampInterop.ScaleFactorUnits.V_mV,
@@ -535,7 +537,7 @@ namespace Symphony.ExternalDevices
             {
                 switch (deviceParams.ScaledOutputSignal700A)
                 {
-                    case MultiClampInterop.SignalIdentifier700A.MCTG_OUT_MUX_I_MEMBRANE:
+                    case MultiClampInterop.SignalIdentifier700A.MCTG_OUT_MUX_V_CMD_SUMMED:
                         CheckScaleFactorUnits(deviceParams, new[] {
                             MultiClampInterop.ScaleFactorUnits.V_A,
                             MultiClampInterop.ScaleFactorUnits.V_mA,
@@ -544,8 +546,10 @@ namespace Symphony.ExternalDevices
                             MultiClampInterop.ScaleFactorUnits.V_pA
                         });
                         break;
-                    case MultiClampInterop.SignalIdentifier700A.MCTG_OUT_MUX_V_CMD_SUMMED:
+                    case MultiClampInterop.SignalIdentifier700A.MCTG_OUT_MUX_I_CMD_SUMMED:
+                    case MultiClampInterop.SignalIdentifier700A.MCTG_OUT_MUX_I_CMD_EXT:
                     case MultiClampInterop.SignalIdentifier700A.MCTG_OUT_MUX_V_CMD_EXT:
+                    case MultiClampInterop.SignalIdentifier700A.MCTG_OUT_MUX_V_MEMBRANE:
                         CheckScaleFactorUnits(deviceParams, new[] {
                             MultiClampInterop.ScaleFactorUnits.V_mV,
                             MultiClampInterop.ScaleFactorUnits.V_uV,

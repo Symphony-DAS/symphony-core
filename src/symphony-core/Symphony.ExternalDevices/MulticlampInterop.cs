@@ -71,18 +71,18 @@ namespace Symphony.ExternalDevices
             /// <summary>
             ///  UINT; must be set to MCTG_API_VERSION
             /// </summary>
-            public Int32 uVersion;
+            public UInt32 uVersion;
 
             /// <summary>
             /// UINT; must be set to sizeof( MC_TELEGRAPH_DATA ) 
             // uVersion &lt;= 6 was 128 bytes, expanded size for uVersion > 6 
             /// </summary>
-            public Int32 uStructSize;
+            public UInt32 uStructSize;
 
             /// <summary>
             /// UINT; ( one-based  counting ) 1 -> 8 
             /// </summary>
-            public Int32 uComPortID;
+            public UInt32 uComPortID;
 
             /// <summary>
             /// UINT; ( zero-based counting ) 0 -> 9 A.K.A. "Device Number"

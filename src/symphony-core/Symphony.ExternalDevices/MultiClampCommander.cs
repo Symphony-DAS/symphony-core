@@ -226,13 +226,22 @@ namespace Symphony.ExternalDevices
                     return;
 
                 var mtd = (MultiClampInterop.MC_TELEGRAPH_DATA)Marshal.PtrToStructure(cds.lpData, typeof(MultiClampInterop.MC_TELEGRAPH_DATA));
-                if (mtd.uChannelID == Channel)
-                {
-                    var md = new MultiClampInterop.MulticlampData(mtd);
+                if (mtd.uChannelID != Channel) 
+                    return;
 
-                    log.Debug("WM_COPYDATA message received from MCCommander");
-                    OnParametersChanged(md);
+                // For some reason the hardware type can come through corrupted. The rest of the structure is intact however.
+                if (mtd.uHardwareType != (uint)MultiClampInterop.HardwareType.MCTG_HW_TYPE_MC700A && mtd.uHardwareType != (uint)MultiClampInterop.HardwareType.MCTG_HW_TYPE_MC700B)
+                {
+                    log.Debug("Unknown hardware type in received message. Using device hardware type instead.");
+                    mtd.uHardwareType = (uint)HardwareType;
                 }
+                if (mtd.uHardwareType != (uint)HardwareType)
+                    return;
+
+                var md = new MultiClampInterop.MulticlampData(mtd);
+
+                log.Debug("WM_COPYDATA message received from MCCommander");
+                OnParametersChanged(md);
             }
             catch (ArgumentOutOfRangeException)
             {
