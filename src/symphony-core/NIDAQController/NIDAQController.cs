@@ -295,7 +295,7 @@ namespace NI
             {
                 s.Reset();
                 var outputSamples = new List<double>();
-                while (TimeSpanExtensions.FromSamples((uint)outputSamples.Count(), s.SampleRate) < ProcessInterval) // && s.HasMoreData
+                while (TimeSpanExtensions.FromSamples((uint)outputSamples.Count(), s.SampleRate).Ticks < ProcessInterval.Ticks * 2) // && s.HasMoreData
                 {
                     var nextOutputDataForStream = NextOutputDataForStream(s);
                     var nextSamples = nextOutputDataForStream.DataWithUnits(s.DAQUnits).Data.

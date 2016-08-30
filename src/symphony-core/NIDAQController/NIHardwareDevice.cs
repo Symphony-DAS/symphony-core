@@ -349,21 +349,25 @@ namespace NI
             {
                 tasks.CreateAITask(chanNames[PhysicalChannelTypes.AI], MinAIVoltage, MaxAIVoltage);
                 tasks.AIStream.Buffer.InputBufferSize = bufferSizePerChannel;
+                tasks.AIStream.ReadOverwriteMode = ReadOverwriteMode.DoNotOverwriteUnreadSamples;
             }
             if (chanNames.ContainsKey(PhysicalChannelTypes.AO))
             {
                 tasks.CreateAOTask(chanNames[PhysicalChannelTypes.AO], MinAOVoltage, MaxAOVoltage);
                 tasks.AOStream.Buffer.OutputBufferSize = bufferSizePerChannel;
+                tasks.AOStream.WriteRegenerationMode = WriteRegenerationMode.DoNotAllowRegeneration;
             }
             if (chanNames.ContainsKey(PhysicalChannelTypes.DIPort))
             {
                 tasks.CreateDITask(chanNames[PhysicalChannelTypes.DIPort]);
                 tasks.DIStream.Buffer.InputBufferSize = bufferSizePerChannel;
+                tasks.DIStream.ReadOverwriteMode = ReadOverwriteMode.DoNotOverwriteUnreadSamples;
             }
             if (chanNames.ContainsKey(PhysicalChannelTypes.DOPort))
             {
                 tasks.CreateDOTask(chanNames[PhysicalChannelTypes.DOPort]);
                 tasks.DOStream.Buffer.OutputBufferSize = bufferSizePerChannel;
+                tasks.DOStream.WriteRegenerationMode = WriteRegenerationMode.DoNotAllowRegeneration;
             }
 
             // Setup master and slave timing
