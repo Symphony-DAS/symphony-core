@@ -20,6 +20,7 @@ namespace Symphony.Core
     public class H5EpochPersistor : IEpochPersistor, IDisposable
     {
         private const string VersionKey = "version";
+        private const string SymphonyVersionKey = "symphonyVersion";
         private const string CompressionKey = "compression";
         private const uint PersistenceVersion = 2;
 
@@ -49,6 +50,7 @@ namespace Symphony.Core
             using (var file = new H5File(filename))
             {
                 file.Attributes[VersionKey] = PersistenceVersion;
+                file.Attributes[SymphonyVersionKey] = SymphonyFramework.VersionString;
                 file.Attributes[CompressionKey] = compression;
 
                 H5Map.InsertTypes(file);
