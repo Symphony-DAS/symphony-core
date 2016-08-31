@@ -903,7 +903,10 @@ namespace Symphony.ExternalDevices
             get
             {
                 if (!HasDeviceInputParameters)
-                    throw new MultiClampDeviceException("No current MultiClamp input parameters. Make sure MultiClamp Commander is open or try toggling the mode.");
+                {
+                    string type = Commander.HardwareType == MultiClampInterop.HardwareType.MCTG_HW_TYPE_MC700A ? "700A" : "700B";
+                    throw new MultiClampDeviceException("No current MultiClamp input parameters. Make sure MultiClamp " + type + " Commander is open or try toggling the mode.");
+                }
 
                 return MostRecentDeviceParameterPreceedingDate(InputParameters, Clock.Now);
             }
@@ -934,7 +937,10 @@ namespace Symphony.ExternalDevices
             get
             {
                 if (!HasDeviceOutputParameters)
-                    throw new MultiClampDeviceException("No current MultiClamp output parameters. Make sure MultiClamp Commander is open or try toggling the mode.");
+                {
+                    string type = Commander.HardwareType == MultiClampInterop.HardwareType.MCTG_HW_TYPE_MC700A ? "700A" : "700B";
+                    throw new MultiClampDeviceException("No current MultiClamp output parameters. Make sure MultiClamp " + type + " Commander is open or try toggling the mode.");
+                }
 
                 return MostRecentDeviceParameterPreceedingDate(OutputParameters, Clock.Now);
             }
