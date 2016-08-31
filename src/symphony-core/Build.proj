@@ -14,6 +14,9 @@
     </RegexTransform>
   </ItemGroup>
 
+  <Target Name="Go" DependsOnTargets="Clean; UpdateAssemblyVersion; Build">
+  </Target>
+
   <Target Name="Clean">
     <MSBuild Projects="$(SolutionRoot)\symphony-core.sln" Targets="Clean" />
   </Target>
