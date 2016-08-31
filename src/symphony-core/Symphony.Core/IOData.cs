@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics.Contracts;
 using System.IO;
@@ -73,10 +74,10 @@ namespace Symphony.Core
         public IDictionary<string, object> Configuration { get; private set; }
 
         public PipelineNodeConfiguration(string name,
-            IDictionary<string,object> config)
+            IEnumerable<KeyValuePair<string, object>> config)
         {
             Name = name;
-            Configuration = config;
+            Configuration = new ConcurrentDictionary<string, object>(config);
         }
 
         public override bool Equals(object obj)
@@ -89,10 +90,7 @@ namespace Symphony.Core
 
         public bool Equals(IPipelineNodeConfiguration other)
         {
-            // Protect against collection modification 
-            var c1 = new Dictionary<string, object>(Configuration);
-            var c2 = new Dictionary<string, object>(other.Configuration);
-            return string.Equals(Name, other.Name) && c1.Count == c2.Count && !c1.Except(c2).Any();
+            return string.Equals(Name, other.Name) && Configuration.Count == other.Configuration.Count && !Configuration.Except(other.Configuration).Any();
         }
 
         public override int GetHashCode()
@@ -124,7 +122,7 @@ namespace Symphony.Core
                 {
                     var span = configSpanList[j];
                     var nodes = span.Nodes.ToList();
-                    if (nodes.SequenceEqual(cNodes.ToList()))
+                    if (nodes.SequenceEqual(cNodes))
                     {
                         cTime += span.Time;
                     }
