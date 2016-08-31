@@ -588,7 +588,12 @@ namespace Symphony.ExternalDevices
             var mcd = new MultiClampDevice(mc, c, UNUSED_BACKGROUND_DICTIONARY);
             mcd.BindStream(new DAQInputStream(UNUSED_NAME));
 
-            mc.FireParametersChanged(DateTimeOffset.Now.Subtract(TimeSpan.FromHours(1)), new MultiClampInterop.MulticlampData() { HardwareType = MultiClampInterop.HardwareType.MCTG_HW_TYPE_MC700B });
+            mc.FireParametersChanged(DateTimeOffset.Now.Subtract(TimeSpan.FromHours(1)), 
+                new MultiClampInterop.MulticlampData()
+                    {
+                        HardwareType = MultiClampInterop.HardwareType.MCTG_HW_TYPE_MC700B,
+                        ScaledOutputSignal700B = MultiClampInterop.SignalIdentifier700B.AXMCD_OUT_PRI_VC_GLDR_I_MEMB,
+                    });
 
 
             Assert.Throws<MultiClampDeviceException>(() => mcd.ConvertInput(new Measurement(0, "V"), DateTimeOffset.Now));
