@@ -89,7 +89,7 @@ namespace Symphony.Core
 
         public bool Equals(IPipelineNodeConfiguration other)
         {
-            return string.Equals(Name, other.Name) && Configuration.Count == other.Configuration.Count && !Configuration.Except(other.Configuration).Any();
+            return string.Equals(Name, other.Name) && Configuration.Count == other.Configuration.Count && !Configuration.Except(other.Configuration).ToList().Any();
         }
 
         public override int GetHashCode()
