@@ -420,7 +420,7 @@ namespace NI
                         {
                             t.Stop();
                         }
-                        catch(DaqException x)
+                        catch(DaqException)
                         {
                             // pass
                         }
