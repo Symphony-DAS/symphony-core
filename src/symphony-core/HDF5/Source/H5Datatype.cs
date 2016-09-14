@@ -1,6 +1,12 @@
-﻿using HDF5DotNet;
+﻿using HDF.PInvoke;
 
-namespace HDF5
+#if HDF5_VER1_10
+using hid_t = System.Int64;
+#else
+using hid_t = System.Int32;
+#endif
+
+namespace HDF
 {
     public class H5Datatype : H5Object
     {
@@ -8,14 +14,14 @@ namespace HDF5
         {
         }
 
-        public H5Datatype(H5T.H5Type nativeTypeId) : base(null, null)
+        public H5Datatype(hid_t nativeTypeId) : base(null, null)
         {
             _nativeTypeId = nativeTypeId;
         }
 
-        private readonly H5T.H5Type _nativeTypeId;
+        private readonly hid_t _nativeTypeId;
 
-        internal H5DataTypeId ToNative()
+        internal hid_t ToNative()
         {
             return File != null ? H5T.open(File.Fid, Path) : H5T.copy(_nativeTypeId);
         }

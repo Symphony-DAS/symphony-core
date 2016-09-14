@@ -1,4 +1,4 @@
-﻿namespace HDF5
+﻿namespace HDF
 {
     public class H5Link : H5Object
     {

@@ -97,17 +97,10 @@
     <ErrorReport>prompt</ErrorReport>
     <Prefer32Bit>false</Prefer32Bit>
   </PropertyGroup>
-  <ItemGroup Condition=" '$(Platform)' == 'x86' ">
-    <Reference Include="HDF5DotNet, Version=1.8.9.0, Culture=neutral, processorArchitecture=x86">
-      <HintPath>$(ProjectDir)..\..\..\externals\HDF5DotNet\x86\HDF5DotNet.dll</HintPath>
-    </Reference>
-  </ItemGroup>
-  <ItemGroup Condition=" '$(Platform)' == 'x64' ">
-    <Reference Include="HDF5DotNet, Version=1.8.9.0, Culture=neutral, processorArchitecture=x64">
-      <HintPath>$(ProjectDir)..\..\..\externals\HDF5DotNet\x64\HDF5DotNet.dll</HintPath>
-    </Reference>
-  </ItemGroup>
   <ItemGroup>
+    <Reference Include="HDF.PInvoke, Version=1.10.0.0, Culture=neutral, PublicKeyToken=18793c1fcffe58a3, processorArchitecture=MSIL">
+      <HintPath>..\packages\HDF.PInvoke.1.10.0.4\lib\Net45\HDF.PInvoke.dll</HintPath>
+    </Reference>
     <Reference Include="log4net, Version=1.2.10.0, Culture=neutral, PublicKeyToken=1b44e1d426115821, processorArchitecture=MSIL">
       <SpecificVersion>False</SpecificVersion>
       <HintPath>..\packages\log4net.1.2.10\lib\2.0\log4net.dll</HintPath>
@@ -154,9 +147,9 @@
     </None>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\HDF5\HDF5.csproj">
-      <Project>{52BF0608-F91F-4AFD-A620-02A112E6A06D}</Project>
-      <Name>HDF5</Name>
+    <ProjectReference Include="..\HDF5\HDF.csproj">
+      <Project>{52bf0608-f91f-4afd-a620-02a112e6a06d}</Project>
+      <Name>HDF</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

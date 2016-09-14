@@ -1,6 +1,15 @@
-﻿using HDF5DotNet;
+﻿using System.Runtime.InteropServices;
+using HDF.PInvoke;
 
-namespace HDF5
+using hsize_t = System.UInt64;
+
+#if HDF5_VER1_10
+using hid_t = System.Int64;
+#else
+using hid_t = System.Int32;
+#endif
+
+namespace HDF
 {
     public class H5Dataset : H5Object
     {
@@ -16,23 +25,23 @@ namespace HDF5
             get { return _attributes ?? (_attributes = new H5AttributeManager(File, Path)); }
         }
 
-        public int NumberOfElements
+        public long NumberOfElements
         {
             get
             {
-                H5DataSetId did = null;
-                H5DataSpaceId sid = null;
+                hid_t did, sid;
+                did = sid = -1;
                 try
                 {
                     did = H5D.open(File.Fid, Path);
-                    sid = H5D.getSpace(did);
-                    return H5S.getSimpleExtentNPoints(sid);
+                    sid = H5D.get_space(did);
+                    return H5S.get_simple_extent_npoints(sid);
                 }
                 finally
                 {
-                    if (sid != null && sid.Id > 0)
+                    if (sid > 0)
                         H5S.close(sid);
-                    if (did != null && did.Id > 0)
+                    if (did > 0)
                         H5D.close(did);
                 }
             }
@@ -40,91 +49,96 @@ namespace HDF5
 
         public void SetData<T>(T[] data)
         {
-            H5DataSetId did = null;
-            H5DataTypeId tid = null;
+            hid_t did, tid;
+            did = tid = -1;
             try
             {
                 did = H5D.open(File.Fid, Path);
-                tid = H5D.getType(did);
-                H5D.write(did, tid, new H5Array<T>(data));
+                tid = H5D.get_type(did);
+
+                GCHandle pinnedData = GCHandle.Alloc(data, GCHandleType.Pinned);
+                H5D.write(did, tid, H5S.ALL, H5S.ALL, H5P.DEFAULT, pinnedData.AddrOfPinnedObject());
+                pinnedData.Free();
             }
             finally
             {
-                if (tid != null && tid.Id > 0)
+                if (tid > 0)
                     H5T.close(tid);
-                if (did != null && did.Id > 0)
+                if (did > 0)
                     H5D.close(did);
             }
         }
 
-        public void SetData<T>(T[] data, long[] start, long[] count)
+        public void SetData<T>(T[] data, ulong[] start, ulong[] count)
         {
-            H5DataSetId did = null;
-            H5DataSpaceId sid = null;
-            H5DataSpaceId mid = null;
-            H5DataTypeId tid = null;
+            hid_t did, sid, mid, tid;
+            did = sid = mid = tid = -1;
             try
             {
                 did = H5D.open(File.Fid, Path);
-                tid = H5D.getType(did);
-                sid = H5D.getSpace(did);
-                H5S.selectHyperslab(sid, H5S.SelectOperator.SET, start, count);
-                mid = H5S.create_simple(1, count);
-                H5D.write(did, tid, mid, sid, new H5PropertyListId(H5P.Template.DEFAULT), new H5Array<T>(data));
+                tid = H5D.get_type(did);
+                sid = H5D.get_space(did);
+                H5S.select_hyperslab(sid, H5S.seloper_t.SET, start, null, count, null); //H5S.SelectOperator.SET, start, count);
+                mid = H5S.create_simple(1, count, null);
+
+                GCHandle pinnedData = GCHandle.Alloc(data, GCHandleType.Pinned);
+                H5D.write(did, tid, mid, sid, H5P.DEFAULT, pinnedData.AddrOfPinnedObject());
+                pinnedData.Free();
             }
             finally
             {
-                if (tid != null && tid.Id > 0)
+                if (tid > 0)
                     H5T.close(tid);
-                if (mid != null && mid.Id > 0)
+                if (mid > 0)
                     H5S.close(mid);
-                if (sid != null && sid.Id > 0)
+                if (sid > 0)
                     H5S.close(sid);
-                if (did != null && did.Id > 0)
+                if (did > 0)
                     H5D.close(did);
             }
         }
 
         public T[] GetData<T>()
         {
-            H5DataSetId did = null;
-            H5DataTypeId tid = null;
-            H5DataSpaceId sid = null;
+            hid_t did, tid, sid;
+            did = tid = sid = -1;
             try
             {
                 did = H5D.open(File.Fid, Path);
-                tid = H5D.getType(did);
-                sid = H5D.getSpace(did);
-                int npoints = H5S.getSimpleExtentNPoints(sid);
+                tid = H5D.get_type(did);
+                sid = H5D.get_space(did);
+                long npoints = H5S.get_simple_extent_npoints(sid);
                 var data = new T[npoints];
                 if (npoints > 0)
                 {
-                    H5D.read(did, tid, new H5Array<T>(data));
+                    GCHandle pinnedData = GCHandle.Alloc(data, GCHandleType.Pinned);
+                    H5D.read(did, tid, H5S.ALL, H5S.ALL, H5P.DEFAULT, pinnedData.AddrOfPinnedObject());
+                    pinnedData.Free();
                 }
                 return data;
             }
             finally
             {
-                if (sid != null && sid.Id > 0)
+                if (sid > 0)
                     H5S.close(sid);
-                if (tid != null && tid.Id > 0)
+                if (tid > 0)
                     H5T.close(tid);
-                if (did != null && did.Id > 0)
+                if (did > 0)
                     H5D.close(did);
             }
         }
 
-        public void Extend(long[] newDims)
+        public void Extend(ulong[] newDims)
         {
-            H5DataSetId did = null;
+            hid_t did = -1;
             try
             {
                 did = H5D.open(File.Fid, Path);
-                H5D.setExtent(did, newDims);
+                H5D.set_extent(did, newDims);
             }
             finally
             {
-                if (did != null && did.Id > 0)
+                if (did > 0)
                     H5D.close(did);
             }
         }

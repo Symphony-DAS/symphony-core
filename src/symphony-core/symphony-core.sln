@@ -40,7 +40,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".nuget", ".nuget", "{23E9B8
 		.nuget\NuGet.targets = .nuget\NuGet.targets
 	EndProjectSection
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HDF5", "HDF5\HDF5.csproj", "{52BF0608-F91F-4AFD-A620-02A112E6A06D}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "HDF", "HDF5\HDF.csproj", "{52BF0608-F91F-4AFD-A620-02A112E6A06D}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NIDAQController", "NIDAQController\NIDAQController.csproj", "{B0651408-A3BE-42D0-A0D8-B07FD31C3D2C}"
 EndProject

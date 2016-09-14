@@ -1,111 +1,75 @@
 ﻿using System;
-using HDF5DotNet;
+using HDF.PInvoke;
 
-namespace HDF5
+#if HDF5_VER1_10
+using hid_t = System.Int64;
+#else
+using hid_t = System.Int32;
+#endif
+
+namespace HDF
 {
-    internal static class H5Open
-    {
-        static H5Open()
-        {
-            H5.Open();
-        }
-    }
-
-    // "Extensions" for H5O
-    internal static class H5Ox
-    {
-        public static H5ObjectWithAttributes open(H5FileId id, string path)
-        {
-            H5ObjectInfo oinfo = H5O.getInfoByName(id, path);
-            switch (oinfo.objectType)
-            {
-                case H5ObjectType.DATASET:
-                    return H5D.open(id, path);
-                case H5ObjectType.GROUP:
-                    return H5G.open(id, path);
-                default:
-                    throw new ArgumentException();
-            }
-        }
-
-        public static void close(H5ObjectWithAttributes oid)
-        {
-            if (oid is H5DataSetId)
-            {
-                H5D.close(oid as H5DataSetId);
-            }
-            else if (oid is H5GroupId)
-            {
-                H5G.close(oid as H5GroupId);
-            }
-            else
-            {
-                throw new ArgumentException();
-            }
-        }
-    }
-
     // "Extensions" for H5T
     internal static class H5Tx
     {
-        public static H5DataTypeId getNativeType(Type systemType)
+        public static hid_t getNativeType(Type systemType)
         {
             switch (Type.GetTypeCode(systemType))
             {
                 case TypeCode.Byte:
-                    return H5T.copy(H5T.H5Type.NATIVE_UCHAR);
+                    return H5T.copy(H5T.NATIVE_UCHAR);
                 case TypeCode.SByte:
-                    return H5T.copy(H5T.H5Type.NATIVE_SCHAR);
+                    return H5T.copy(H5T.NATIVE_SCHAR);
                 case TypeCode.Int16:
-                    return H5T.copy(H5T.H5Type.NATIVE_SHORT);
+                    return H5T.copy(H5T.NATIVE_SHORT);
                 case TypeCode.UInt16:
-                    return H5T.copy(H5T.H5Type.NATIVE_USHORT);
+                    return H5T.copy(H5T.NATIVE_USHORT);
                 case TypeCode.Int32:
-                    return H5T.copy(H5T.H5Type.NATIVE_INT);
+                    return H5T.copy(H5T.NATIVE_INT);
                 case TypeCode.UInt32:
-                    return H5T.copy(H5T.H5Type.NATIVE_UINT);
+                    return H5T.copy(H5T.NATIVE_UINT);
                 case TypeCode.Int64:
-                    return H5T.copy(H5T.H5Type.NATIVE_LLONG);
+                    return H5T.copy(H5T.NATIVE_LLONG);
                 case TypeCode.UInt64:
-                    return H5T.copy(H5T.H5Type.NATIVE_ULLONG);
+                    return H5T.copy(H5T.NATIVE_ULLONG);
                 case TypeCode.Char:
-                    return H5T.copy(H5T.H5Type.NATIVE_USHORT);
+                    return H5T.copy(H5T.NATIVE_USHORT);
                 case TypeCode.Single:
-                    return H5T.copy(H5T.H5Type.NATIVE_FLOAT);
+                    return H5T.copy(H5T.NATIVE_FLOAT);
                 case TypeCode.Double:
-                    return H5T.copy(H5T.H5Type.NATIVE_DOUBLE);
+                    return H5T.copy(H5T.NATIVE_DOUBLE);
                 case TypeCode.Boolean:
-                    return H5T.copy(H5T.H5Type.NATIVE_UCHAR);
+                    return H5T.copy(H5T.NATIVE_UCHAR);
                 default:
                     throw new NotSupportedException("Unsupported system type");
             }
         }
 
-        public static Type getSystemType(H5DataTypeId nativeType)
+        public static Type getSystemType(hid_t nativeType)
         {
-            if (H5T.equal(nativeType, new H5DataTypeId(H5T.H5Type.NATIVE_UCHAR)))
+            if (H5T.equal(nativeType, H5T.NATIVE_UCHAR) > 0)
                 return typeof(byte);
-            if (H5T.equal(nativeType, new H5DataTypeId(H5T.H5Type.NATIVE_SCHAR)))
+            if (H5T.equal(nativeType, H5T.NATIVE_SCHAR) > 0)
                 return typeof(sbyte);
-            if (H5T.equal(nativeType, new H5DataTypeId(H5T.H5Type.NATIVE_SHORT)))
+            if (H5T.equal(nativeType, H5T.NATIVE_SHORT) > 0)
                 return typeof(short);
-            if (H5T.equal(nativeType, new H5DataTypeId(H5T.H5Type.NATIVE_USHORT)))
+            if (H5T.equal(nativeType, H5T.NATIVE_USHORT) > 0)
                 return typeof(ushort);
-            if (H5T.equal(nativeType, new H5DataTypeId(H5T.H5Type.NATIVE_INT)))
+            if (H5T.equal(nativeType, H5T.NATIVE_INT) > 0)
                 return typeof(int);
-            if (H5T.equal(nativeType, new H5DataTypeId(H5T.H5Type.NATIVE_UINT)))
+            if (H5T.equal(nativeType, H5T.NATIVE_UINT) > 0)
                 return typeof(uint);
-            if (H5T.equal(nativeType, new H5DataTypeId(H5T.H5Type.NATIVE_LLONG)))
+            if (H5T.equal(nativeType, H5T.NATIVE_LLONG) > 0)
                 return typeof(long);
-            if (H5T.equal(nativeType, new H5DataTypeId(H5T.H5Type.NATIVE_ULLONG)))
+            if (H5T.equal(nativeType, H5T.NATIVE_ULLONG) > 0)
                 return typeof(ulong);
-            if (H5T.equal(nativeType, new H5DataTypeId(H5T.H5Type.NATIVE_USHORT)))
+            if (H5T.equal(nativeType, H5T.NATIVE_USHORT) > 0)
                 return typeof(char);
-            if (H5T.equal(nativeType, new H5DataTypeId(H5T.H5Type.NATIVE_FLOAT)))
+            if (H5T.equal(nativeType, H5T.NATIVE_FLOAT) > 0)
                 return typeof(float);
-            if (H5T.equal(nativeType, new H5DataTypeId(H5T.H5Type.NATIVE_DOUBLE)))
+            if (H5T.equal(nativeType, H5T.NATIVE_DOUBLE) > 0)
                 return typeof(double);
-            if (H5T.equal(nativeType, new H5DataTypeId(H5T.H5Type.NATIVE_UCHAR)))
+            if (H5T.equal(nativeType, H5T.NATIVE_UCHAR) > 0)
                 return typeof(bool);
             throw new NotSupportedException("Unsupported native type");
         }

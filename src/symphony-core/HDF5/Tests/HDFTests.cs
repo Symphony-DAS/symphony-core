@@ -4,13 +4,14 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
-using HDF5DotNet;
+using HDF;
+using HDF.PInvoke;
 using NUnit.Framework;
 
-namespace HDF5.Tests
+namespace HDF.Tests
 {
     [TestFixture]
-    public class HDF5Tests
+    public class HDFTests
     {
         [StructLayout(LayoutKind.Explicit)]
         unsafe struct Point
@@ -169,8 +170,8 @@ namespace HDF5.Tests
                                                new[] {"x", "y"},
                                                new[]
                                                    {
-                                                       new H5Datatype(H5T.H5Type.NATIVE_DOUBLE),
-                                                       new H5Datatype(H5T.H5Type.NATIVE_DOUBLE)
+                                                       new H5Datatype(H5T.NATIVE_DOUBLE),
+                                                       new H5Datatype(H5T.NATIVE_DOUBLE)
                                                    });
 
                 var dataset = file.AddDataset("points", type, points);
@@ -203,13 +204,13 @@ namespace HDF5.Tests
 
             using (var file = new H5File(TEST_FILE))
             {
-                var stringType = file.CreateDatatype("STRING", H5T.H5TClass.STRING, 40);
+                var stringType = file.CreateDatatype("STRING", H5T.class_t.STRING, 40);
                 var pointType = file.CreateDatatype("POINT",
                                                     new[] {"x", "y"},
                                                     new[]
                                                         {
-                                                            new H5Datatype(H5T.H5Type.NATIVE_DOUBLE),
-                                                            new H5Datatype(H5T.H5Type.NATIVE_DOUBLE)
+                                                            new H5Datatype(H5T.NATIVE_DOUBLE),
+                                                            new H5Datatype(H5T.NATIVE_DOUBLE)
                                                         });
 
                 var type = file.CreateDatatype("NAMED_POINT",
@@ -231,11 +232,11 @@ namespace HDF5.Tests
                                                new[] { "x", "y" },
                                                new[]
                                                    {
-                                                       new H5Datatype(H5T.H5Type.NATIVE_DOUBLE),
-                                                       new H5Datatype(H5T.H5Type.NATIVE_DOUBLE)
+                                                       new H5Datatype(H5T.NATIVE_DOUBLE),
+                                                       new H5Datatype(H5T.NATIVE_DOUBLE)
                                                    });
 
-                var dataset = file.AddDataset("points", type, new long[] {0}, new long[] {-1}, new long[] {64});
+                var dataset = file.AddDataset("points", type, new ulong[] {0}, new[] {H5S.UNLIMITED}, new ulong[] {64});
 
                 var points = new[] {new Point {x = 1, y = 2}};
 
@@ -243,7 +244,7 @@ namespace HDF5.Tests
                 dataset.SetData(points);
                 Assert.AreEqual(0, dataset.GetData<Point>().Count());
 
-                dataset.Extend(new long[] {1});
+                dataset.Extend(new ulong[] {1});
                 dataset.SetData(points);
                 Assert.AreEqual(1, dataset.GetData<Point>().Count());
                 Assert.AreEqual(points, dataset.GetData<Point>());

@@ -1,9 +1,18 @@
 ﻿using System;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
-using HDF5DotNet;
+using HDF.PInvoke;
 
-namespace HDF5
+using hsize_t = System.UInt64;
+
+#if HDF5_VER1_10
+using hid_t = System.Int64;
+#else
+using hid_t = System.Int32;
+#endif
+
+namespace HDF
 {
     public class H5Attribute : H5Object
     {
@@ -65,51 +74,59 @@ namespace HDF5
 
         public object GetValue()
         {
-            H5ObjectWithAttributes oid = null;
-            H5DataTypeId tmpid = null;
-            H5DataTypeId tid = null;
-            H5DataSpaceId sid = null;
-            H5AttributeId aid = null;
+            hid_t oid, tmpid, tid, sid, aid;
+            oid = tmpid = tid = sid = aid = -1;
             try
             {
-                oid = H5Ox.open(File.Fid, Path);
+                oid = H5O.open(File.Fid, Path);
                 aid = H5A.open(oid, _name);
-                sid = H5A.getSpace(aid);
+                sid = H5A.get_space(aid);
 
-                tmpid = H5A.getType(aid);
-                tid = H5T.getNativeType(tmpid, H5T.Direction.DEFAULT);
+                tmpid = H5A.get_type(aid);
+                tid = H5T.get_native_type(tmpid, H5T.direction_t.DEFAULT);
 
                 object value;
-                if (H5T.getClass(tid) == H5T.H5TClass.STRING)
+                if (H5T.get_class(tid) == H5T.class_t.STRING)
                 {
-                    if (H5S.get_simple_extent_type(sid) == H5S.H5SClass.NULLSPACE)
+                    if (H5S.get_simple_extent_type(sid) == H5S.class_t.NULL)
                     {
                         value = string.Empty;
                     }
                     else
                     {
-                        var buffer = new byte[H5T.getSize(tid)];
-                        H5A.read(aid, tid, new H5Array<byte>(buffer));
-                        value = Encoding.ASCII.GetString(buffer);
+                        var buffer = new byte[H5T.get_size(tid).ToInt32()];
+
+                        GCHandle pinnedBuffer = GCHandle.Alloc(buffer, GCHandleType.Pinned);
+                        H5A.read(aid, tid, pinnedBuffer.AddrOfPinnedObject());
+                        pinnedBuffer.Free();
+
+                        value = Encoding.ASCII.GetString(buffer).TrimEnd((char) 0);
                     }
                 }
                 else
                 {
                     Type elementType = H5Tx.getSystemType(tid);
 
-                    long[] dims = H5S.getSimpleExtentDims(sid);
+                    int ndims = H5S.get_simple_extent_ndims(sid);
+                    var dims = new hsize_t[ndims];
 
-                    Array data = Array.CreateInstance(elementType, dims.Any() ? dims : new long[] { 1 });
+                    H5S.get_simple_extent_dims(sid, dims, null);
+
+                    var ldims = new long[ndims];
+                    for (int i = 0; i < ndims; i++)
+                    {
+                        if (dims[i] > Int32.MaxValue)
+                            throw new NotSupportedException("Attribute dimension is too large");
+                        ldims[i] = (long) dims[i];
+                    }
+
+                    Array data = Array.CreateInstance(elementType, dims.Any() ? ldims : new long[] { 1 });
 
                     if (data.Length > 0)
                     {
-                        //H5Array<type> buffer = new H5Array<type>(data);
-                        var bufferType = typeof(H5Array<>).MakeGenericType(new[] { elementType });
-                        var buffer = Activator.CreateInstance(bufferType, new object[] { data });
-
-                        //H5A.read(attributeId, typeId, buffer);
-                        var methodInfo = typeof(H5A).GetMethod("read").MakeGenericMethod(new[] { elementType });
-                        methodInfo.Invoke(null, new[] { aid, tid, buffer });
+                        GCHandle pinnedData = GCHandle.Alloc(data, GCHandleType.Pinned);
+                        H5A.read(aid, tid, pinnedData.AddrOfPinnedObject());
+                        pinnedData.Free();
                     }
 
                     value = dims.Any() ? data : data.GetValue(0);
@@ -119,16 +136,16 @@ namespace HDF5
             }
             finally
             {
-                if (aid != null && aid.Id > 0)
+                if (aid > 0)
                     H5A.close(aid);
-                if (sid != null && sid.Id > 0)
+                if (sid > 0)
                     H5S.close(sid);
-                if (tmpid != null && tmpid.Id > 0)
+                if (tmpid > 0)
                     H5T.close(tmpid);
-                if (tid != null && tid.Id > 0)
+                if (tid > 0)
                     H5T.close(tid);
-                if (oid != null && oid.Id > 0)
-                    H5Ox.close(oid);
+                if (oid > 0)
+                    H5O.close(oid);
             }
         }
     }

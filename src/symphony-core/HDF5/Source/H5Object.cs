@@ -1,7 +1,13 @@
 ﻿using System.Linq;
-using HDF5DotNet;
+using HDF.PInvoke;
 
-namespace HDF5
+#if HDF5_VER1_10
+using hid_t = System.Int64;
+#else
+using hid_t = System.Int32;
+#endif
+
+namespace HDF
 {
     public abstract class H5Object
     {
@@ -21,7 +27,7 @@ namespace HDF5
 
         public void Flush()
         {
-            H5F.flush(File.Fid, H5F.Scope.LOCAL);
+            H5F.flush(File.Fid, H5F.scope_t.LOCAL);
         }
 
         public override bool Equals(object obj)

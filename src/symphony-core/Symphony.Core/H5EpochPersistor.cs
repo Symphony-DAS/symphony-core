@@ -5,8 +5,8 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
-using HDF5;
-using HDF5DotNet;
+using HDF.PInvoke;
+using HDF;
 using log4net;
 
 namespace Symphony.Core
@@ -394,7 +394,7 @@ namespace Symphony.Core
             get
             {
                 return Group.Attributes.ContainsKey(KeywordsKey)
-                           ? ((string) Group.Attributes[KeywordsKey]).Split(new[] {','})
+                           ? ((string) Group.Attributes[KeywordsKey]).Split(',')
                            : Enumerable.Empty<string>();
             }
         }
@@ -501,15 +501,16 @@ namespace Symphony.Core
 
             if (_notesDataset == null)
             {
-                _notesDataset = Group.AddDataset(NotesDatasetName, H5Map.GetNoteType(Group.File), new[] {0L}, new[] {-1L}, new[] {64L});
+                _notesDataset = Group.AddDataset(NotesDatasetName, H5Map.GetNoteType(Group.File), new[] {0UL},
+                    new[] {H5S.UNLIMITED}, new[] {64UL});
             }
 
-            long n = _notesDataset.NumberOfElements;
+            ulong n = (ulong) _notesDataset.NumberOfElements;
             _notesDataset.Extend(new[] {n + 1});
             var nt = H5Map.Convert(note);
             try
             {
-                _notesDataset.SetData(new[] {nt}, new[] {n}, new[] {1L});
+                _notesDataset.SetData(new[] {nt}, new[] {n}, new[] {1UL});
             }
             finally
             {
@@ -1554,7 +1555,7 @@ namespace Symphony.Core
                 group.Attributes[UTIKey] = uti;
                 group.Attributes[NameKey] = name;
 
-                group.AddDataset(DataDatasetName, new H5Datatype(H5T.H5Type.NATIVE_UCHAR), data);
+                group.AddDataset(DataDatasetName, new H5Datatype(H5T.NATIVE_UCHAR), data);
 
                 return factory.Create<H5PersistentResource>(group);
             }
@@ -1701,21 +1702,21 @@ namespace Symphony.Core
                                                          new[] {"ticks", "offsetHours"},
                                                          new[]
                                                              {
-                                                                 new H5Datatype(H5T.H5Type.NATIVE_LLONG),
-                                                                 new H5Datatype(H5T.H5Type.NATIVE_DOUBLE)
+                                                                 new H5Datatype(H5T.NATIVE_LLONG),
+                                                                 new H5Datatype(H5T.NATIVE_DOUBLE)
                                                              });
 
-            var noteTextType = file.CreateDatatype(NoteTextTypeName, H5T.H5TClass.STRING, -1);
+            var noteTextType = file.CreateDatatype(NoteTextTypeName, H5T.class_t.STRING, -1);
 
             file.CreateDatatype(NoteTypeName,
                                 new[] {"time", "text"},
                                 new[] {dateTimeOffsetType, noteTextType});
 
-            var unitsType = file.CreateDatatype(UnitsTypeName, H5T.H5TClass.STRING, UnitsStringLength);
+            var unitsType = file.CreateDatatype(UnitsTypeName, H5T.class_t.STRING, UnitsStringLength);
 
             file.CreateDatatype(MeasurementTypeName,
                                 new[] {"quantity", "units"},
-                                new[] {new H5Datatype(H5T.H5Type.NATIVE_DOUBLE), unitsType});
+                                new[] {new H5Datatype(H5T.NATIVE_DOUBLE), unitsType});
         }
 
         public static H5Datatype GetNoteType(H5File file)

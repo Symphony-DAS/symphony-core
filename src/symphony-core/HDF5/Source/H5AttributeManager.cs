@@ -2,10 +2,20 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
-using HDF5DotNet;
+using HDF.PInvoke;
 
-namespace HDF5
+using size_t = System.IntPtr;
+using ssize_t = System.IntPtr;
+
+#if HDF5_VER1_10
+using hid_t = System.Int64;
+#else
+using hid_t = System.Int32;
+#endif
+
+namespace HDF
 {
     public class H5AttributeManager : H5Object, IEnumerable<H5Attribute>
     {
@@ -41,17 +51,17 @@ namespace HDF5
             if (!ContainsKey(key))
                 return false;
 
-            H5ObjectWithAttributes oid = null;
+            long oid = -1;
             try
             {
-                oid = H5Ox.open(File.Fid, Path);
-                H5A.Delete(oid, key);
+                oid = H5O.open(File.Fid, Path);
+                H5A.delete(oid, key);
                 return !ContainsKey(key);
             }
             finally
             {
-                if (oid != null && oid.Id > 0)
-                    H5Ox.close(oid);
+                if (oid > 0)
+                    H5O.close(oid);
             }
         }
 
@@ -62,51 +72,59 @@ namespace HDF5
 
         private IEnumerable<H5Attribute> GetAttributes()
         {
-            H5ObjectWithAttributes oid = null;
+            hid_t oid = -1;
             try
             {
-                oid = H5Ox.open(File.Fid, Path);
-                H5ObjectInfo oinfo = H5O.getInfoByName(File.Fid, Path);
-                int n = (int)oinfo.nAttributes;
-                for (int i = 0; i < n; i++)
+                oid = H5O.open(File.Fid, Path);
+                var oinfo = new H5O.info_t();
+                H5O.get_info_by_name(File.Fid, Path, ref oinfo);
+                ulong n = oinfo.num_attrs;
+                for (ulong i = 0; i < n; i++)
                 {
-                    string name = H5A.getNameByIndex(File.Fid, Path, H5IndexType.NAME, H5IterationOrder.INCREASING, i);
-                    yield return new H5Attribute(File, Path, name);
+                    ssize_t size = H5A.get_name_by_idx(File.Fid, Path, H5.index_t.NAME, H5.iter_order_t.INC, i, null, IntPtr.Zero);
+
+                    var buffer = new byte[size.ToInt64() + 1];
+                    var bufferSize = new IntPtr(size.ToInt64() + 1);
+                    
+                    H5A.get_name_by_idx(File.Fid, Encoding.ASCII.GetBytes(Path), H5.index_t.NAME, H5.iter_order_t.INC, i, buffer, bufferSize);
+
+                    yield return new H5Attribute(File, Path, Encoding.ASCII.GetString(buffer).TrimEnd((char) 0));
                 }
             }
             finally
             {
-                if (oid != null && oid.Id > 0)
-                    H5Ox.close(oid);
+                if (oid > 0)
+                    H5O.close(oid);
             }
         }
 
         private H5Attribute CreateAttribute(string name, object value)
         {
-            H5ObjectWithAttributes oid = null;
-            H5DataTypeId tid = null;
-            H5DataSpaceId sid = null;
-            H5AttributeId aid = null;
+            hid_t oid, tid, sid, aid;
+            oid = tid = sid = aid = -1;
             try
             {
-                oid = H5Ox.open(File.Fid, Path);
+                oid = H5O.open(File.Fid, Path);
 
                 if (value is string || value is char)
                 {
                     string svalue = value.ToString();
                     if (svalue.Length == 0)
                     {
-                        tid = H5T.copy(H5T.H5Type.C_S1);
-                        sid = H5S.create(H5S.H5SClass.NULLSPACE);
+                        tid = H5T.copy(H5T.C_S1);
+                        sid = H5S.create(H5S.class_t.NULL);
                         aid = H5A.create(oid, name, tid, sid);
                     }
                     else
                     {
-                        tid = H5T.copy(H5T.H5Type.C_S1);
-                        H5T.setSize(tid, svalue.Length);
-                        sid = H5S.create(H5S.H5SClass.SCALAR);
+                        tid = H5T.copy(H5T.C_S1);
+                        H5T.set_size(tid, new IntPtr(svalue.Length));
+                        sid = H5S.create(H5S.class_t.SCALAR);
                         aid = H5A.create(oid, name, tid, sid);
-                        H5A.write(aid, tid, new H5Array<byte>(Encoding.ASCII.GetBytes(svalue)));
+
+                        IntPtr valueArray = Marshal.StringToHGlobalAnsi(svalue);
+                        H5A.write(aid, tid, valueArray);
+                        Marshal.FreeHGlobal(valueArray);
                     }
                 }
                 else
@@ -119,17 +137,17 @@ namespace HDF5
                     if (valueType.IsArray)
                     {
                         int rank = ((Array)value).Rank;
-                        var dims = new long[rank];
+                        var dims = new ulong[rank];
                         for (int i = 0; i < rank; i++)
                         {
-                            dims[i] = ((Array)value).GetLength(i);
+                            dims[i] = (ulong) ((Array)value).GetLength(i);
                         }
-                        sid = H5S.create_simple(rank, dims);
+                        sid = H5S.create_simple(rank, dims, null);
                         data = (Array)value;
                     }
                     else
                     {
-                        sid = H5S.create(H5S.H5SClass.SCALAR);
+                        sid = H5S.create(H5S.class_t.SCALAR);
                         data = Array.CreateInstance(elementType, 1);
                         data.SetValue(value, 0);
                     }
@@ -138,13 +156,9 @@ namespace HDF5
 
                     if (!valueType.IsArray || ((Array) value).Length > 0)
                     {
-                        // Equivalent to: H5Array<elementType> buffer = new H5Array<elementType>(data);
-                        var bufferType = typeof(H5Array<>).MakeGenericType(new[] { elementType });
-                        var buffer = Activator.CreateInstance(bufferType, new object[] { data });
-
-                        // Equivalent to: H5A.write(attributeId, typeId, buffer);
-                        var methodInfo = typeof(H5A).GetMethod("write").MakeGenericMethod(new[] { elementType });
-                        methodInfo.Invoke(null, new[] { aid, tid, buffer });
+                        GCHandle pinnedData = GCHandle.Alloc(data, GCHandleType.Pinned);
+                        H5A.write(aid, tid, pinnedData.AddrOfPinnedObject());
+                        pinnedData.Free();
                     }
                 }
 
@@ -152,14 +166,14 @@ namespace HDF5
             }
             finally
             {
-                if (aid != null && aid.Id > 0)
+                if (aid > 0)
                     H5A.close(aid);
-                if (sid != null && sid.Id > 0)
+                if (sid > 0)
                     H5S.close(sid);
-                if (tid != null && tid.Id > 0)
+                if (tid > 0)
                     H5T.close(tid);
-                if (oid != null && oid.Id > 0)
-                    H5Ox.close(oid);
+                if (oid > 0)
+                    H5O.close(oid);
             }
         }
 

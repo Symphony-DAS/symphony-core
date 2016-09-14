@@ -1,7 +1,17 @@
-﻿using System.Collections.Generic;
-using HDF5DotNet;
+﻿using System;
+using System.Collections.Generic;
+using System.Text;
+using HDF.PInvoke;
 
-namespace HDF5
+using ssize_t = System.IntPtr;
+
+#if HDF5_VER1_10
+using hid_t = System.Int64;
+#else
+using hid_t = System.Int32;
+#endif
+
+namespace HDF
 {
     public class H5Group : H5Object
     {
@@ -29,7 +39,7 @@ namespace HDF5
 
         public IEnumerable<H5Dataset> Datasets { get { return GetObjects<H5Dataset>(); } } 
 
-        public H5Dataset AddDataset(string name, H5Datatype type, long[] dims, long[] maxDims = null, long[] chunks = null, uint compression = 0)
+        public H5Dataset AddDataset(string name, H5Datatype type, ulong[] dims, ulong[] maxDims = null, ulong[] chunks = null, uint compression = 0)
         {
             string path = Combine(Path, name);
             return File.CreateDataset(path, type, dims, maxDims, chunks, compression);
@@ -54,23 +64,33 @@ namespace HDF5
 
         private IEnumerable<T> GetObjects<T>() where T : H5Object
         {
-            H5GInfo ginfo = H5G.getInfoByName(File.Fid, Path);
-            int n = (int)ginfo.nLinks;
-            for (int i = 0; i < n; i++)
+            var ginfo = new H5G.info_t();
+            H5G.get_info_by_name(File.Fid, Path, ref ginfo);
+            ulong n = ginfo.nlinks;
+            for (ulong i = 0; i < n; i++)
             {
-                string name = H5L.getNameByIndex(File.Fid, Path, H5IndexType.NAME, H5IterationOrder.INCREASING, i);
+                ssize_t size = H5L.get_name_by_idx(File.Fid, Path, H5.index_t.NAME, H5.iter_order_t.INC, i, null, IntPtr.Zero);
+
+                var buffer = new byte[size.ToInt64() + 1];
+                var bufferSize = new IntPtr(size.ToInt64() + 1);
+
+                H5L.get_name_by_idx(File.Fid, Encoding.ASCII.GetBytes(Path), H5.index_t.NAME, H5.iter_order_t.INC, i, buffer, bufferSize);
+
+                string name = Encoding.ASCII.GetString(buffer).TrimEnd((char) 0);
                 string fullPath = Combine(Path, name);
-                H5ObjectInfo oinfo = H5O.getInfoByIndex(File.Fid, Path, H5IndexType.NAME, H5IterationOrder.INCREASING, i);
+
+                var oinfo = new H5O.info_t();
+                H5O.get_info_by_idx(File.Fid, Path, H5.index_t.NAME, H5.iter_order_t.INC, i, ref oinfo);
                 H5Object obj = null;
-                switch (oinfo.objectType)
+                switch (oinfo.type)
                 {
-                    case H5ObjectType.DATASET:
+                    case H5O.type_t.DATASET:
                         obj = new H5Dataset(File, fullPath);
                         break;
-                    case H5ObjectType.GROUP:
+                    case H5O.type_t.GROUP:
                         obj = new H5Group(File, fullPath);
                         break;
-                    case H5ObjectType.NAMED_DATATYPE:
+                    case H5O.type_t.NAMED_DATATYPE:
                         obj = new H5Datatype(File, fullPath);
                         break;
                 }
