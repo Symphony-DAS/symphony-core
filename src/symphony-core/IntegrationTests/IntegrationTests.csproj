@@ -118,10 +118,10 @@
   <Import Project="$(SolutionDir)\.nuget\nuget.targets" />
   <PropertyGroup>
     <PostBuildEvent>if $(Platform) == x64 (
-copy "$(SolutionDir)packages\HDF.PInvoke.1.10.0.4\lib\native\bin64\*.*" "$(TargetDir)"
+copy "$(SolutionDir)packages\HDF.PInvoke.1.8.17.8\lib\native\bin64\*.*" "$(TargetDir)"
 )
 if $(Platform) == x86 (
-copy "$(SolutionDir)packages\HDF.PInvoke.1.10.0.4\lib\native\bin32\*.*" "$(TargetDir)"
+copy "$(SolutionDir)packages\HDF.PInvoke.1.8.17.8\lib\native\bin32\*.*" "$(TargetDir)"
 )</PostBuildEvent>
   </PropertyGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

@@ -50,7 +50,7 @@ namespace HDF
             if (!ContainsKey(key))
                 return false;
 
-            long oid = -1;
+            hid_t oid = -1;
             try
             {
                 oid = H5O.open(File.Fid, Path);
