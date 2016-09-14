@@ -2,8 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Threading;
-using Symphony.Core;
 using log4net;
+using Symphony.Core;
 
 namespace Symphony.ExternalDevices
 {

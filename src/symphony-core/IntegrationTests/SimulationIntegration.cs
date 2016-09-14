@@ -4,9 +4,9 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using NUnit.Framework;
 using Symphony.Core;
 using Symphony.SimulationDAQController;
-using NUnit.Framework;
 
 namespace IntegrationTests
 {

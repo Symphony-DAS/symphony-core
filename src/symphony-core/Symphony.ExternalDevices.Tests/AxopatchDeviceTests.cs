@@ -1,13 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using Moq;
+using NUnit.Framework;
 using Symphony.Core;
 
 namespace Symphony.ExternalDevices
 {
-    using NUnit.Framework;
-
     [TestFixture]
     class Axopatch200BTests
     {

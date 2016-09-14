@@ -3,7 +3,6 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using HDF.PInvoke;
-
 using hsize_t = System.UInt64;
 
 #if HDF5_VER1_10

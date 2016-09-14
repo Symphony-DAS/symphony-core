@@ -5,12 +5,11 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using Heka;
+using NUnit.Framework;
 using Symphony.Core;
 
 namespace IntegrationTests
 {
-    using NUnit.Framework;
-
     [TestFixture]
     class HekaIntegration
     {

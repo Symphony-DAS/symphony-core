@@ -4,7 +4,6 @@ using System.Diagnostics.Contracts;
 using System.Linq;
 using System.Reflection;
 using log4net;
-using Symphony.Core;
 
 namespace Symphony.Core
 {

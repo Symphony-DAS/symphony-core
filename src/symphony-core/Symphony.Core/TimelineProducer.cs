@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-
-namespace Symphony.Core
+﻿namespace Symphony.Core
 {
     /// <summary>
     /// Interface for components that can generate TimeStampedEvents (and thus require a Clock)

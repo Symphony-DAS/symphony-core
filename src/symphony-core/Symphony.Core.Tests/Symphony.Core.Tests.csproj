@@ -163,8 +163,12 @@
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
-    <PostBuildEvent>
-    </PostBuildEvent>
+    <PostBuildEvent>if $(Platform) == x64 (
+copy "$(SolutionDir)packages\HDF.PInvoke.1.10.0.4\lib\native\bin64\*.*" "$(TargetDir)"
+)
+if $(Platform) == x86 (
+copy "$(SolutionDir)packages\HDF.PInvoke.1.10.0.4\lib\native\bin32\*.*" "$(TargetDir)"
+)</PostBuildEvent>
   </PropertyGroup>
   <Import Project="$(SolutionDir)\.nuget\nuget.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

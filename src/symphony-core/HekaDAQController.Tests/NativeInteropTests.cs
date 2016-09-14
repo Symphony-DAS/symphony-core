@@ -1,15 +1,11 @@
 ﻿using System;
-
+using System.Runtime.InteropServices;
 using Heka.NativeInterop;
-using Symphony.Core;
+using NUnit.Framework;
 
 namespace Heka
 {
-    using System.Runtime.InteropServices;
-    using System.Threading;
-    using NUnit.Framework;
     using HekkaDevice = System.IntPtr;
-    using System.Collections.Generic;
 
     [TestFixture]
     public class NativeInteropTests
@@ -71,7 +67,7 @@ namespace Heka
             {
                 //ITCMM.HWFunction hwf = new ITCMM.HWFunction();
 
-                err = ITCMM.ITC_InitDevice(device, IntPtr.Zero); // ref hwf);
+                err = ITCMM.ITC_InitDevice(device, HekkaDevice.Zero); // ref hwf);
 
                 ITCMM.ITCPublicConfig config = new ITCMM.ITCPublicConfig();
                 config.OutputEnable = 1;
@@ -140,7 +136,7 @@ namespace Heka
             {
                 //ITCMM.HWFunction hwf = new ITCMM.HWFunction();
 
-                err = ITCMM.ITC_InitDevice(device, IntPtr.Zero); //ref hwf);
+                err = ITCMM.ITC_InitDevice(device, HekkaDevice.Zero); //ref hwf);
 
                 ITCMM.ITCPublicConfig config = new ITCMM.ITCPublicConfig();
                 config.OutputEnable = 1;
@@ -255,7 +251,7 @@ namespace Heka
         [Timeout(20000)]
         public void RoundTripWithContinuousAcquisition()
         {
-            var io = new IOBridge(IntPtr.Zero, ITCMM.ITC18_NUMBEROFINPUTS, ITCMM.ITC18_NUMBEROFOUTPUTS);
+            var io = new IOBridge(HekkaDevice.Zero, ITCMM.ITC18_NUMBEROFINPUTS, ITCMM.ITC18_NUMBEROFOUTPUTS);
             const int nsamples = 5000;
             var output = new short[nsamples];
             for (int i = 0; i < nsamples; i++)

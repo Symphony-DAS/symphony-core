@@ -5,8 +5,8 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using System.Threading.Tasks;
 using Heka.NativeInterop;
-using Symphony.Core;
 using log4net;
+using Symphony.Core;
 
 namespace Heka
 {

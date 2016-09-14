@@ -1,14 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using Heka.NativeInterop;
+using Moq;
+using NUnit.Framework;
+using Symphony.Core;
 
 namespace Heka
 {
-    using Heka.NativeInterop;
-    using Moq;
-    using NUnit.Framework;
-    using Symphony.Core;
-
     [TestFixture]
     class HekaDAQStreamTests
     {

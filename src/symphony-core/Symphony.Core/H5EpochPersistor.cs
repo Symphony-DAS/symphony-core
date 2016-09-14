@@ -1,12 +1,11 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
-using HDF.PInvoke;
 using HDF;
+using HDF.PInvoke;
 using log4net;
 
 namespace Symphony.Core

@@ -1,10 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using NUnit.Framework;
 using NationalInstruments.DAQmx;
+using NUnit.Framework;
 using Symphony.Core;
 
 namespace NI

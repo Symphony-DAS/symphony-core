@@ -4,7 +4,6 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
-using HDF;
 using HDF.PInvoke;
 using NUnit.Framework;
 

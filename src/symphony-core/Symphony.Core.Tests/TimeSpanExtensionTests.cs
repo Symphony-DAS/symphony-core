@@ -1,10 +1,8 @@
 ﻿using System;
+using NUnit.Framework;
 
 namespace Symphony.Core
 {
-    using NUnit.Framework;
-    using Symphony.Core;
-
     [TestFixture]
     class TimeSpanExtensionTests
     {

@@ -3,11 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using NUnit.Framework;
 
 namespace Symphony.Core
 {
-    using NUnit.Framework;
-
     [TestFixture]
     public class ControllerTests
     {

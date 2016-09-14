@@ -1,6 +1,5 @@
 ﻿using System.Linq;
 using HDF.PInvoke;
-
 #if HDF5_VER1_10
 using hid_t = System.Int64;
 #else

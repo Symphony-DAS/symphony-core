@@ -1,13 +1,12 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using NationalInstruments.DAQmx;
 using Symphony.Core;
-using Task = System.Threading.Tasks.Task;
 using DAQTask = NationalInstruments.DAQmx.Task;
+using Task = System.Threading.Tasks.Task;
 
 namespace NI
 {

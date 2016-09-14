@@ -1,8 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Text;
 using HDF.PInvoke;
-
 using ssize_t = System.IntPtr;
 
 #if HDF5_VER1_10
@@ -69,10 +67,10 @@ namespace HDF
             ulong n = ginfo.nlinks;
             for (ulong i = 0; i < n; i++)
             {
-                ssize_t size = H5L.get_name_by_idx(File.Fid, Path, H5.index_t.NAME, H5.iter_order_t.INC, i, null, IntPtr.Zero);
+                ssize_t size = H5L.get_name_by_idx(File.Fid, Path, H5.index_t.NAME, H5.iter_order_t.INC, i, null, ssize_t.Zero);
 
                 var buffer = new byte[size.ToInt64() + 1];
-                var bufferSize = new IntPtr(size.ToInt64() + 1);
+                var bufferSize = new ssize_t(size.ToInt64() + 1);
 
                 H5L.get_name_by_idx(File.Fid, Encoding.ASCII.GetBytes(Path), H5.index_t.NAME, H5.iter_order_t.INC, i, buffer, bufferSize);
 

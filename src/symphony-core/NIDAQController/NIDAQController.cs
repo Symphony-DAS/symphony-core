@@ -2,12 +2,11 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
+using log4net;
 using NationalInstruments.DAQmx;
 using Symphony.Core;
-using log4net;
 
 namespace NI
 {

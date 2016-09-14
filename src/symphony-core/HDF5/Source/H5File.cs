@@ -1,6 +1,5 @@
 ﻿using System;
 using HDF.PInvoke;
-
 using size_t = System.IntPtr;
 
 #if HDF5_VER1_10

@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using Symphony.Core;
 using log4net;
+using Symphony.Core;
 
 namespace Symphony.ExternalDevices
 {

@@ -1,10 +1,9 @@
 ﻿using System;
+using Heka.NativeInterop;
+using Symphony.Core;
 
 namespace Heka
 {
-    using Heka.NativeInterop;
-    using Symphony.Core;
-
     public class HekaDAQException : DAQException
     {
         public string HekaError { get; private set; }

@@ -5,7 +5,6 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using HDF.PInvoke;
-
 using size_t = System.IntPtr;
 using ssize_t = System.IntPtr;
 

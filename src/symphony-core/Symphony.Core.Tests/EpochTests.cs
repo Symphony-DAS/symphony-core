@@ -1,11 +1,10 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
+using NUnit.Framework;
 
 namespace Symphony.Core
 {
-    using NUnit.Framework;
-    using System;
-
     [TestFixture]
     class EpochTests
     {
