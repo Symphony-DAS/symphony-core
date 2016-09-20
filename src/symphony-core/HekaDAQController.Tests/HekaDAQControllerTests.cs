@@ -148,8 +148,8 @@ namespace Heka
 
                 try
                 {
-                    CollectionAssert.AllItemsAreInstancesOfType(controller.StreamsOfType(StreamType.ANALOG_IN), typeof(HekaDAQInputStream));
-                    CollectionAssert.AllItemsAreInstancesOfType(controller.StreamsOfType(StreamType.ANALOG_OUT), typeof(HekaDAQOutputStream));
+                    CollectionAssert.AllItemsAreInstancesOfType(controller.StreamsOfType(StreamType.AI), typeof(HekaDAQInputStream));
+                    CollectionAssert.AllItemsAreInstancesOfType(controller.StreamsOfType(StreamType.AO), typeof(HekaDAQOutputStream));
                 }
                 finally
                 {

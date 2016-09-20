@@ -74,7 +74,7 @@ namespace HekkaDAQ.Tests.Properties {
         ///			DeviceType &quot;1&quot;
         ///			DeviceNumber &quot;0&quot;
         ///		]
-        ///		InputStream &quot;ANALOG_IN.0&quot; &quot;Heka.HekaDAQInputStream&quot;
+        ///		InputStream &quot;ai0&quot; &quot;Heka.HekaDAQInputStream&quot;
         ///		[
         ///			Clock &quot;Clock&quot;
         ///			Configuration
@@ -83,7 +83,7 @@ namespace HekkaDAQ.Tests.Properties {
         ///			]
         ///			SampleRate 1000 Hz
         ///		]
-        ///		OutputStream &quot;ANALOG_OUT.0&quot; &quot;Heka.HekaDAQOutputStream&quot;
+        ///		OutputStream &quot;ao0&quot; &quot;Heka.HekaDAQOutputStream&quot;
         ///		[
         ///			Clock &quot;Clock&quot;
         ///			Configuration

@@ -68,7 +68,7 @@ namespace IntegrationTests
                                                            Clock = daq.Clock,
                                                            OutputSampleRate = daq.SampleRate
                                                        };
-                                        dev0.BindStream((IDAQOutputStream)daq.GetStreams("ANALOG_OUT." + i).First());
+                                        dev0.BindStream((IDAQOutputStream)daq.GetStreams("ao" + i).First());
 
                                         return dev0;
                                     })
@@ -85,7 +85,7 @@ namespace IntegrationTests
                                 Clock = daq.Clock,
                                 InputSampleRate = daq.SampleRate
                             };
-                            dev0.BindStream((IDAQInputStream)daq.GetStreams("ANALOG_IN." + i).First());
+                            dev0.BindStream((IDAQInputStream)daq.GetStreams("ai" + i).First());
 
                             return dev0;
                         })
@@ -172,8 +172,8 @@ namespace IntegrationTests
                                        OutputSampleRate = daq.SampleRate,
                                        InputSampleRate = daq.SampleRate
                                    };
-                    dev0.BindStream((IDAQOutputStream)daq.GetStreams("ANALOG_OUT.0").First());
-                    dev0.BindStream((IDAQInputStream)daq.GetStreams("ANALOG_IN.0").First());
+                    dev0.BindStream((IDAQOutputStream)daq.GetStreams("ao0").First());
+                    dev0.BindStream((IDAQInputStream)daq.GetStreams("ai0").First());
 
                     var dev1 = new UnitConvertingExternalDevice("Device1", "Manufacturer", controller, new Measurement(0, "V"))
                     {
@@ -182,8 +182,8 @@ namespace IntegrationTests
                         OutputSampleRate = daq.SampleRate,
                         InputSampleRate = daq.SampleRate
                     };
-                    dev1.BindStream((IDAQOutputStream)daq.GetStreams("ANALOG_OUT.1").First());
-                    dev1.BindStream((IDAQInputStream)daq.GetStreams("ANALOG_IN.1").First());
+                    dev1.BindStream((IDAQOutputStream)daq.GetStreams("ao1").First());
+                    dev1.BindStream((IDAQInputStream)daq.GetStreams("ai1").First());
 
                     for (int j = 0; j < nEpochs; j++)
                     {
@@ -296,8 +296,8 @@ namespace IntegrationTests
                         OutputSampleRate = daq.SampleRate,
                         InputSampleRate = daq.SampleRate
                     };
-                    dev0.BindStream((IDAQOutputStream)daq.GetStreams("ANALOG_OUT.0").First());
-                    dev0.BindStream((IDAQInputStream)daq.GetStreams("ANALOG_IN.0").First());
+                    dev0.BindStream((IDAQOutputStream)daq.GetStreams("ao0").First());
+                    dev0.BindStream((IDAQInputStream)daq.GetStreams("ai0").First());
 
                     var dev1 = new UnitConvertingExternalDevice("Device1", "Manufacturer", controller, new Measurement(0, "V"))
                     {
@@ -306,8 +306,8 @@ namespace IntegrationTests
                         OutputSampleRate = daq.SampleRate,
                         InputSampleRate = daq.SampleRate
                     };
-                    dev1.BindStream((IDAQOutputStream)daq.GetStreams("ANALOG_OUT.1").First());
-                    dev1.BindStream((IDAQInputStream)daq.GetStreams("ANALOG_IN.1").First());
+                    dev1.BindStream((IDAQOutputStream)daq.GetStreams("ao1").First());
+                    dev1.BindStream((IDAQInputStream)daq.GetStreams("ai1").First());
 
                     var nDAQStarts = 0;
                     daq.Started += (evt, args) =>
@@ -452,8 +452,8 @@ namespace IntegrationTests
                             OutputSampleRate = daq.SampleRate,
                             InputSampleRate = daq.SampleRate
                         };
-                    dev0.BindStream(daq.GetStreams("ANALOG_OUT.0").First() as IDAQOutputStream);
-                    dev0.BindStream(daq.GetStreams("ANALOG_IN.0").First() as IDAQInputStream);
+                    dev0.BindStream(daq.GetStreams("ao0").First() as IDAQOutputStream);
+                    dev0.BindStream(daq.GetStreams("ai0").First() as IDAQInputStream);
                     dev0.Clock = daq.Clock;
 
                     controller.DiscardedEpoch += (c, args) => Console.WriteLine("Discarded epoch: " + args.Epoch);
@@ -481,7 +481,7 @@ namespace IntegrationTests
 
 
                     var actual = ((HekaDAQController)controller.DAQController).ReadStreamAsync(
-                        daq.GetStreams("ANALOG_IN.0").First() as IDAQInputStream);
+                        daq.GetStreams("ai0").First() as IDAQInputStream);
 
                     //Should be within +/- 0.025 volts
                     Assert.That(actual.Data.First().QuantityInBaseUnits, Is.InRange(expectedBackground.QuantityInBaseUnits - (decimal)0.025,
@@ -535,8 +535,8 @@ namespace IntegrationTests
                                        OutputSampleRate = daq.SampleRate,
                                        InputSampleRate = daq.SampleRate
                                    };
-                    dev0.BindStream(daq.GetStreams("ANALOG_OUT.0").First() as IDAQOutputStream);
-                    dev0.BindStream(daq.GetStreams("ANALOG_IN.0").First() as IDAQInputStream);
+                    dev0.BindStream(daq.GetStreams("ao0").First() as IDAQOutputStream);
+                    dev0.BindStream(daq.GetStreams("ai0").First() as IDAQInputStream);
 
                     controller.DiscardedEpoch += (c, args) => Console.WriteLine("Discarded epoch: " + args.Epoch);
 
@@ -629,8 +629,8 @@ namespace IntegrationTests
                                        OutputSampleRate = daq.SampleRate,
                                        InputSampleRate = daq.SampleRate
                                    };
-                    dev0.BindStream((IDAQOutputStream) daq.GetStreams("ANALOG_OUT.0").First());
-                    dev0.BindStream((IDAQInputStream) daq.GetStreams("ANALOG_IN.0").First());
+                    dev0.BindStream((IDAQOutputStream) daq.GetStreams("ao0").First());
+                    dev0.BindStream((IDAQInputStream) daq.GetStreams("ai0").First());
 
                     for (int j = 0; j < nEpochs; j++)
                     {

@@ -18,12 +18,12 @@ namespace Heka
     /// </summary>
     public enum StreamType
     {
-        ANALOG_IN = ITCMM.D2H,
-        ANALOG_OUT = ITCMM.H2D,
-        DIGITAL_IN = ITCMM.DIGITAL_INPUT,
-        DIGITAL_OUT = ITCMM.DIGITAL_OUTPUT,
-        AUX_IN = ITCMM.AUX_INPUT,
-        AUX_OUT = ITCMM.AUX_OUTPUT
+        AI = ITCMM.D2H,
+        AO = ITCMM.H2D,
+        DI_PORT = ITCMM.DIGITAL_INPUT,
+        DO_PORT = ITCMM.DIGITAL_OUTPUT,
+        XI = ITCMM.AUX_INPUT,
+        XO = ITCMM.AUX_OUTPUT
     }
 
     /// <summary>
@@ -284,26 +284,26 @@ namespace Heka
                     //set-up ADC channels
                     for (ushort i = 0; i < deviceInfo.NumberOfADCs; i++)
                     {
-                        string name = String.Format("{0}.{1}", "ANALOG_IN", i);
-                        this.DAQStreams.Add(new HekaDAQInputStream(name, StreamType.ANALOG_IN, i, this));
+                        string name = String.Format("{0}{1}", "ai", i);
+                        this.DAQStreams.Add(new HekaDAQInputStream(name, StreamType.AI, i, this));
                     }
 
 
                     for (ushort i = 0; i < deviceInfo.NumberOfDACs; i++)
                     {
-                        string name = String.Format("{0}.{1}", "ANALOG_OUT", i);
-                        this.DAQStreams.Add(new HekaDAQOutputStream(name, StreamType.ANALOG_OUT, i, this));
+                        string name = String.Format("{0}{1}", "ao", i);
+                        this.DAQStreams.Add(new HekaDAQOutputStream(name, StreamType.AO, i, this));
                     }
 
                     for (ushort i = 0; i < deviceInfo.NumberOfDIs; i++)
                     {
-                        string name = String.Format("{0}.{1}", "DIGITAL_IN", i);
+                        string name = String.Format("{0}{1}", "diport", i);
                         this.DAQStreams.Add(new HekaDigitalDAQInputStream(name, i, this));
                     }
 
                     for (ushort i = 0; i < deviceInfo.NumberOfDOs; i++)
                     {
-                        string name = String.Format("{0}.{1}", "DIGITAL_OUT", i);
+                        string name = String.Format("{0}{1}", "doport", i);
                         this.DAQStreams.Add(new HekaDigitalDAQOutputStream(name, i, this));
                     }
                 }

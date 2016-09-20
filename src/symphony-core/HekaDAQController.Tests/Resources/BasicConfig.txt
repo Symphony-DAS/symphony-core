@@ -11,7 +11,7 @@ Controller
 			DeviceType "1"
 			DeviceNumber "0"
 		]
-		InputStream "ANALOG_IN.0" "Heka.HekaDAQInputStream"
+		InputStream "ai0" "Heka.HekaDAQInputStream"
 		[
 			Clock "Clock"
 			Configuration
@@ -20,7 +20,7 @@ Controller
 			]
 			SampleRate 1000 Hz
 		]
-		OutputStream "ANALOG_OUT.0" "Heka.HekaDAQOutputStream"
+		OutputStream "ao0" "Heka.HekaDAQOutputStream"
 		[
 			Clock "Clock"
 			Configuration

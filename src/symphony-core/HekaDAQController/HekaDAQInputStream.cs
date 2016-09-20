@@ -25,7 +25,7 @@ namespace Heka
         {
             this.ChannelType = streamType;
             this.ChannelNumber = channelNumber;
-            this.MeasurementConversionTarget = (ChannelType == StreamType.DIGITAL_IN || ChannelType == StreamType.AUX_IN) 
+            this.MeasurementConversionTarget = (ChannelType == StreamType.DI_PORT || ChannelType == StreamType.XI) 
                 ? Measurement.UNITLESS : "V";
             this.Controller = controller;
             this.Clock = controller.Clock;
@@ -97,7 +97,7 @@ namespace Heka
         public IDictionary<IExternalDevice, ushort> BitPositions { get; private set; }
 
         public HekaDigitalDAQInputStream(string name, ushort channelNumber, HekaDAQController controller) 
-            : base(name, StreamType.DIGITAL_IN, channelNumber, controller)
+            : base(name, StreamType.DI_PORT, channelNumber, controller)
         {
             BitPositions = new Dictionary<IExternalDevice, ushort>();
         }

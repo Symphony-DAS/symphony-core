@@ -32,7 +32,7 @@ namespace Heka
             HekaDAQOutputStream.RegisterConverters();
 
             var itcMock = new Mock<IHekaDevice>();
-            StreamType channelType = StreamType.ANALOG_OUT;
+            StreamType channelType = StreamType.AO;
             ushort channelNumber = 0;
             var time = DateTimeOffset.Now;
 
@@ -85,7 +85,7 @@ namespace Heka
         public void ChannelInfoShouldGiveCompleteITCChannelInfo(
             [Values((ushort)0, (ushort)1, (ushort)8)] 
             ushort channelNumber,
-    [Values(StreamType.ANALOG_OUT, StreamType.DIGITAL_OUT, StreamType.AUX_OUT)] 
+    [Values(StreamType.AO, StreamType.DO_PORT, StreamType.XO)] 
             StreamType streamType
             )
         {
@@ -176,7 +176,7 @@ namespace Heka
         public void ChannelInfoShouldGiveCompleteITCChannelInfo(
             [Values((ushort)0, (ushort)1, (ushort)8)]
             ushort channelNumber,
-    [Values(StreamType.ANALOG_IN, StreamType.DIGITAL_IN, StreamType.AUX_IN)] 
+    [Values(StreamType.AI, StreamType.DI_PORT, StreamType.XI)] 
             StreamType streamType
             )
         {
