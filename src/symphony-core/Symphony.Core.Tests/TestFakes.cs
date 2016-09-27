@@ -54,6 +54,16 @@ namespace Symphony.Core
             return null;
         }
 
+        public IPersistentEpochGroup SplitEpochGroup(IPersistentEpochGroup group, IPersistentEpochBlock block)
+        {
+            return null;
+        }
+
+        public IPersistentEpochGroup MergeEpochGroups(IPersistentEpochGroup group1, IPersistentEpochGroup group2)
+        {
+            return null;
+        }
+
         public IPersistentEpochGroup CurrentEpochGroup { get; private set; }
 
         public IPersistentEpochBlock BeginEpochBlock(string protocolID, IDictionary<string, object> parameters)

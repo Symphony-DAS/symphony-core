@@ -85,6 +85,21 @@ namespace Symphony.Core
         IPersistentEpochGroup EndEpochGroup();
 
         /// <summary>
+        /// Splits the Epoch Group after the given Epoch Block.
+        /// </summary>
+        /// <param name="block">Epoch Block to split the Epoch Group on</param>
+        /// <returns>The new Epoch Group created by the split</returns>
+        IPersistentEpochGroup SplitEpochGroup(IPersistentEpochGroup group, IPersistentEpochBlock block);
+
+        /// <summary>
+        /// Merges two Epoch Groups.
+        /// </summary>
+        /// <param name="group1"></param>
+        /// <param name="group2"></param>
+        /// <returns>The new Epoch Group created by the merge</returns>
+        IPersistentEpochGroup MergeEpochGroups(IPersistentEpochGroup group1, IPersistentEpochGroup group2);
+
+        /// <summary>
         /// The currently open Epoch Group or null if there is no open Epoch Group.
         /// </summary>
         IPersistentEpochGroup CurrentEpochGroup { get; }

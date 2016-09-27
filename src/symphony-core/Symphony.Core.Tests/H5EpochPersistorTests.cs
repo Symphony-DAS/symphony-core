@@ -402,6 +402,87 @@ namespace Symphony.Core
         }
 
         [Test]
+        public void ShouldSplitEpochGroup()
+        {
+            var src = persistor.AddSource("label", null);
+
+            var time = DateTimeOffset.Now;
+            var grp1 = persistor.BeginEpochGroup("group1", src, time);
+            var blks = new List<IPersistentEpochBlock>();
+            for (int i = 0; i < 10; i++)
+            {
+                var b = persistor.BeginEpochBlock("id", new Dictionary<string, object>(), time);
+                time = time.AddMilliseconds(500);
+                persistor.EndEpochBlock(time);
+                blks.Add(b);
+            }
+
+            var grp2 = persistor.SplitEpochGroup(grp1, blks[6]);
+
+            Assert.AreEqual(2, persistor.Experiment.EpochGroups.Count());
+            Assert.AreEqual(7, grp1.EpochBlocks.Count());
+            Assert.AreEqual(3, grp2.EpochBlocks.Count());
+        }
+
+        [Test]
+        public void ShouldSplitCurrentEpochGroup()
+        {
+            var src = persistor.AddSource("label", null);
+
+            var grp1 = persistor.BeginEpochGroup("group1", src);
+            var blk1 = persistor.BeginEpochBlock("id", new Dictionary<string, object>());
+            persistor.EndEpochBlock();
+
+            var grp2 = persistor.SplitEpochGroup(grp1, blk1);
+
+            Assert.True(persistor.CurrentEpochGroup != grp1);
+            Assert.True(persistor.CurrentEpochGroup == grp2);
+        }
+
+        [Test]
+        public void ShouldMergeEpochGroups()
+        {
+            var src = persistor.AddSource("label", null);
+
+            var time = DateTimeOffset.Now;
+            var grp1 = persistor.BeginEpochGroup("group1", src, time);
+            for (int i = 0; i < 7; i++)
+            {
+                persistor.BeginEpochBlock("id", new Dictionary<string, object>(), time);
+                time = time.AddMilliseconds(500);
+                persistor.EndEpochBlock(time);
+            }
+            persistor.EndEpochGroup(time);
+            var grp2 = persistor.BeginEpochGroup("group2", src, time);
+            for (int i = 0; i < 3; i++)
+            {
+                persistor.BeginEpochBlock("id", new Dictionary<string, object>(), time);
+                time = time.AddMilliseconds(500);
+                persistor.EndEpochBlock(time);
+            }
+            persistor.EndEpochGroup(time);
+
+            var grp3 = persistor.MergeEpochGroups(grp1, grp2);
+
+            Assert.AreEqual(1, persistor.Experiment.EpochGroups.Count());
+            Assert.AreEqual(10, grp3.EpochBlocks.Count());
+        }
+
+        [Test]
+        public void ShouldMergeCurrentEpochGroup()
+        {
+            var src = persistor.AddSource("label", null);
+
+            var grp1 = persistor.BeginEpochGroup("group1", src);
+            persistor.EndEpochGroup();
+            var grp2 = persistor.BeginEpochGroup("group2", src);
+
+            var grp3 = persistor.MergeEpochGroups(grp1, grp2);
+
+            Assert.True(persistor.CurrentEpochGroup == grp3);
+        }
+
+        [Test]
         public void ShouldBeginEpochBlock()
         {
             Assert.IsNull(persistor.CurrentEpochBlock);
