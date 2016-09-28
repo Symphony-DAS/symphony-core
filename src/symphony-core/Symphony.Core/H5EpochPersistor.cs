@@ -382,6 +382,7 @@ namespace Symphony.Core
         public virtual void Delete()
         {
             Group.Delete();
+            TryFlush();
         }
 
         public override bool Equals(object obj)
