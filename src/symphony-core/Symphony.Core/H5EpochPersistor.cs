@@ -1130,10 +1130,12 @@ namespace Symphony.Core
                 throw new ArgumentNullException();
             if (!EpochBlocks.Contains(block))
                 throw new ArgumentException("Epoch group does not contain the given block");
+            if (block.EndTime == null)
+                throw new ArgumentException("Epoch block must have an end time");
 
             var split = Parent == null
-                ? ((H5PersistentExperiment) Experiment).InsertEpochGroup(Label, (H5PersistentSource) Source, block.StartTime)
-                : ((H5PersistentEpochGroup) Parent).InsertEpochGroup(Label, (H5PersistentSource) Source, block.StartTime);
+                ? ((H5PersistentExperiment) Experiment).InsertEpochGroup(Label, (H5PersistentSource) Source, block.EndTime.Value)
+                : ((H5PersistentEpochGroup) Parent).InsertEpochGroup(Label, (H5PersistentSource) Source, block.EndTime.Value);
             try
             {
                 split.CopyAnnotationsFrom(this);
