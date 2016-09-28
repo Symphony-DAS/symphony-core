@@ -417,13 +417,13 @@ namespace Symphony.Core
                 blks.Add(b);
             }
 
-            var grp2 = persistor.SplitEpochGroup(grp1, blks[6]);
+            var split = persistor.SplitEpochGroup(grp1, blks[6]);
 
             Assert.AreEqual(2, persistor.Experiment.EpochGroups.Count());
-            Assert.AreEqual(7, grp1.EpochBlocks.Count());
-            Assert.True(grp1.EpochBlocks.All(b => b.EpochGroup == grp1));
-            Assert.AreEqual(3, grp2.EpochBlocks.Count());
-            Assert.True(grp2.EpochBlocks.All(b => b.EpochGroup == grp2));
+            Assert.AreEqual(7, split.Item1.EpochBlocks.Count());
+            Assert.True(split.Item1.EpochBlocks.All(b => b.EpochGroup == split.Item1));
+            Assert.AreEqual(3, split.Item2.EpochBlocks.Count());
+            Assert.True(split.Item2.EpochBlocks.All(b => b.EpochGroup == split.Item2));
         }
 
         [Test]
@@ -435,10 +435,10 @@ namespace Symphony.Core
             var blk1 = persistor.BeginEpochBlock("id", new Dictionary<string, object>());
             persistor.EndEpochBlock();
 
-            var grp2 = persistor.SplitEpochGroup(grp1, blk1);
+            var split = persistor.SplitEpochGroup(grp1, blk1);
 
-            Assert.True(persistor.CurrentEpochGroup != grp1);
-            Assert.True(persistor.CurrentEpochGroup == grp2);
+            Assert.True(persistor.CurrentEpochGroup != split.Item1);
+            Assert.True(persistor.CurrentEpochGroup == split.Item2);
         }
 
         [Test]

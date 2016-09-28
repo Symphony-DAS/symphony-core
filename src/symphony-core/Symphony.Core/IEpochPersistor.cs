@@ -89,7 +89,7 @@ namespace Symphony.Core
         /// </summary>
         /// <param name="block">Epoch Block to split the Epoch Group on</param>
         /// <returns>The new Epoch Group created by the split</returns>
-        IPersistentEpochGroup SplitEpochGroup(IPersistentEpochGroup group, IPersistentEpochBlock block);
+        Tuple<IPersistentEpochGroup, IPersistentEpochGroup> SplitEpochGroup(IPersistentEpochGroup group, IPersistentEpochBlock block);
 
         /// <summary>
         /// Merges two Epoch Groups.

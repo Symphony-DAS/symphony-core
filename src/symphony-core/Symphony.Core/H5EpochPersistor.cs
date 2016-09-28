@@ -217,7 +217,7 @@ namespace Symphony.Core
             return _openEpochGroups.Pop();
         }
 
-        public IPersistentEpochGroup SplitEpochGroup(IPersistentEpochGroup group, IPersistentEpochBlock block)
+        public Tuple<IPersistentEpochGroup, IPersistentEpochGroup> SplitEpochGroup(IPersistentEpochGroup group, IPersistentEpochBlock block)
         {
             if (_openEpochGroups.Contains(group) && group != CurrentEpochGroup)
                 throw new InvalidOperationException("Cannot split an open epoch group that isn't the current epoch group");
@@ -228,9 +228,9 @@ namespace Symphony.Core
 
             if (group == CurrentEpochGroup)
             {
-                ((H5PersistentEpochGroup) CurrentEpochGroup).SetEndTime(DateTimeOffset.Now);
+                ((H5PersistentEpochGroup) split.Item1).SetEndTime(DateTimeOffset.Now);
                 _openEpochGroups.Pop();
-                _openEpochGroups.Push(split);
+                _openEpochGroups.Push((H5PersistentEpochGroup) split.Item2);
             }
             return split;
         }
@@ -1171,41 +1171,52 @@ namespace Symphony.Core
             get { return EntityFactory.Create<H5PersistentExperiment>(_experimentGroup); }
         }
 
-        public static H5PersistentEpochGroup Split(H5PersistentEpochGroup group, H5PersistentEpochBlock block)
+        public static Tuple<IPersistentEpochGroup, IPersistentEpochGroup> Split(H5PersistentEpochGroup group, H5PersistentEpochBlock block)
         {
             if (!group.EpochBlocks.Contains(block))
                 throw new ArgumentException("Epoch group does not contain the given block");
             if (block.EndTime == null)
                 throw new ArgumentException("Epoch block must have an end time");
 
-            var split = group.Parent == null
+            var g1 = group.Parent == null
+                ? ((H5PersistentExperiment)group.Experiment).InsertEpochGroup(group.Label, (H5PersistentSource)group.Source, group.StartTime)
+                : ((H5PersistentEpochGroup)group.Parent).InsertEpochGroup(group.Label, (H5PersistentSource)group.Source, group.StartTime);
+            var g2 = group.Parent == null
                 ? ((H5PersistentExperiment)group.Experiment).InsertEpochGroup(group.Label, (H5PersistentSource)group.Source, block.EndTime.Value)
                 : ((H5PersistentEpochGroup)group.Parent).InsertEpochGroup(group.Label, (H5PersistentSource)group.Source, block.EndTime.Value);
             try
             {
-                split.CopyAnnotationsFrom(group);
-                split.CopyResourcesFrom(group);
+                g1.CopyAnnotationsFrom(group);
+                g1.CopyResourcesFrom(group);
 
-                var blocks = group.EpochBlocks.Where(b => b.StartTime > block.StartTime).ToList();
-                foreach (var b in blocks)
+                g2.CopyAnnotationsFrom(group);
+                g2.CopyResourcesFrom(group);
+
+                var blocks = group.EpochBlocks.ToList();
+                foreach (var b in blocks.Where(b => b.StartTime <= block.StartTime))
                 {
-                    ((H5PersistentEpochBlock)b).MoveTo(split);
+                    ((H5PersistentEpochBlock) b).MoveTo(g1);
                 }
+                foreach (var b in blocks.Where(b => b.StartTime > block.StartTime))
+                {
+                    ((H5PersistentEpochBlock) b).MoveTo(g2);
+                }
+
+                g1.SetEndTime(block.EndTime.Value);
 
                 if (group.EndTime != null)
                 {
-                    split.SetEndTime(group.EndTime.Value);
-                }
-                if (block.EndTime != null)
-                {
-                    group.SetEndTime(block.EndTime.Value);
+                    g2.SetEndTime(group.EndTime.Value);
                 }
 
-                return split;
+                group.Delete();
+
+                return new Tuple<IPersistentEpochGroup, IPersistentEpochGroup>(g1, g2);
             }
             catch (Exception x)
             {
-                split.Delete();
+                g1.Delete();
+                g2.Delete();
                 throw new PersistanceException("An error occurred while splitting epoch group: " + group.Label, x);
             }
         }
@@ -1227,7 +1238,7 @@ namespace Symphony.Core
                 var blocks = g1.EpochBlocks.Concat(g2.EpochBlocks).ToList();
                 foreach (var b in blocks)
                 {
-                    ((H5PersistentEpochBlock)b).MoveTo(merged);
+                    ((H5PersistentEpochBlock) b).MoveTo(merged);
                 }
 
                 var endTime = g1.EndTime > g2.EndTime ? g1.EndTime : g2.EndTime;

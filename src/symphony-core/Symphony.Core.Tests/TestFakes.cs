@@ -54,7 +54,7 @@ namespace Symphony.Core
             return null;
         }
 
-        public IPersistentEpochGroup SplitEpochGroup(IPersistentEpochGroup group, IPersistentEpochBlock block)
+        public Tuple<IPersistentEpochGroup, IPersistentEpochGroup> SplitEpochGroup(IPersistentEpochGroup group, IPersistentEpochBlock block)
         {
             return null;
         }
