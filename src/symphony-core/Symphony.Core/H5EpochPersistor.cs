@@ -224,7 +224,7 @@ namespace Symphony.Core
             if (CurrentEpochBlock != null)
                 throw new InvalidOperationException("There is an open epoch block");
 
-            var split = ((H5PersistentEpochGroup) group).Split((H5PersistentEpochBlock) block);
+            var split = H5PersistentEpochGroup.Split((H5PersistentEpochGroup) group, (H5PersistentEpochBlock) block);
 
             if (group == CurrentEpochGroup)
             {
@@ -375,7 +375,7 @@ namespace Symphony.Core
         public H5PersistentEntityFactory EntityFactory { get; private set; }
 
         // The HDF5 group representing the persistent entity.
-        public H5Group Group { get; private set; }
+        public H5Group Group { get; protected set; }
 
         public Guid UUID { get; private set; }
 
@@ -780,9 +780,10 @@ namespace Symphony.Core
             get { return Sources.Aggregate(EpochGroups, (current, source) => current.Concat(source.AllEpochGroups)); }
         }
 
-        public void AddEpochGroup(H5PersistentEpochGroup epochGroup)
+        public H5Group AddEpochGroup(H5PersistentEpochGroup epochGroup)
         {
             _epochGroupsGroup.AddHardLink(epochGroup.Group.Name, epochGroup.Group);
+            return _epochGroupsGroup.Groups.First(g => g.Name == epochGroup.Group.Name);
         }
 
         public bool RemoveEpochGroup(H5PersistentEpochGroup epochGroup)
@@ -1124,89 +1125,6 @@ namespace Symphony.Core
             return group;
         }
 
-        public H5PersistentEpochGroup Split(H5PersistentEpochBlock block)
-        {
-            if (block == null)
-                throw new ArgumentNullException();
-            if (!EpochBlocks.Contains(block))
-                throw new ArgumentException("Epoch group does not contain the given block");
-            if (block.EndTime == null)
-                throw new ArgumentException("Epoch block must have an end time");
-
-            var split = Parent == null
-                ? ((H5PersistentExperiment) Experiment).InsertEpochGroup(Label, (H5PersistentSource) Source, block.EndTime.Value)
-                : ((H5PersistentEpochGroup) Parent).InsertEpochGroup(Label, (H5PersistentSource) Source, block.EndTime.Value);
-            try
-            {
-                split.CopyAnnotationsFrom(this);
-                split.CopyResourcesFrom(this);
-
-                var blocks = EpochBlocks.Where(b => b.StartTime > block.StartTime).ToList();
-                foreach (var b in blocks)
-                {
-                    split.CopyEpochBlock((H5PersistentEpochBlock) b);
-                }
-                foreach (var b in blocks)
-                {
-                    ((H5PersistentEpochBlock) b).Delete();
-                }
-
-                if (EndTime != null)
-                {
-                    split.SetEndTime(EndTime.Value);
-                }
-                if (block.EndTime != null)
-                {
-                    SetEndTime(block.EndTime.Value);
-                }
-
-                return split;
-            }
-            catch (Exception x)
-            {
-                split.Delete();
-                throw new PersistanceException("An error occurred while splitting epoch group: " + Label, x);
-            }
-        }
-
-        public static H5PersistentEpochGroup Merge(H5PersistentEpochGroup g1, H5PersistentEpochGroup g2)
-        {
-            var startTime = g1.StartTime < g2.StartTime ? g1.StartTime : g2.StartTime;
-            var merged = g1.Parent == null
-                ? ((H5PersistentExperiment) g1.Experiment).InsertEpochGroup(g1.Label, (H5PersistentSource) g1.Source, startTime)
-                : ((H5PersistentEpochGroup) g2.Parent).InsertEpochGroup(g1.Label, (H5PersistentSource) g1.Source, startTime);
-            try
-            {
-                merged.CopyAnnotationsFrom(g2);
-                merged.CopyResourcesFrom(g2);
-
-                merged.CopyAnnotationsFrom(g1);
-                merged.CopyResourcesFrom(g1);
-
-                var blocks = g1.EpochBlocks.Concat(g2.EpochBlocks).ToList();
-                foreach (var b in blocks)
-                {
-                    merged.CopyEpochBlock((H5PersistentEpochBlock) b);
-                }
-
-                var endTime = g1.EndTime > g2.EndTime ? g1.EndTime : g2.EndTime;
-                if (endTime != null)
-                {
-                    merged.SetEndTime(endTime.Value);
-                }
-
-                g1.Delete();
-                g2.Delete();
-
-                return merged;
-            }
-            catch (Exception x)
-            {
-                merged.Delete();
-                throw new PersistanceException("An error occurred while merging epoch groups: " + g1.Label + ", " + g2.Label, x);
-            }
-        }
-
         public IEnumerable<IPersistentEpochBlock> EpochBlocks
         {
             get
@@ -1227,12 +1145,20 @@ namespace Symphony.Core
             return b;
         }
 
-        public H5PersistentEpochBlock CopyEpochBlock(H5PersistentEpochBlock block)
+        public H5Group AddEpochBlock(H5PersistentEpochBlock block)
         {
-            var b = H5PersistentEpochBlock.CopyEpochBlock(_epochBlocksGroup, block);
-            TryFlush();
+            _epochBlocksGroup.AddHardLink(block.Group.Name, block.Group);
+            return _epochBlocksGroup.Groups.First(g => g.Name == block.Group.Name);
+        }
 
-            return b;
+        public bool RemoveEpochBlock(H5PersistentEpochBlock block)
+        {
+            var bg = _epochBlocksGroup.Groups.FirstOrDefault(g => g.Name == block.Group.Name);
+            if (bg == null)
+                return false;
+
+            bg.Delete();
+            return true;
         }
 
         public IPersistentEpochGroup Parent
@@ -1243,6 +1169,83 @@ namespace Symphony.Core
         public IPersistentExperiment Experiment
         {
             get { return EntityFactory.Create<H5PersistentExperiment>(_experimentGroup); }
+        }
+
+        public static H5PersistentEpochGroup Split(H5PersistentEpochGroup group, H5PersistentEpochBlock block)
+        {
+            if (!group.EpochBlocks.Contains(block))
+                throw new ArgumentException("Epoch group does not contain the given block");
+            if (block.EndTime == null)
+                throw new ArgumentException("Epoch block must have an end time");
+
+            var split = group.Parent == null
+                ? ((H5PersistentExperiment)group.Experiment).InsertEpochGroup(group.Label, (H5PersistentSource)group.Source, block.EndTime.Value)
+                : ((H5PersistentEpochGroup)group.Parent).InsertEpochGroup(group.Label, (H5PersistentSource)group.Source, block.EndTime.Value);
+            try
+            {
+                split.CopyAnnotationsFrom(group);
+                split.CopyResourcesFrom(group);
+
+                var blocks = group.EpochBlocks.Where(b => b.StartTime > block.StartTime).ToList();
+                foreach (var b in blocks)
+                {
+                    ((H5PersistentEpochBlock)b).MoveTo(split);
+                }
+
+                if (group.EndTime != null)
+                {
+                    split.SetEndTime(group.EndTime.Value);
+                }
+                if (block.EndTime != null)
+                {
+                    group.SetEndTime(block.EndTime.Value);
+                }
+
+                return split;
+            }
+            catch (Exception x)
+            {
+                split.Delete();
+                throw new PersistanceException("An error occurred while splitting epoch group: " + group.Label, x);
+            }
+        }
+
+        public static H5PersistentEpochGroup Merge(H5PersistentEpochGroup g1, H5PersistentEpochGroup g2)
+        {
+            var startTime = g1.StartTime < g2.StartTime ? g1.StartTime : g2.StartTime;
+            var merged = g1.Parent == null
+                ? ((H5PersistentExperiment)g1.Experiment).InsertEpochGroup(g1.Label, (H5PersistentSource)g1.Source, startTime)
+                : ((H5PersistentEpochGroup)g2.Parent).InsertEpochGroup(g1.Label, (H5PersistentSource)g1.Source, startTime);
+            try
+            {
+                merged.CopyAnnotationsFrom(g2);
+                merged.CopyResourcesFrom(g2);
+
+                merged.CopyAnnotationsFrom(g1);
+                merged.CopyResourcesFrom(g1);
+
+                var blocks = g1.EpochBlocks.Concat(g2.EpochBlocks).ToList();
+                foreach (var b in blocks)
+                {
+                    ((H5PersistentEpochBlock)b).MoveTo(merged);
+                }
+
+                var endTime = g1.EndTime > g2.EndTime ? g1.EndTime : g2.EndTime;
+                if (endTime != null)
+                {
+                    merged.SetEndTime(endTime.Value);
+                }
+
+                g1.Delete();
+                g2.Delete();
+
+                return merged;
+            }
+            catch (Exception x)
+            {
+                merged.Delete();
+                throw new PersistanceException("An error occurred while merging epoch groups: " + g1.Label + ", " + g2.Label, x);
+            }
         }
     }
 
@@ -1255,7 +1258,7 @@ namespace Symphony.Core
 
         private readonly H5Group _protocolParametersGroup;
         private readonly H5Group _epochsGroup;
-        private readonly H5Group _epochGroupGroup;
+        private H5Group _epochGroupGroup;
 
         public static H5PersistentEpochBlock InsertEpochBlock(H5Group container, H5PersistentEntityFactory factory,
             H5PersistentEpochGroup epochGroup, string protocolID, IDictionary<string, object> parameters,
@@ -1292,28 +1295,6 @@ namespace Symphony.Core
             {
                 group.Delete();
                 throw new PersistanceException("An error occurred while persisting epoch block: " + protocolID, x);
-            }
-        }
-
-        public static H5PersistentEpochBlock CopyEpochBlock(H5Group destination, H5PersistentEpochBlock block)
-        {
-            var copy = InsertEpochBlock(destination, block.EntityFactory, (H5PersistentEpochGroup) block.EpochGroup,
-                block.ProtocolID, block.ProtocolParameters.ToDictionary(kv => kv.Key, kv => kv.Value), block.StartTime);
-            try
-            {
-                copy.CopyAnnotationsFrom(block);
-                copy.CopyResourcesFrom(block);
-                if (block.EndTime != null)
-                {
-                    copy.SetEndTime(block.EndTime.Value);
-                }
-
-                return copy;
-            }
-            catch (Exception x)
-            {
-                copy.Delete();
-                throw new PersistanceException("An error occurred while copying epoch block: " + block.ProtocolID, x);
             }
         }
 
@@ -1363,6 +1344,18 @@ namespace Symphony.Core
         public IPersistentEpochGroup EpochGroup
         {
             get { return EntityFactory.Create<H5PersistentEpochGroup>(_epochGroupGroup); }
+        }
+
+        public void MoveTo(H5PersistentEpochGroup to)
+        {
+            var from = (H5PersistentEpochGroup)EpochGroup;
+
+            _epochGroupGroup.Delete();
+            Group = to.AddEpochBlock(this);
+            from.RemoveEpochBlock(this);
+
+            Group.AddHardLink(EpochGroupGroupName, to.Group);
+            _epochGroupGroup = Group.Groups.First(g => g.Name == EpochGroupGroupName);
         }
     }
 

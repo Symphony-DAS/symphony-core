@@ -421,7 +421,9 @@ namespace Symphony.Core
 
             Assert.AreEqual(2, persistor.Experiment.EpochGroups.Count());
             Assert.AreEqual(7, grp1.EpochBlocks.Count());
+            Assert.True(grp1.EpochBlocks.All(b => b.EpochGroup == grp1));
             Assert.AreEqual(3, grp2.EpochBlocks.Count());
+            Assert.True(grp2.EpochBlocks.All(b => b.EpochGroup == grp2));
         }
 
         [Test]
@@ -466,6 +468,7 @@ namespace Symphony.Core
 
             Assert.AreEqual(1, persistor.Experiment.EpochGroups.Count());
             Assert.AreEqual(10, grp3.EpochBlocks.Count());
+            Assert.True(grp3.EpochBlocks.All(b => b.EpochGroup == grp3));
         }
 
         [Test]
