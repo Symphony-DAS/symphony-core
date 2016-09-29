@@ -238,6 +238,8 @@ namespace Symphony.Core
 
         public IPersistentEpochGroup MergeEpochGroups(IPersistentEpochGroup group1, IPersistentEpochGroup group2)
         {
+            if ((_openEpochGroups.Contains(group1) && group1 != CurrentEpochGroup) || (_openEpochGroups.Contains(group2) && group2 != CurrentEpochGroup))
+                throw new InvalidOperationException("Cannot merge an open epoch group that isn't the current epoch group");
             if (CurrentEpochBlock != null)
                 throw new InvalidOperationException("There is an open epoch block");
 
