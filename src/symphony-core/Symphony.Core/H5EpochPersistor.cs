@@ -360,10 +360,15 @@ namespace Symphony.Core
 
             UUID = GetUUID(group);
 
+            InitEntityH5Objects();
+        }
+
+        private void InitEntityH5Objects()
+        {
             var subGroups = Group.Groups.ToList();
             _propertiesGroup = subGroups.FirstOrDefault(g => g.Name == PropertiesGroupName);
             _resourcesGroup = subGroups.FirstOrDefault(g => g.Name == ResourcesGroupName);
-            _notesDataset = group.Datasets.FirstOrDefault(ds => ds.Name == NotesDatasetName);
+            _notesDataset = Group.Datasets.FirstOrDefault(ds => ds.Name == NotesDatasetName);
         }
 
         public H5PersistentEntityFactory EntityFactory { get; private set; }
@@ -373,9 +378,18 @@ namespace Symphony.Core
 
         protected void SetGroup(H5Group group)
         {
+            if (Group == group)
+                return;
             if (UUID != GetUUID(group))
                 throw new ArgumentException("UUID of given group does not match the UUID of the entity");
+            
             Group = group;
+            InitEntityH5Objects();
+
+            foreach (var r in Resources)
+            {
+                ((H5PersistentResource) r).SetEntity(this);
+            }
         }
 
         public Guid UUID { get; private set; }
@@ -514,6 +528,12 @@ namespace Symphony.Core
             if (resource == null)
                 throw new KeyNotFoundException(name);
             return resource;
+        }
+
+        public IPersistentResource GetResource(Guid uuid)
+        {
+            var group = _resourcesGroup.Groups.First(g => GetUUID(g) == uuid);
+            return EntityFactory.Create<H5PersistentResource>(group);
         }
 
         public IEnumerable<string> GetResourceNames()
@@ -2181,7 +2201,7 @@ namespace Symphony.Core
         private const string NameKey = "name";
         private const string DataDatasetName = "data";
 
-        private readonly H5Dataset _dataDataset;
+        private H5Dataset _dataDataset;
 
         public static H5PersistentResource InsertResource(H5Group container, H5PersistentEntityFactory factory,
             string uti, string name, byte[] data)
@@ -2225,7 +2245,12 @@ namespace Symphony.Core
             UTI = group.Attributes[UTIKey];
             Name = group.Attributes[NameKey];
 
-            _dataDataset = group.Datasets.First(ds => ds.Name == DataDatasetName);
+            InitResourceH5Objects();
+        }
+
+        private void InitResourceH5Objects()
+        {
+            _dataDataset = Group.Datasets.First(ds => ds.Name == DataDatasetName);
         }
 
         public string UTI { get; private set; }
@@ -2235,6 +2260,16 @@ namespace Symphony.Core
         public byte[] Data
         {
             get { return _dataDataset.GetData<byte>(); }
+        }
+
+        public void SetEntity(H5PersistentEntity entity)
+        {
+            EntityFactory.RemoveFromCache(this);
+            var newResource = (H5PersistentResource)entity.GetResource(UUID);
+
+            SetGroup(newResource.Group);
+
+            InitResourceH5Objects();
         }
     }
 

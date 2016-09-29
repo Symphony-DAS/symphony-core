@@ -425,6 +425,7 @@ namespace Symphony.Core
             }
 
             var grp2 = persistor.BeginEpochGroup("group2", src, time);
+            grp2.AddResource("uti", "name", new byte[] {1, 2, 3});
             for (int i = 0; i < 4; i++)
             {
                 var b = persistor.BeginEpochBlock(epoch.ProtocolID, epoch.ProtocolParameters, time);
@@ -454,6 +455,7 @@ namespace Symphony.Core
             Assert.AreEqual(1, split.Item2.EpochGroups.Count());
             Assert.AreEqual(4, split.Item2.EpochGroups.First().EpochBlocks.Count());
             Assert.True(split.Item2.EpochGroups.First().EpochBlocks.All(b => b.EpochGroup == split.Item2.EpochGroups.First()));
+            Assert.AreEqual(new byte[] { 1, 2, 3 }, split.Item2.EpochGroups.First().GetResource("name").Data);
         }
 
         [Test]
