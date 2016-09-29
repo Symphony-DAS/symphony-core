@@ -1,4 +1,5 @@
 ﻿using System;
+using System.CodeDom;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
@@ -375,7 +376,14 @@ namespace Symphony.Core
         public H5PersistentEntityFactory EntityFactory { get; private set; }
 
         // The HDF5 group representing the persistent entity.
-        public H5Group Group { get; protected set; }
+        public H5Group Group { get; private set; }
+
+        protected void SetGroup(H5Group group)
+        {
+            if (UUID != GetUUID(group))
+                throw new ArgumentException("UUID of given group does not match the UUID of the entity");
+            Group = group;
+        }
 
         public Guid UUID { get; private set; }
 
@@ -1146,10 +1154,11 @@ namespace Symphony.Core
             return b;
         }
 
-        public H5Group AddEpochBlock(H5PersistentEpochBlock block)
+        public H5PersistentEpochBlock AddEpochBlock(H5PersistentEpochBlock block)
         {
             _epochBlocksGroup.AddHardLink(block.Group.Name, block.Group);
-            return _epochBlocksGroup.Groups.First(g => g.Name == block.Group.Name);
+            var group = _epochBlocksGroup.Groups.First(g => g.Name == block.Group.Name);
+            return new H5PersistentEpochBlock(group, EntityFactory);
         }
 
         public bool RemoveEpochBlock(H5PersistentEpochBlock block)
@@ -1196,11 +1205,11 @@ namespace Symphony.Core
                 var blocks = group.EpochBlocks.ToList();
                 foreach (var b in blocks.Where(b => b.StartTime <= block.StartTime))
                 {
-                    ((H5PersistentEpochBlock) b).MoveTo(g1);
+                    ((H5PersistentEpochBlock) b).SetEpochGroup(g1);
                 }
                 foreach (var b in blocks.Where(b => b.StartTime > block.StartTime))
                 {
-                    ((H5PersistentEpochBlock) b).MoveTo(g2);
+                    ((H5PersistentEpochBlock) b).SetEpochGroup(g2);
                 }
 
                 g1.SetEndTime(block.EndTime.Value);
@@ -1239,7 +1248,7 @@ namespace Symphony.Core
                 var blocks = g1.EpochBlocks.Concat(g2.EpochBlocks).ToList();
                 foreach (var b in blocks)
                 {
-                    ((H5PersistentEpochBlock) b).MoveTo(merged);
+                    ((H5PersistentEpochBlock) b).SetEpochGroup(merged);
                 }
 
                 var endTime = g1.EndTime > g2.EndTime ? g1.EndTime : g2.EndTime;
@@ -1268,8 +1277,8 @@ namespace Symphony.Core
         private const string EpochsGroupName = "epochs";
         private const string EpochGroupGroupName = "epochGroup";
 
-        private readonly H5Group _protocolParametersGroup;
-        private readonly H5Group _epochsGroup;
+        private H5Group _protocolParametersGroup;
+        private H5Group _epochsGroup;
         private H5Group _epochGroupGroup;
 
         public static H5PersistentEpochBlock InsertEpochBlock(H5Group container, H5PersistentEntityFactory factory,
@@ -1314,7 +1323,12 @@ namespace Symphony.Core
         {
             ProtocolID = group.Attributes[ProtocolIDKey];
 
-            var subGroups = group.Groups.ToList();
+            InitEpochBlockH5Objects();
+        }
+
+        private void InitEpochBlockH5Objects()
+        {
+            var subGroups = Group.Groups.ToList();
             _protocolParametersGroup = subGroups.First(g => g.Name == ProtocolParametersGroupName);
             _epochsGroup = subGroups.First(g => g.Name == EpochsGroupName);
             _epochGroupGroup = subGroups.First(g => g.Name == EpochGroupGroupName);
@@ -1353,21 +1367,58 @@ namespace Symphony.Core
             return pEpoch;
         }
 
+        public H5PersistentEpoch AddEpoch(H5PersistentEpoch epoch)
+        {
+            _epochsGroup.AddHardLink(epoch.Group.Name, epoch.Group);
+            var group = _epochsGroup.Groups.First(g => g.Name == epoch.Group.Name);
+            return new H5PersistentEpoch(group, EntityFactory);
+        }
+
+        public bool RemoveEpoch(H5PersistentEpoch epoch)
+        {
+            var bg = _epochsGroup.Groups.FirstOrDefault(g => g.Name == epoch.Group.Name);
+            if (bg == null)
+                return false;
+
+            bg.Delete();
+            return true;
+        }
+
         public IPersistentEpochGroup EpochGroup
         {
             get { return EntityFactory.Create<H5PersistentEpochGroup>(_epochGroupGroup); }
         }
 
-        public void MoveTo(H5PersistentEpochGroup to)
+        public void SetEpochGroup(H5PersistentEpochGroup epochGroup)
         {
-            var from = (H5PersistentEpochGroup)EpochGroup;
+            var oldEpochGroup = (H5PersistentEpochGroup) EpochGroup;
 
-            _epochGroupGroup.Delete();
-            Group = to.AddEpochBlock(this);
-            from.RemoveEpochBlock(this);
+            H5PersistentEpochBlock newBlock;
+            if (epochGroup.UUID == oldEpochGroup.UUID)
+            {
+                EntityFactory.RemoveFromCache(this);
+                newBlock = (H5PersistentEpochBlock) epochGroup.EpochBlocks.First(b => b.UUID == UUID);
+            }
+            else
+            {
+                newBlock = epochGroup.AddEpochBlock(this);
+            }
 
-            Group.AddHardLink(EpochGroupGroupName, to.Group);
-            _epochGroupGroup = Group.Groups.First(g => g.Name == EpochGroupGroupName);
+            foreach (var e in Epochs)
+            {
+                ((H5PersistentEpoch)e).SetEpochBlock(newBlock);
+            }
+
+            if (epochGroup.UUID != oldEpochGroup.UUID)
+            {
+                oldEpochGroup.RemoveEpochBlock(this);
+            }
+            
+            newBlock._epochGroupGroup.Delete();
+            newBlock.Group.AddHardLink(EpochGroupGroupName, epochGroup.Group);
+            SetGroup(newBlock.Group);
+
+            InitEpochBlockH5Objects();
         }
     }
 
@@ -1379,11 +1430,11 @@ namespace Symphony.Core
         private const string StimuliGroupName = "stimuli";
         private const string EpochBlockGroupName = "epochBlock";
 
-        private readonly H5Group _backgroundGroup;
-        private readonly H5Group _protocolParametersGroup;
-        private readonly H5Group _responsesGroup;
-        private readonly H5Group _stimuliGroup;
-        private readonly H5Group _epochBlockGroup;
+        private H5Group _backgroundGroup;
+        private H5Group _protocolParametersGroup;
+        private H5Group _responsesGroup;
+        private H5Group _stimuliGroup;
+        private H5Group _epochBlockGroup;
 
         public static H5PersistentEpoch InsertEpoch(H5Group container, H5PersistentEntityFactory factory,
             H5PersistentEpochBlock block, Epoch epoch, uint compression)
@@ -1458,7 +1509,12 @@ namespace Symphony.Core
 
         public H5PersistentEpoch(H5Group group, H5PersistentEntityFactory factory) : base(group, factory)
         {
-            var subGroups = group.Groups.ToList();
+            InitEpochH5Objects();
+        }
+
+        private void InitEpochH5Objects()
+        {
+            var subGroups = Group.Groups.ToList();
             _backgroundGroup = subGroups.First(g => g.Name == BackgroundsGroupName);
             _protocolParametersGroup = subGroups.First(g => g.Name == ProtocolParametersGroupName);
             _responsesGroup = subGroups.First(g => g.Name == ResponsesGroupName);
@@ -1469,6 +1525,23 @@ namespace Symphony.Core
         public IEnumerable<IPersistentBackground> Backgrounds
         {
             get { return _backgroundGroup.Groups.Select(g => EntityFactory.Create<H5PersistentBackground>(g)); }
+        }
+
+        public H5PersistentBackground AddBackground(H5PersistentBackground background)
+        {
+            _backgroundGroup.AddHardLink(background.Group.Name, background.Group);
+            var group = _backgroundGroup.Groups.First(g => g.Name == background.Group.Name);
+            return new H5PersistentBackground(group, EntityFactory);
+        }
+
+        public bool RemoveBackground(H5PersistentBackground background)
+        {
+            var bg = _backgroundGroup.Groups.FirstOrDefault(g => g.Name == background.Group.Name);
+            if (bg == null)
+                return false;
+
+            bg.Delete();
+            return true;
         }
 
         public IEnumerable<KeyValuePair<string, object>> ProtocolParameters
@@ -1486,30 +1559,96 @@ namespace Symphony.Core
             get { return _responsesGroup.Groups.Select(g => EntityFactory.Create<H5PersistentResponse>(g)); }
         }
 
+        public H5PersistentResponse AddResponse(H5PersistentResponse response)
+        {
+            _responsesGroup.AddHardLink(response.Group.Name, response.Group);
+            var group = _responsesGroup.Groups.First(g => g.Name == response.Group.Name);
+            return new H5PersistentResponse(group, EntityFactory);
+        }
+
+        public bool RemoveResponse(H5PersistentResponse response)
+        {
+            var bg = _responsesGroup.Groups.FirstOrDefault(g => g.Name == response.Group.Name);
+            if (bg == null)
+                return false;
+
+            bg.Delete();
+            return true;
+        }
+
         public IEnumerable<IPersistentStimulus> Stimuli
         {
             get { return _stimuliGroup.Groups.Select(g => EntityFactory.Create<H5PersistentStimulus>(g)); }
+        }
+
+        public H5PersistentStimulus AddStimulus(H5PersistentStimulus stimulus)
+        {
+            _stimuliGroup.AddHardLink(stimulus.Group.Name, stimulus.Group);
+            var group = _stimuliGroup.Groups.First(g => g.Name == stimulus.Group.Name);
+            return new H5PersistentStimulus(group, EntityFactory);
+        }
+
+        public bool RemoveStimulus(H5PersistentStimulus stimulus)
+        {
+            var bg = _stimuliGroup.Groups.FirstOrDefault(g => g.Name == stimulus.Group.Name);
+            if (bg == null)
+                return false;
+
+            bg.Delete();
+            return true;
         }
 
         public IPersistentEpochBlock EpochBlock
         {
             get { return EntityFactory.Create<H5PersistentEpochBlock>(_epochBlockGroup); }
         }
+
+        public void SetEpochBlock(H5PersistentEpochBlock epochBlock)
+        {
+            var oldEpochBlock = (H5PersistentEpochBlock)EpochBlock;
+
+            H5PersistentEpoch newEpoch;
+            if (epochBlock.UUID == oldEpochBlock.UUID)
+            {
+                EntityFactory.RemoveFromCache(this);
+                newEpoch = (H5PersistentEpoch) epochBlock.Epochs.First(e => e.UUID == UUID);
+            }
+            else
+            {
+                newEpoch = epochBlock.AddEpoch(this);
+            }
+
+            foreach (var io in Backgrounds.Concat<IPersistentIOBase>(Responses).Concat(Stimuli))
+            {
+                ((H5PersistentIOBase)io).SetEpoch(newEpoch);
+            }
+
+            if (epochBlock.UUID != oldEpochBlock.UUID)
+            {
+                oldEpochBlock.RemoveEpoch(this);
+            }
+
+            newEpoch._epochBlockGroup.Delete();
+            newEpoch.Group.AddHardLink(EpochBlockGroupName, epochBlock.Group);
+            SetGroup(newEpoch.Group);
+
+            InitEpochH5Objects();
+        }
     }
 
     abstract class H5PersistentIOBase : H5PersistentEntity, IPersistentIOBase
     {
-        private const string DeviceGroupName = "device";
-        private const string DataConfigurationSpansGroupName = "dataConfigurationSpans";
-        private const string SpanGroupPrefix = "span_";
-        private const string SpanIndexKey = "index";
-        private const string SpanStartTimeKey = "startTimeSeconds";
-        private const string SpanDurationKey = "timeSpanSeconds";
-        private const string EpochGroupName = "epoch";
+        protected const string DeviceGroupName = "device";
+        protected const string DataConfigurationSpansGroupName = "dataConfigurationSpans";
+        protected const string SpanGroupPrefix = "span_";
+        protected const string SpanIndexKey = "index";
+        protected const string SpanStartTimeKey = "startTimeSeconds";
+        protected const string SpanDurationKey = "timeSpanSeconds";
+        protected const string EpochGroupName = "epoch";
 
-        private readonly H5Group _deviceGroup;
-        private readonly H5Group _dataConfigurationSpansGroup;
-        private readonly H5Group _epochGroup;
+        protected H5Group _deviceGroup;
+        protected H5Group _dataConfigurationSpansGroup;
+        protected H5Group _epochGroup;
 
         protected static H5Group InsertIOBaseGroup(H5Group container, H5PersistentEpoch epoch, H5PersistentDevice device,
             IList<IConfigurationSpan> configSpans)
@@ -1575,7 +1714,12 @@ namespace Symphony.Core
 
         protected H5PersistentIOBase(H5Group group, H5PersistentEntityFactory factory) : base(group, factory)
         {
-            var subGroups = group.Groups.ToList();
+            InitIOBaseH5Objects();
+        }
+
+        protected void InitIOBaseH5Objects()
+        {
+            var subGroups = Group.Groups.ToList();
             _deviceGroup = subGroups.First(g => g.Name == DeviceGroupName);
             _dataConfigurationSpansGroup = subGroups.First(g => g.Name == DataConfigurationSpansGroupName);
             _epochGroup = subGroups.First(g => g.Name == EpochGroupName);
@@ -1613,6 +1757,8 @@ namespace Symphony.Core
         {
             get { return EntityFactory.Create<H5PersistentEpoch>(_epochGroup); }
         }
+
+        public abstract void SetEpoch(H5PersistentEpoch epoch);
     }
 
     class H5PersistentResponse : H5PersistentIOBase, IPersistentResponse
@@ -1623,7 +1769,7 @@ namespace Symphony.Core
         private const string InputTimeOffsetHoursKey = "inputTimeDotNetDateTimeOffsetOffsetHours";
         private const string DataDatasetName = "data";
 
-        private readonly H5Dataset _dataDataset;
+        private H5Dataset _dataDataset;
 
         public static H5PersistentResponse InsertResponse(H5Group container, H5PersistentEntityFactory factory,
             H5PersistentEpoch epoch, H5PersistentDevice device, Response response, uint compression)
@@ -1659,7 +1805,12 @@ namespace Symphony.Core
             double offset = group.Attributes[InputTimeOffsetHoursKey];
             InputTime = new DateTimeOffset(ticks, TimeSpan.FromHours(offset));
 
-            _dataDataset = group.Datasets.First(ds => ds.Name == DataDatasetName);
+            InitResponseH5Objects();
+        }
+
+        private void InitResponseH5Objects()
+        {
+            _dataDataset = Group.Datasets.First(ds => ds.Name == DataDatasetName);
         }
 
         public IMeasurement SampleRate { get; private set; }
@@ -1669,6 +1820,30 @@ namespace Symphony.Core
         public IEnumerable<IMeasurement> Data
         {
             get { return _dataDataset.GetData<H5Map.MeasurementT>().Select(H5Map.Convert); }
+        }
+
+        public override void SetEpoch(H5PersistentEpoch epoch)
+        {
+            var oldEpoch = (H5PersistentEpoch)Epoch;
+
+            H5PersistentResponse newResponse;
+            if (epoch.UUID == oldEpoch.UUID)
+            {
+                EntityFactory.RemoveFromCache(this);
+                newResponse = (H5PersistentResponse) epoch.Responses.First(r => r.UUID == UUID);
+            }
+            else
+            {
+                newResponse = epoch.AddResponse(this);
+                oldEpoch.RemoveResponse(this);
+            }
+
+            newResponse._epochGroup.Delete();
+            newResponse.Group.AddHardLink(EpochGroupName, epoch.Group);
+            SetGroup(newResponse.Group);
+
+            InitIOBaseH5Objects();
+            InitResponseH5Objects();
         }
     }
 
@@ -1682,8 +1857,8 @@ namespace Symphony.Core
         private const string DurationKey = "durationSeconds";
         private const string DataDatasetName = "data";
 
-        private readonly H5Group _parametersGroup;
-        private readonly H5Dataset _dataDataset;
+        private H5Group _parametersGroup;
+        private H5Dataset _dataDataset;
 
         public static H5PersistentStimulus InsertStimulus(H5Group container, H5PersistentEntityFactory factory,
             H5PersistentEpoch epoch, H5PersistentDevice device, IStimulus stimulus, uint compression)
@@ -1748,8 +1923,13 @@ namespace Symphony.Core
                 ? Option<TimeSpan>.Some(TimeSpan.FromSeconds(group.Attributes[DurationKey]))
                 : Option<TimeSpan>.None();
 
-            _parametersGroup = group.Groups.First(g => g.Name == ParametersGroupName);
-            _dataDataset = group.Datasets.FirstOrDefault(g => g.Name == DataDatasetName);
+            InitStimulusH5Objects();
+        }
+
+        private void InitStimulusH5Objects()
+        {
+            _parametersGroup = Group.Groups.First(g => g.Name == ParametersGroupName);
+            _dataDataset = Group.Datasets.FirstOrDefault(g => g.Name == DataDatasetName);
         }
 
         public string StimulusID { get; private set; }
@@ -1777,6 +1957,30 @@ namespace Symphony.Core
                     : Option<IEnumerable<IMeasurement>>.Some(
                         _dataDataset.GetData<H5Map.MeasurementT>().Select(H5Map.Convert));
             }
+        }
+
+        public override void SetEpoch(H5PersistentEpoch epoch)
+        {
+            var oldEpoch = (H5PersistentEpoch)Epoch;
+
+            H5PersistentStimulus newStimulus;
+            if (epoch.UUID == oldEpoch.UUID)
+            {
+                EntityFactory.RemoveFromCache(this);
+                newStimulus = (H5PersistentStimulus) epoch.Stimuli.First(s => s.UUID == UUID);
+            }
+            else
+            {
+                newStimulus = epoch.AddStimulus(this);
+                oldEpoch.RemoveStimulus(this);
+            }
+
+            newStimulus._epochGroup.Delete();
+            newStimulus.Group.AddHardLink(EpochGroupName, epoch.Group);
+            SetGroup(newStimulus.Group);
+
+            InitIOBaseH5Objects();
+            InitStimulusH5Objects();
         }
     }
 
@@ -1823,6 +2027,29 @@ namespace Symphony.Core
         public IMeasurement Value { get; private set; }
 
         public IMeasurement SampleRate { get; private set; }
+
+        public override void SetEpoch(H5PersistentEpoch epoch)
+        {
+            var oldEpoch = (H5PersistentEpoch)Epoch;
+
+            H5PersistentBackground newBackground;
+            if (epoch.UUID == oldEpoch.UUID)
+            {
+                EntityFactory.RemoveFromCache(this);
+                newBackground = (H5PersistentBackground) epoch.Backgrounds.First(b => b.UUID == UUID);
+            }
+            else
+            {
+                newBackground = epoch.AddBackground(this);
+                oldEpoch.RemoveBackground(this);
+            }
+
+            newBackground._epochGroup.Delete();
+            newBackground.Group.AddHardLink(EpochGroupName, epoch.Group);
+            SetGroup(newBackground.Group);
+
+            InitIOBaseH5Objects();
+        }
     }
 
     class H5PersistentResource : H5PersistentEntity, IPersistentResource
@@ -1952,6 +2179,11 @@ namespace Symphony.Core
             _cache.Add(uuid, entity);
 
             return entity;
+        }
+
+        public bool RemoveFromCache(H5PersistentEntity entity)
+        {
+            return _cache.Remove(entity.UUID);
         }
 
         static class Constructor<T>

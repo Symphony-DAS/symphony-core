@@ -404,6 +404,10 @@ namespace Symphony.Core
         [Test]
         public void ShouldSplitEpochGroup()
         {
+            ExternalDeviceBase dev1;
+            ExternalDeviceBase dev2;
+            var epoch = CreateTestEpoch(out dev1, out dev2);
+
             var src = persistor.AddSource("label", null);
 
             var time = DateTimeOffset.Now;
@@ -411,7 +415,10 @@ namespace Symphony.Core
             var blks = new List<IPersistentEpochBlock>();
             for (int i = 0; i < 10; i++)
             {
-                var b = persistor.BeginEpochBlock("id", new Dictionary<string, object>(), time);
+                var b = persistor.BeginEpochBlock(epoch.ProtocolID, epoch.ProtocolParameters, time);
+
+                persistor.Serialize(epoch);
+
                 time = time.AddMilliseconds(500);
                 persistor.EndEpochBlock(time);
                 blks.Add(b);
@@ -420,10 +427,16 @@ namespace Symphony.Core
             var split = persistor.SplitEpochGroup(grp1, blks[6]);
 
             Assert.AreEqual(2, persistor.Experiment.EpochGroups.Count());
+
             Assert.AreEqual(7, split.Item1.EpochBlocks.Count());
             Assert.True(split.Item1.EpochBlocks.All(b => b.EpochGroup == split.Item1));
+            Assert.True(split.Item1.EpochBlocks.All(b => b.Epochs.All(e => e.EpochBlock == b)));
+            Assert.True(split.Item1.EpochBlocks.All(b => b.Epochs.All(e => e.Responses.All(r => r.Epoch == e))));
+
             Assert.AreEqual(3, split.Item2.EpochBlocks.Count());
             Assert.True(split.Item2.EpochBlocks.All(b => b.EpochGroup == split.Item2));
+            Assert.True(split.Item2.EpochBlocks.All(b => b.Epochs.All(e => e.EpochBlock == b)));
+            Assert.True(split.Item2.EpochBlocks.All(b => b.Epochs.All(e => e.Responses.All(r => r.Epoch == e))));
         }
 
         [Test]
@@ -444,13 +457,20 @@ namespace Symphony.Core
         [Test]
         public void ShouldMergeEpochGroups()
         {
+            ExternalDeviceBase dev1;
+            ExternalDeviceBase dev2;
+            var epoch = CreateTestEpoch(out dev1, out dev2);
+
             var src = persistor.AddSource("label", null);
 
             var time = DateTimeOffset.Now;
             var grp1 = persistor.BeginEpochGroup("group1", src, time);
             for (int i = 0; i < 7; i++)
             {
-                persistor.BeginEpochBlock("id", new Dictionary<string, object>(), time);
+                var b = persistor.BeginEpochBlock(epoch.ProtocolID, epoch.ProtocolParameters, time);
+
+                persistor.Serialize(epoch);
+
                 time = time.AddMilliseconds(500);
                 persistor.EndEpochBlock(time);
             }
@@ -458,7 +478,10 @@ namespace Symphony.Core
             var grp2 = persistor.BeginEpochGroup("group2", src, time);
             for (int i = 0; i < 3; i++)
             {
-                persistor.BeginEpochBlock("id", new Dictionary<string, object>(), time);
+                var b = persistor.BeginEpochBlock(epoch.ProtocolID, epoch.ProtocolParameters, time);
+
+                persistor.Serialize(epoch);
+
                 time = time.AddMilliseconds(500);
                 persistor.EndEpochBlock(time);
             }
@@ -469,6 +492,8 @@ namespace Symphony.Core
             Assert.AreEqual(1, persistor.Experiment.EpochGroups.Count());
             Assert.AreEqual(10, grp3.EpochBlocks.Count());
             Assert.True(grp3.EpochBlocks.All(b => b.EpochGroup == grp3));
+            Assert.True(grp3.EpochBlocks.All(b => b.Epochs.All(e => e.EpochBlock == b)));
+            Assert.True(grp3.EpochBlocks.All(b => b.Epochs.All(e => e.Responses.All(r => r.Epoch == e))));
         }
 
         [Test]
