@@ -238,15 +238,6 @@ namespace Symphony.Core
 
         public IPersistentEpochGroup MergeEpochGroups(IPersistentEpochGroup group1, IPersistentEpochGroup group2)
         {
-            if (group1.Parent != group2.Parent)
-                throw new InvalidOperationException("Cannot merge epoch groups on different levels");
-
-            var firstGroup = group1.StartTime < group2.StartTime ? group1 : group2;
-            var secondGroup = group1.StartTime < group2.StartTime ? group2 : group1;
-            var groups = firstGroup.EpochGroups.ToList();
-            if (groups.Any(g => g.StartTime > firstGroup.StartTime && g.EndTime < secondGroup.EndTime))
-                throw new InvalidOperationException("Only adjacent epoch groups may be merged");
-
             if (CurrentEpochBlock != null)
                 throw new InvalidOperationException("There is an open epoch block");
 
@@ -1233,10 +1224,20 @@ namespace Symphony.Core
 
         public static H5PersistentEpochGroup Merge(H5PersistentEpochGroup g1, H5PersistentEpochGroup g2)
         {
-            var startTime = g1.StartTime < g2.StartTime ? g1.StartTime : g2.StartTime;
+            if (Equals(g1, g2))
+                throw new InvalidOperationException("Cannot merge an epoch group into itself");
+            if (g1.Parent != g2.Parent)
+                throw new InvalidOperationException("Cannot merge epoch groups on different levels");
+
+            var firstGroup = g1.StartTime < g2.StartTime ? g1 : g2;
+            var secondGroup = g1.StartTime < g2.StartTime ? g2 : g1;
+            var groups = firstGroup.EpochGroups.ToList();
+            if (groups.Any(g => g.StartTime > firstGroup.StartTime && g.EndTime < secondGroup.EndTime))
+                throw new InvalidOperationException("Only adjacent epoch groups may be merged");
+
             var merged = g1.Parent == null
-                ? ((H5PersistentExperiment)g1.Experiment).InsertEpochGroup(g1.Label, (H5PersistentSource)g1.Source, startTime)
-                : ((H5PersistentEpochGroup)g2.Parent).InsertEpochGroup(g1.Label, (H5PersistentSource)g1.Source, startTime);
+                ? ((H5PersistentExperiment)g1.Experiment).InsertEpochGroup(g1.Label, (H5PersistentSource)g1.Source, firstGroup.StartTime)
+                : ((H5PersistentEpochGroup)g2.Parent).InsertEpochGroup(g1.Label, (H5PersistentSource)g1.Source, firstGroup.StartTime);
             try
             {
                 merged.CopyAnnotationsFrom(g2);
