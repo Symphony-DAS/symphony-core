@@ -604,15 +604,17 @@ namespace Symphony.Core
             }
         }
 
-        protected void TryFlush()
+        protected bool TryFlush()
         {
             try
             {
                 Group.Flush();
+                return true;
             }
             catch (Exception x)
             {
                 H5EpochPersistor.Log.WarnFormat("Unable to flush buffers to disk: {0}", x.Message);
+                return false;
             }
         }
     }
@@ -989,6 +991,12 @@ namespace Symphony.Core
             get { return EpochGroups.Flatten(g => g.EpochGroups); }
         }
 
+        public IPersistentEpochGroup GetEpochGroup(Guid uuid)
+        {
+            var group = _epochGroupsGroup.Groups.First(g => GetUUID(g) == uuid);
+            return EntityFactory.Create<H5PersistentEpochGroup>(group);
+        }
+
         public H5PersistentEpochGroup InsertEpochGroup(string label, H5PersistentSource source, DateTimeOffset startTime)
         {
             var group = H5PersistentEpochGroup.InsertEpochGroup(_epochGroupsGroup, EntityFactory, null, this, label,
@@ -1121,6 +1129,12 @@ namespace Symphony.Core
             get { return EpochGroups.Aggregate(EpochGroups, (current, group) => current.Concat(group.AllEpochGroups)); }
         }
 
+        public IPersistentEpochGroup GetEpochGroup(Guid uuid)
+        {
+            var group = _epochGroupsGroup.Groups.First(g => GetUUID(g) == uuid);
+            return EntityFactory.Create<H5PersistentEpochGroup>(group);
+        }
+
         public H5PersistentEpochGroup InsertEpochGroup(string label, H5PersistentSource source, DateTimeOffset startTime)
         {
             var group = InsertEpochGroup(_epochGroupsGroup, EntityFactory, this, (H5PersistentExperiment) Experiment,
@@ -1155,6 +1169,12 @@ namespace Symphony.Core
                     _epochBlocksGroup.Groups.Select(g => EntityFactory.Create<H5PersistentEpochBlock>(g))
                         .OrderBy(b => b.StartTime);
             }
+        }
+
+        public IPersistentEpochBlock GetEpochBlock(Guid uuid)
+        {
+            var group = _epochBlocksGroup.Groups.First(g => GetUUID(g) == uuid);
+            return EntityFactory.Create<H5PersistentEpochBlock>(group);
         }
 
         public H5PersistentEpochBlock InsertEpochBlock(string protocolID, IDictionary<string, object> parameters,
@@ -1198,8 +1218,8 @@ namespace Symphony.Core
             {
                 EntityFactory.RemoveFromCache(this);
                 newEpochGroup = parent == null 
-                    ? (H5PersistentEpochGroup)Experiment.EpochGroups.First(g => g.UUID == UUID)
-                    : (H5PersistentEpochGroup)parent.EpochGroups.First(g => g.UUID == UUID);
+                    ? (H5PersistentEpochGroup)((H5PersistentExperiment)Experiment).GetEpochGroup(UUID)
+                    : (H5PersistentEpochGroup)parent.GetEpochGroup(UUID);
             }
             else
             {
@@ -1433,6 +1453,12 @@ namespace Symphony.Core
             }
         }
 
+        public IPersistentEpoch GetEpoch(Guid uuid)
+        {
+            var group = _epochsGroup.Groups.First(g => GetUUID(g) == uuid);
+            return EntityFactory.Create<H5PersistentEpoch>(group);
+        }
+
         public H5PersistentEpoch InsertEpoch(Epoch epoch, uint compression)
         {
             if (epoch.ProtocolID != ProtocolID)
@@ -1471,10 +1497,10 @@ namespace Symphony.Core
             var oldEpochGroup = (H5PersistentEpochGroup) EpochGroup;
 
             H5PersistentEpochBlock newBlock;
-            if (epochGroup.UUID == oldEpochGroup.UUID)
+            if (Equals(epochGroup, oldEpochGroup))
             {
                 EntityFactory.RemoveFromCache(this);
-                newBlock = (H5PersistentEpochBlock) epochGroup.EpochBlocks.First(b => b.UUID == UUID);
+                newBlock = (H5PersistentEpochBlock) epochGroup.GetEpochBlock(UUID);
             }
             else
             {
@@ -1486,7 +1512,7 @@ namespace Symphony.Core
                 ((H5PersistentEpoch)e).SetEpochBlock(newBlock);
             }
 
-            if (epochGroup.UUID != oldEpochGroup.UUID)
+            if (!Equals(epochGroup, oldEpochGroup))
             {
                 oldEpochGroup.RemoveEpochBlock(this);
             }
@@ -1507,7 +1533,7 @@ namespace Symphony.Core
         private const string StimuliGroupName = "stimuli";
         private const string EpochBlockGroupName = "epochBlock";
 
-        private H5Group _backgroundGroup;
+        private H5Group _backgroundsGroup;
         private H5Group _protocolParametersGroup;
         private H5Group _responsesGroup;
         private H5Group _stimuliGroup;
@@ -1592,7 +1618,7 @@ namespace Symphony.Core
         private void InitEpochH5Objects()
         {
             var subGroups = Group.Groups.ToList();
-            _backgroundGroup = subGroups.First(g => g.Name == BackgroundsGroupName);
+            _backgroundsGroup = subGroups.First(g => g.Name == BackgroundsGroupName);
             _protocolParametersGroup = subGroups.First(g => g.Name == ProtocolParametersGroupName);
             _responsesGroup = subGroups.First(g => g.Name == ResponsesGroupName);
             _stimuliGroup = subGroups.First(g => g.Name == StimuliGroupName);
@@ -1601,19 +1627,25 @@ namespace Symphony.Core
 
         public IEnumerable<IPersistentBackground> Backgrounds
         {
-            get { return _backgroundGroup.Groups.Select(g => EntityFactory.Create<H5PersistentBackground>(g)); }
+            get { return _backgroundsGroup.Groups.Select(g => EntityFactory.Create<H5PersistentBackground>(g)); }
+        }
+
+        public IPersistentBackground GetBackground(Guid uuid)
+        {
+            var group = _backgroundsGroup.Groups.First(g => GetUUID(g) == uuid);
+            return EntityFactory.Create<H5PersistentBackground>(group);
         }
 
         public H5PersistentBackground AddBackground(H5PersistentBackground background)
         {
-            _backgroundGroup.AddHardLink(background.Group.Name, background.Group);
-            var group = _backgroundGroup.Groups.First(g => g.Name == background.Group.Name);
+            _backgroundsGroup.AddHardLink(background.Group.Name, background.Group);
+            var group = _backgroundsGroup.Groups.First(g => g.Name == background.Group.Name);
             return new H5PersistentBackground(group, EntityFactory);
         }
 
         public bool RemoveBackground(H5PersistentBackground background)
         {
-            var bg = _backgroundGroup.Groups.FirstOrDefault(g => g.Name == background.Group.Name);
+            var bg = _backgroundsGroup.Groups.FirstOrDefault(g => g.Name == background.Group.Name);
             if (bg == null)
                 return false;
 
@@ -1636,6 +1668,12 @@ namespace Symphony.Core
             get { return _responsesGroup.Groups.Select(g => EntityFactory.Create<H5PersistentResponse>(g)); }
         }
 
+        public IPersistentResponse GetResponse(Guid uuid)
+        {
+            var group = _responsesGroup.Groups.First(g => GetUUID(g) == uuid);
+            return EntityFactory.Create<H5PersistentResponse>(group);
+        }
+
         public H5PersistentResponse AddResponse(H5PersistentResponse response)
         {
             _responsesGroup.AddHardLink(response.Group.Name, response.Group);
@@ -1656,6 +1694,12 @@ namespace Symphony.Core
         public IEnumerable<IPersistentStimulus> Stimuli
         {
             get { return _stimuliGroup.Groups.Select(g => EntityFactory.Create<H5PersistentStimulus>(g)); }
+        }
+
+        public IPersistentStimulus GetStimulus(Guid uuid)
+        {
+            var group = _stimuliGroup.Groups.First(g => GetUUID(g) == uuid);
+            return EntityFactory.Create<H5PersistentStimulus>(group);
         }
 
         public H5PersistentStimulus AddStimulus(H5PersistentStimulus stimulus)
@@ -1685,10 +1729,10 @@ namespace Symphony.Core
             var oldEpochBlock = (H5PersistentEpochBlock)EpochBlock;
 
             H5PersistentEpoch newEpoch;
-            if (epochBlock.UUID == oldEpochBlock.UUID)
+            if (Equals(epochBlock, oldEpochBlock))
             {
                 EntityFactory.RemoveFromCache(this);
-                newEpoch = (H5PersistentEpoch) epochBlock.Epochs.First(e => e.UUID == UUID);
+                newEpoch = (H5PersistentEpoch) epochBlock.GetEpoch(UUID);
             }
             else
             {
@@ -1700,7 +1744,7 @@ namespace Symphony.Core
                 ((H5PersistentIOBase)io).SetEpoch(newEpoch);
             }
 
-            if (epochBlock.UUID != oldEpochBlock.UUID)
+            if (!Equals(epochBlock, oldEpochBlock))
             {
                 oldEpochBlock.RemoveEpoch(this);
             }
@@ -1904,10 +1948,10 @@ namespace Symphony.Core
             var oldEpoch = (H5PersistentEpoch)Epoch;
 
             H5PersistentResponse newResponse;
-            if (epoch.UUID == oldEpoch.UUID)
+            if (Equals(epoch, oldEpoch))
             {
                 EntityFactory.RemoveFromCache(this);
-                newResponse = (H5PersistentResponse) epoch.Responses.First(r => r.UUID == UUID);
+                newResponse = (H5PersistentResponse) epoch.GetResponse(UUID);
             }
             else
             {
@@ -2041,10 +2085,10 @@ namespace Symphony.Core
             var oldEpoch = (H5PersistentEpoch)Epoch;
 
             H5PersistentStimulus newStimulus;
-            if (epoch.UUID == oldEpoch.UUID)
+            if (Equals(epoch, oldEpoch))
             {
                 EntityFactory.RemoveFromCache(this);
-                newStimulus = (H5PersistentStimulus) epoch.Stimuli.First(s => s.UUID == UUID);
+                newStimulus = (H5PersistentStimulus) epoch.GetStimulus(UUID);
             }
             else
             {
@@ -2110,10 +2154,10 @@ namespace Symphony.Core
             var oldEpoch = (H5PersistentEpoch)Epoch;
 
             H5PersistentBackground newBackground;
-            if (epoch.UUID == oldEpoch.UUID)
+            if (Equals(epoch, oldEpoch))
             {
                 EntityFactory.RemoveFromCache(this);
-                newBackground = (H5PersistentBackground) epoch.Backgrounds.First(b => b.UUID == UUID);
+                newBackground = (H5PersistentBackground) epoch.GetBackground(UUID);
             }
             else
             {
