@@ -424,6 +424,19 @@ namespace Symphony.Core
                 blks.Add(b);
             }
 
+            var grp2 = persistor.BeginEpochGroup("group2", src, time);
+            for (int i = 0; i < 4; i++)
+            {
+                var b = persistor.BeginEpochBlock(epoch.ProtocolID, epoch.ProtocolParameters, time);
+
+                persistor.Serialize(epoch);
+
+                time = time.AddMilliseconds(500);
+                persistor.EndEpochBlock(time);
+            }
+            time = time.AddMilliseconds(500);
+            persistor.EndEpochGroup(time);
+
             var split = persistor.SplitEpochGroup(grp1, blks[6]);
 
             Assert.AreEqual(2, persistor.Experiment.EpochGroups.Count());
@@ -432,11 +445,15 @@ namespace Symphony.Core
             Assert.True(split.Item1.EpochBlocks.All(b => b.EpochGroup == split.Item1));
             Assert.True(split.Item1.EpochBlocks.All(b => b.Epochs.All(e => e.EpochBlock == b)));
             Assert.True(split.Item1.EpochBlocks.All(b => b.Epochs.All(e => e.Responses.All(r => r.Epoch == e))));
+            Assert.AreEqual(0, split.Item1.EpochGroups.Count());
 
             Assert.AreEqual(3, split.Item2.EpochBlocks.Count());
             Assert.True(split.Item2.EpochBlocks.All(b => b.EpochGroup == split.Item2));
             Assert.True(split.Item2.EpochBlocks.All(b => b.Epochs.All(e => e.EpochBlock == b)));
             Assert.True(split.Item2.EpochBlocks.All(b => b.Epochs.All(e => e.Responses.All(r => r.Epoch == e))));
+            Assert.AreEqual(1, split.Item2.EpochGroups.Count());
+            Assert.AreEqual(4, split.Item2.EpochGroups.First().EpochBlocks.Count());
+            Assert.True(split.Item2.EpochGroups.First().EpochBlocks.All(b => b.EpochGroup == split.Item2.EpochGroups.First()));
         }
 
         [Test]
@@ -474,8 +491,22 @@ namespace Symphony.Core
                 time = time.AddMilliseconds(500);
                 persistor.EndEpochBlock(time);
             }
-            persistor.EndEpochGroup(time);
+
             var grp2 = persistor.BeginEpochGroup("group2", src, time);
+            for (int i = 0; i < 4; i++)
+            {
+                var b = persistor.BeginEpochBlock(epoch.ProtocolID, epoch.ProtocolParameters, time);
+
+                persistor.Serialize(epoch);
+
+                time = time.AddMilliseconds(500);
+                persistor.EndEpochBlock(time);
+            }
+            time = time.AddMilliseconds(500);
+            persistor.EndEpochGroup(time);
+            persistor.EndEpochGroup(time);
+
+            var grp3 = persistor.BeginEpochGroup("group2", src, time);
             for (int i = 0; i < 3; i++)
             {
                 var b = persistor.BeginEpochBlock(epoch.ProtocolID, epoch.ProtocolParameters, time);
@@ -487,13 +518,16 @@ namespace Symphony.Core
             }
             persistor.EndEpochGroup(time);
 
-            var grp3 = persistor.MergeEpochGroups(grp1, grp2);
+            var grp4 = persistor.MergeEpochGroups(grp1, grp3);
 
             Assert.AreEqual(1, persistor.Experiment.EpochGroups.Count());
-            Assert.AreEqual(10, grp3.EpochBlocks.Count());
-            Assert.True(grp3.EpochBlocks.All(b => b.EpochGroup == grp3));
-            Assert.True(grp3.EpochBlocks.All(b => b.Epochs.All(e => e.EpochBlock == b)));
-            Assert.True(grp3.EpochBlocks.All(b => b.Epochs.All(e => e.Responses.All(r => r.Epoch == e))));
+            Assert.AreEqual(10, grp4.EpochBlocks.Count());
+            Assert.True(grp4.EpochBlocks.All(b => b.EpochGroup == grp4));
+            Assert.True(grp4.EpochBlocks.All(b => b.Epochs.All(e => e.EpochBlock == b)));
+            Assert.True(grp4.EpochBlocks.All(b => b.Epochs.All(e => e.Responses.All(r => r.Epoch == e))));
+            Assert.AreEqual(1, grp4.EpochGroups.Count());
+            Assert.AreEqual(4, grp4.EpochGroups.First().EpochBlocks.Count());
+            Assert.True(grp4.EpochGroups.First().EpochBlocks.All(b => b.EpochGroup == grp4.EpochGroups.First()));
         }
 
         [Test]
