@@ -94,10 +94,10 @@ namespace Symphony.Core
         Tuple<IPersistentEpochGroup, IPersistentEpochGroup> SplitEpochGroup(IPersistentEpochGroup group, IPersistentEpochBlock block);
 
         /// <summary>
-        /// Merges two Epoch Groups. On successful merge, the given Epoch Groups will be deleted by this method.
+        /// Merges Epoch Group "group1" into Epoch Group "group2". On successful merge, the given Epoch Groups will be deleted by this method.
         /// </summary>
-        /// <param name="group1">Primary Epoch Group to merge</param>
-        /// <param name="group2">Secondary Epoch Group to merge</param>
+        /// <param name="group1">Epoch Group to merge</param>
+        /// <param name="group2">Epoch Group to merge into</param>
         /// <returns>The new Epoch Group created by the merge</returns>
         IPersistentEpochGroup MergeEpochGroups(IPersistentEpochGroup group1, IPersistentEpochGroup group2);
 

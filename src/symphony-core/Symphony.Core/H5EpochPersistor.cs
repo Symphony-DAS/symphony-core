@@ -1235,16 +1235,16 @@ namespace Symphony.Core
             if (groups.Any(g => g.StartTime > firstGroup.StartTime && g.EndTime < secondGroup.EndTime))
                 throw new InvalidOperationException("Only adjacent epoch groups may be merged");
 
-            var merged = g1.Parent == null
-                ? ((H5PersistentExperiment)g1.Experiment).InsertEpochGroup(g1.Label, (H5PersistentSource)g1.Source, firstGroup.StartTime)
-                : ((H5PersistentEpochGroup)g2.Parent).InsertEpochGroup(g1.Label, (H5PersistentSource)g1.Source, firstGroup.StartTime);
+            var merged = g2.Parent == null
+                ? ((H5PersistentExperiment)g2.Experiment).InsertEpochGroup(g2.Label, (H5PersistentSource)g2.Source, firstGroup.StartTime)
+                : ((H5PersistentEpochGroup)g2.Parent).InsertEpochGroup(g2.Label, (H5PersistentSource)g2.Source, firstGroup.StartTime);
             try
             {
-                merged.CopyAnnotationsFrom(g2);
-                merged.CopyResourcesFrom(g2);
-
                 merged.CopyAnnotationsFrom(g1);
                 merged.CopyResourcesFrom(g1);
+
+                merged.CopyAnnotationsFrom(g2);
+                merged.CopyResourcesFrom(g2);
 
                 var blocks = g1.EpochBlocks.Concat(g2.EpochBlocks).ToList();
                 foreach (var b in blocks)
