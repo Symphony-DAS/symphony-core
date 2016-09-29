@@ -1010,11 +1010,11 @@ namespace Symphony.Core
 
         private string _label;
 
-        private readonly H5Group _sourceGroup;
-        private readonly H5Group _epochGroupsGroup;
-        private readonly H5Group _epochBlocksGroup;
-        private readonly H5Group _parentGroup;
-        private readonly H5Group _experimentGroup;
+        private H5Group _sourceGroup;
+        private H5Group _epochGroupsGroup;
+        private H5Group _epochBlocksGroup;
+        private H5Group _parentGroup;
+        private H5Group _experimentGroup;
 
         public static H5PersistentEpochGroup InsertEpochGroup(H5Group container, H5PersistentEntityFactory factory,
             H5PersistentEpochGroup parent, H5PersistentExperiment experiment, string label, H5PersistentSource source,
@@ -1057,7 +1057,12 @@ namespace Symphony.Core
         {
             _label = group.Attributes[LabelKey];
 
-            var subGroups = group.Groups.ToList();
+            InitEpochGroupH5Objects();
+        }
+
+        private void InitEpochGroupH5Objects()
+        {
+            var subGroups = Group.Groups.ToList();
             _sourceGroup = subGroups.First(g => g.Name == SourceGroupName);
             _epochGroupsGroup = subGroups.First(g => g.Name == EpochGroupsGroupName);
             _epochBlocksGroup = subGroups.First(g => g.Name == EpochBlocksGroupName);
@@ -1125,6 +1130,23 @@ namespace Symphony.Core
             return group;
         }
 
+        public H5PersistentEpochGroup AddEpochGroup(H5PersistentEpochGroup epochGroup)
+        {
+            _epochGroupsGroup.AddHardLink(epochGroup.Group.Name, epochGroup.Group);
+            var group = _epochGroupsGroup.Groups.First(g => g.Name == epochGroup.Group.Name);
+            return new H5PersistentEpochGroup(group, EntityFactory);
+        }
+
+        public bool RemoveEpochGroup(H5PersistentEpochGroup epochGroup)
+        {
+            var bg = _epochGroupsGroup.Groups.FirstOrDefault(g => g.Name == epochGroup.Group.Name);
+            if (bg == null)
+                return false;
+
+            bg.Delete();
+            return true;
+        }
+
         public IEnumerable<IPersistentEpochBlock> EpochBlocks
         {
             get
@@ -1167,6 +1189,48 @@ namespace Symphony.Core
             get { return _parentGroup == null ? null : EntityFactory.Create<H5PersistentEpochGroup>(_parentGroup); }
         }
 
+        public void SetParent(H5PersistentEpochGroup parent)
+        {
+            var oldParent = (H5PersistentEpochGroup)Parent;
+
+            H5PersistentEpochGroup newEpochGroup;
+            if (Equals(parent, oldParent))
+            {
+                EntityFactory.RemoveFromCache(this);
+                newEpochGroup = parent == null 
+                    ? (H5PersistentEpochGroup)Experiment.EpochGroups.First(g => g.UUID == UUID)
+                    : (H5PersistentEpochGroup)parent.EpochGroups.First(g => g.UUID == UUID);
+            }
+            else
+            {
+                newEpochGroup = parent.AddEpochGroup(this);
+            }
+
+            foreach (var g in EpochGroups)
+            {
+                ((H5PersistentEpochGroup) g).SetParent(newEpochGroup);
+            }
+
+            foreach (var b in EpochBlocks)
+            {
+                ((H5PersistentEpochBlock) b).SetEpochGroup(newEpochGroup);
+            }
+
+            if (!Equals(parent, oldParent))
+            {
+                oldParent.RemoveEpochGroup(this);
+            }
+
+            newEpochGroup._parentGroup.Delete();
+            if (parent != null)
+            {
+                newEpochGroup.Group.AddHardLink(ParentGroupName, parent.Group);
+            }
+            SetGroup(newEpochGroup.Group);
+
+            InitEpochGroupH5Objects();
+        }
+
         public IPersistentExperiment Experiment
         {
             get { return EntityFactory.Create<H5PersistentExperiment>(_experimentGroup); }
@@ -1193,14 +1257,16 @@ namespace Symphony.Core
                 g2.CopyAnnotationsFrom(group);
                 g2.CopyResourcesFrom(group);
 
-                var blocks = group.EpochBlocks.ToList();
-                foreach (var b in blocks.Where(b => b.StartTime <= block.StartTime))
+                var groups = group.EpochGroups.ToList();
+                foreach (var g in groups)
                 {
-                    ((H5PersistentEpochBlock) b).SetEpochGroup(g1);
+                    ((H5PersistentEpochGroup) g).SetParent(g.StartTime <= block.StartTime ? g1 : g2);
                 }
-                foreach (var b in blocks.Where(b => b.StartTime > block.StartTime))
+
+                var blocks = group.EpochBlocks.ToList();
+                foreach (var b in blocks)
                 {
-                    ((H5PersistentEpochBlock) b).SetEpochGroup(g2);
+                    ((H5PersistentEpochBlock) b).SetEpochGroup(b.StartTime <= block.StartTime ? g1 : g2);
                 }
 
                 g1.SetEndTime(block.EndTime.Value);
@@ -1231,8 +1297,12 @@ namespace Symphony.Core
 
             var firstGroup = g1.StartTime < g2.StartTime ? g1 : g2;
             var secondGroup = g1.StartTime < g2.StartTime ? g2 : g1;
-            var groups = firstGroup.EpochGroups.ToList();
-            if (groups.Any(g => g.StartTime > firstGroup.StartTime && g.EndTime < secondGroup.EndTime))
+
+            bool areAdjacent = g2.Parent == null
+                ? !g2.Experiment.EpochGroups.Any(g => g.StartTime > firstGroup.StartTime && g.EndTime < secondGroup.EndTime)
+                : !g2.Parent.EpochGroups.Any(g => g.StartTime > firstGroup.StartTime && g.EndTime < secondGroup.EndTime);
+
+            if (!areAdjacent)
                 throw new InvalidOperationException("Only adjacent epoch groups may be merged");
 
             var merged = g2.Parent == null
@@ -1245,6 +1315,12 @@ namespace Symphony.Core
 
                 merged.CopyAnnotationsFrom(g2);
                 merged.CopyResourcesFrom(g2);
+
+                var groups = g1.EpochGroups.Concat(g2.EpochGroups).ToList();
+                foreach (var g in groups)
+                {
+                    ((H5PersistentEpochGroup) g).SetParent(merged);
+                }
 
                 var blocks = g1.EpochBlocks.Concat(g2.EpochBlocks).ToList();
                 foreach (var b in blocks)
