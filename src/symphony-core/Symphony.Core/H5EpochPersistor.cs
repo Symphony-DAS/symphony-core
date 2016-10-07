@@ -29,7 +29,6 @@ namespace Symphony.Core
         private readonly H5File _file;
 
         private readonly H5PersistentExperiment _experiment;
-        private readonly H5PersistentEntityFactory _entityFactory;
         private readonly Stack<H5PersistentEpochGroup> _openEpochGroups;
 
         public static H5EpochPersistor Create(string filename)
@@ -85,8 +84,7 @@ namespace Symphony.Core
             if (_file.Groups.Count() != 1)
                 throw new FileLoadException("Expected a single top-level group. Are you sure this is a Symphony file?");
 
-            _entityFactory = new H5PersistentEntityFactory();
-            _experiment = _entityFactory.Create<H5PersistentExperiment>(_file.Groups.First());
+            _experiment = new H5PersistentExperiment(_file.Groups.First(), new H5PersistentEntityFactory());
 
             _openEpochGroups = new Stack<H5PersistentEpochGroup>();
 
@@ -939,6 +937,18 @@ namespace Symphony.Core
             _devicesGroup = subGroups.First(g => g.Name == DevicesGroupName);
             _sourcesGroup = subGroups.First(g => g.Name == SourcesGroupName);
             _epochGroupsGroup = subGroups.First(g => g.Name == EpochGroupsGroupName);
+
+            // Load the entities that may be hard linked into the cache. This is necessary because we always want to hard link
+            // to the canonical entity's group and not a group that points to the canonical entity's group. Just iterating the
+            // enumerables would have the same affect, but explicitly adding them to the cache is clearer.
+            var entities =
+                new List<H5PersistentEntity> {this}.Concat<IPersistentEntity>(Devices)
+                    .Concat(AllSources)
+                    .Concat(AllEpochGroups);
+            foreach (var e in entities)
+            {
+                EntityFactory.SetEntityInCache((H5PersistentEntity) e);
+            }
         }
 
         public string Purpose
@@ -1238,7 +1248,7 @@ namespace Symphony.Core
             H5PersistentEpochGroup newEpochGroup;
             if (Equals(parent, oldParent))
             {
-                EntityFactory.RemoveFromCache(this);
+                EntityFactory.RemoveEntityFromCache(this);
                 newEpochGroup = parent == null 
                     ? (H5PersistentEpochGroup)((H5PersistentExperiment)Experiment).GetEpochGroup(UUID)
                     : (H5PersistentEpochGroup)parent.GetEpochGroup(UUID);
@@ -1521,7 +1531,7 @@ namespace Symphony.Core
             H5PersistentEpochBlock newBlock;
             if (Equals(epochGroup, oldEpochGroup))
             {
-                EntityFactory.RemoveFromCache(this);
+                EntityFactory.RemoveEntityFromCache(this);
                 newBlock = (H5PersistentEpochBlock) epochGroup.GetEpochBlock(UUID);
             }
             else
@@ -1753,7 +1763,7 @@ namespace Symphony.Core
             H5PersistentEpoch newEpoch;
             if (Equals(epochBlock, oldEpochBlock))
             {
-                EntityFactory.RemoveFromCache(this);
+                EntityFactory.RemoveEntityFromCache(this);
                 newEpoch = (H5PersistentEpoch) epochBlock.GetEpoch(UUID);
             }
             else
@@ -1972,7 +1982,7 @@ namespace Symphony.Core
             H5PersistentResponse newResponse;
             if (Equals(epoch, oldEpoch))
             {
-                EntityFactory.RemoveFromCache(this);
+                EntityFactory.RemoveEntityFromCache(this);
                 newResponse = (H5PersistentResponse) epoch.GetResponse(UUID);
             }
             else
@@ -2109,7 +2119,7 @@ namespace Symphony.Core
             H5PersistentStimulus newStimulus;
             if (Equals(epoch, oldEpoch))
             {
-                EntityFactory.RemoveFromCache(this);
+                EntityFactory.RemoveEntityFromCache(this);
                 newStimulus = (H5PersistentStimulus) epoch.GetStimulus(UUID);
             }
             else
@@ -2178,7 +2188,7 @@ namespace Symphony.Core
             H5PersistentBackground newBackground;
             if (Equals(epoch, oldEpoch))
             {
-                EntityFactory.RemoveFromCache(this);
+                EntityFactory.RemoveEntityFromCache(this);
                 newBackground = (H5PersistentBackground) epoch.GetBackground(UUID);
             }
             else
@@ -2264,7 +2274,7 @@ namespace Symphony.Core
 
         public void SetEntity(H5PersistentEntity entity)
         {
-            EntityFactory.RemoveFromCache(this);
+            EntityFactory.RemoveEntityFromCache(this);
             var newResource = (H5PersistentResource)entity.GetResource(UUID);
 
             SetGroup(newResource.Group);
@@ -2334,12 +2344,17 @@ namespace Symphony.Core
                 return (T) _cache[uuid];
 
             T entity = Constructor<T>.Func(group, this);
-            _cache.Add(uuid, entity);
+            _cache[entity.UUID] = entity;
 
             return entity;
         }
 
-        public bool RemoveFromCache(H5PersistentEntity entity)
+        public void SetEntityInCache(H5PersistentEntity entity)
+        {
+            _cache[entity.UUID] = entity;
+        }
+
+        public bool RemoveEntityFromCache(H5PersistentEntity entity)
         {
             return _cache.Remove(entity.UUID);
         }
