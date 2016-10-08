@@ -660,7 +660,7 @@ namespace Symphony.Core
             var resp = persistedEpoch.Responses.First();
 
             Assert.AreEqual(2, resp.ConfigurationSpans.Select(s => s.Nodes.Where(n => n.Configuration.ContainsKey("configParam2")).Select(n => n.Configuration["configParam2"])).First().First());
-            resp.SetConfigurationValue("configParam2", "test");
+            resp.SetConfigurationSetting("configParam2", "test");
             Assert.AreEqual("test", resp.ConfigurationSpans.Select(s => s.Nodes.Where(n => n.Configuration.ContainsKey("configParam2")).Select(n => n.Configuration["configParam2"])).First().First());
         }
 

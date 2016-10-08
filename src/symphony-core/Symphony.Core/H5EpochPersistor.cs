@@ -1906,15 +1906,15 @@ namespace Symphony.Core
             }
         }
 
-        public void SetConfigurationValue(string key, object value)
+        public void SetConfigurationSetting(string name, object value)
         {
             foreach (var spanGroup in _dataConfigurationSpansGroup.Groups)
             {
                 foreach (var nodeGroup in spanGroup.Groups)
                 {
-                    if (nodeGroup.Attributes.ContainsKey(key))
+                    if (nodeGroup.Attributes.ContainsKey(name))
                     {
-                        nodeGroup.Attributes[key] = new H5Attribute(value);
+                        nodeGroup.Attributes[name] = new H5Attribute(value);
                     }
                 }
             }

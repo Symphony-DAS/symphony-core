@@ -466,12 +466,12 @@ namespace Symphony.Core
         IEnumerable<IConfigurationSpan> ConfigurationSpans { get; }
 
         /// <summary>
-        /// Sets the configuration value for a pre-existing configuration key across all configuration 
+        /// Sets the configuration setting for a pre-existing setting across all configuration 
         /// spans and nodes.
         /// </summary>
-        /// <param name="key">Key of the configuration value to set</param>
-        /// <param name="value">New value for the configuration key</param>
-        void SetConfigurationValue(string key, object value);
+        /// <param name="name">Name of the configuration setting to set</param>
+        /// <param name="value">New value for the configuration setting</param>
+        void SetConfigurationSetting(string name, object value);
 
         /// <summary>
         /// The Epoch that contains this entity.
