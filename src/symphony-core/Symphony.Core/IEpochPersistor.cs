@@ -461,9 +461,17 @@ namespace Symphony.Core
         IPersistentDevice Device { get; }
 
         /// <summary>
-        /// The parameters describing the configuration of the associated Device.
+        /// The parameters describing the configuration of the presented or recorded data.
         /// </summary>
         IEnumerable<IConfigurationSpan> ConfigurationSpans { get; }
+
+        /// <summary>
+        /// Sets the configuration value for a pre-existing configuration key across all configuration 
+        /// spans and nodes.
+        /// </summary>
+        /// <param name="key">Key of the configuration value to set</param>
+        /// <param name="value">New value for the configuration key</param>
+        void SetConfigurationValue(string key, object value);
 
         /// <summary>
         /// The Epoch that contains this entity.

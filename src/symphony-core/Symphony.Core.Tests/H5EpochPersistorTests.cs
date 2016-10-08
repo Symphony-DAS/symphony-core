@@ -645,6 +645,26 @@ namespace Symphony.Core
         }
 
         [Test]
+        public void ShouldSetConfigurationValueOnEpochIO()
+        {
+            ExternalDeviceBase dev1;
+            ExternalDeviceBase dev2;
+            var epoch = CreateTestEpoch(out dev1, out dev2);
+
+            var src = persistor.AddSource("label", null);
+            var grp = persistor.BeginEpochGroup("group", src);
+            var blk = persistor.BeginEpochBlock(epoch.ProtocolID, epoch.ProtocolParameters, epoch.StartTime);
+
+            var persistedEpoch = persistor.Serialize(epoch);
+
+            var resp = persistedEpoch.Responses.First();
+
+            Assert.AreEqual(2, resp.ConfigurationSpans.Select(s => s.Nodes.Where(n => n.Configuration.ContainsKey("configParam2")).Select(n => n.Configuration["configParam2"])).First().First());
+            resp.SetConfigurationValue("configParam2", "test");
+            Assert.AreEqual("test", resp.ConfigurationSpans.Select(s => s.Nodes.Where(n => n.Configuration.ContainsKey("configParam2")).Select(n => n.Configuration["configParam2"])).First().First());
+        }
+
+        [Test]
         public void ShouldSetEndTimeOnAllOpenEntitiesOnClose()
         {
             var startTime = DateTimeOffset.Now;
