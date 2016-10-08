@@ -93,6 +93,11 @@ namespace Symphony.Core
                 throw new NotImplementedException();
             }
 
+            public bool RemoveResource(string name)
+            {
+                throw new NotImplementedException();
+            }
+
             public Resource GetResource(string name)
             {
                 throw new NotImplementedException();

@@ -130,6 +130,13 @@ namespace Symphony.Core
         Resource AddResource(string uti, string name, byte[] data);
 
         /// <summary>
+        /// Removes a Resource by name.
+        /// </summary>
+        /// <param name="name">The name of the resource to remove</param>
+        /// <returns></returns>
+        bool RemoveResource(string name);
+
+        /// <summary>
         /// Gets a Resource by name.
         /// </summary>
         /// <param name="name">The name of the resource to get</param>
@@ -476,6 +483,16 @@ namespace Symphony.Core
             var resource = new Resource(uti, name, data);
             Resources.Add(name, resource);
             return resource;
+        }
+
+        /// <summary>
+        /// Removes a Resource by name.
+        /// </summary>
+        /// <param name="name">The name of the resource to remove</param>
+        /// <returns></returns>
+        public bool RemoveResource(string name)
+        {
+            return Resources.Remove(name);
         }
 
         /// <summary>
