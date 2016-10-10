@@ -763,26 +763,18 @@ namespace Symphony.Core
 
             if (persistor != null)
             {
-                // Add devices to persistor
+                // Add new device resources to persistor
                 foreach (var device in Devices)
                 {
-                    var pDevice = persistor.Device(device.Name, device.Manufacturer);
-                    var pResourceNames = pDevice.GetResourceNames().ToList();
+                    var pdev = persistor.Device(device.Name, device.Manufacturer);
+                    var pnames = pdev.GetResourceNames().ToList();
 
                     foreach (var name in device.GetResourceNames())
                     {
-                        var resource = device.GetResource(name);
-                        if (pResourceNames.Contains(name))
+                        if (!pnames.Contains(name))
                         {
-                            var pResource = pDevice.GetResource(name);
-                            if (!resource.UTI.Equals(pResource.UTI) || !resource.Data.SequenceEqual(pResource.Data))
-                                throw new SymphonyControllerException(device.Name +
-                                                                      " already contains a resource named '" +
-                                                                      resource.Name + "' with a different value");
-                        }
-                        else
-                        {
-                            pDevice.AddResource(resource.UTI, resource.Name, resource.Data);
+                            var r = device.GetResource(name);
+                            pdev.AddResource(r.UTI, r.Name, r.Data);
                         }
                     }
                 }
