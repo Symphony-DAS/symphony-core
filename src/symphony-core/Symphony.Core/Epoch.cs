@@ -41,6 +41,7 @@ namespace Symphony.Core
             Responses = new Dictionary<IExternalDevice, Response>();
             Stimuli = new Dictionary<IExternalDevice, IStimulus>();
             Backgrounds = new Dictionary<IExternalDevice, Background>();
+            Properties = new Dictionary<string, object>();
             Keywords = new HashSet<string>();
             ShouldWaitForTrigger = false;
             ShouldBePersisted = true;
@@ -158,6 +159,8 @@ namespace Symphony.Core
                 return times.Any() ? times.First() : Maybe<DateTimeOffset>.No();
             }
         }
+
+        public IDictionary<string, object> Properties { get; private set; }
 
         public ISet<string> Keywords { get; private set; }
 

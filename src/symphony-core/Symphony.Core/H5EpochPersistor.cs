@@ -1628,6 +1628,22 @@ namespace Symphony.Core
                     H5PersistentBackground.InsertBackground(backgroundsGroup, factory, persistentEpoch, device, kv.Value);
                 }
 
+                foreach (var kv in epoch.Properties.ToList())
+                {
+                    var value = kv.Value ?? "";
+                    if (H5AttributeManager.IsSupportedType(value.GetType()))
+                    {
+                        persistentEpoch.AddProperty(kv.Key, value);
+                    }
+                    else
+                    {
+                        H5EpochPersistor.Log.WarnFormat(
+                            "Property value ({0} : {1}) is of usupported type. Falling back to string representation.",
+                            kv.Key, value);
+                        persistentEpoch.AddProperty(kv.Key, value.ToString());
+                    }
+                }
+
                 foreach (var keyword in epoch.Keywords.ToList())
                 {
                     persistentEpoch.AddKeyword(keyword);

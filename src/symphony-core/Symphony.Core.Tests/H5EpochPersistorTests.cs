@@ -768,6 +768,9 @@ namespace Symphony.Core
             epoch.Responses[dev2].AppendData(responseData3);
             epoch.Responses[dev2].AppendData(responseData4);
 
+            epoch.Properties.Add("prop1", 5);
+            epoch.Properties.Add("prop2", "banana");
+
             epoch.Keywords.Add("word1");
             epoch.Keywords.Add("word2");
 
@@ -799,6 +802,7 @@ namespace Symphony.Core
             Assert.AreEqual((DateTimeOffset)expected.StartTime, actual.StartTime);
             Assert.AreEqual((DateTimeOffset)expected.StartTime + expected.Duration, actual.EndTime);
             CollectionAssert.AreEquivalent(expected.ProtocolParameters, actual.ProtocolParameters);
+            CollectionAssert.AreEquivalent(expected.Properties, actual.Properties);
             CollectionAssert.AreEquivalent(expected.Keywords, actual.Keywords);
 
             // Backgrounds

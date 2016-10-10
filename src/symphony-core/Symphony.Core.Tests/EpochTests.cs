@@ -199,7 +199,20 @@ namespace Symphony.Core
         }
 
         private const string UNUSED_PROTOCOL_ID = "UNUSED";
-        
+
+        [Test]
+        public void ShouldAddProperties()
+        {
+            var e = new Epoch(UNUSED_PROTOCOL_ID);
+
+            Assert.That(e.Properties, Is.Empty);
+            e.Properties.Add("prop1", 3);
+            e.Properties.Add("prop2", "hello");
+
+            Assert.That(e.Properties, Contains.Item(new KeyValuePair<string, int>("prop1", 3)));
+            Assert.That(e.Properties, Contains.Item(new KeyValuePair<string, string>("prop2", "hello")));
+        }
+
         [Test]
         public void ShouldAddKeywords()
         {
