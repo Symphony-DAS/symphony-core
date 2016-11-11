@@ -459,6 +459,39 @@ namespace Symphony.Core
         }
 
         [Test]
+        public void ShouldMaintainOldReferencesAfterMultipleSplits()
+        {
+            ExternalDeviceBase dev1;
+            ExternalDeviceBase dev2;
+            var epoch = CreateTestEpoch(out dev1, out dev2);
+
+            var src = persistor.AddSource("label", null);
+
+            var time = DateTimeOffset.Now;
+            var grp = persistor.BeginEpochGroup("group", src, time);
+            var blk1 = persistor.BeginEpochBlock(epoch.ProtocolID, epoch.ProtocolParameters, time);
+            var e1 = persistor.Serialize(epoch);
+            time = time.AddMilliseconds(500);
+            persistor.EndEpochBlock(time);
+            var blk2 = persistor.BeginEpochBlock(epoch.ProtocolID, epoch.ProtocolParameters, time);
+            var e2 = persistor.Serialize(epoch);
+            time = time.AddMilliseconds(500);
+            persistor.EndEpochBlock(time);
+            persistor.EndEpochGroup(time);
+
+            var split1 = persistor.SplitEpochGroup(grp, blk1);
+            var e3 = split1.Item1.EpochBlocks.First().Epochs.First();
+            var e4 = split1.Item2.EpochBlocks.First().Epochs.First();
+
+            var split2 = persistor.SplitEpochGroup(split1.Item2, split1.Item2.EpochBlocks.First());
+            var e5 = split2.Item1.EpochBlocks.First().Epochs.First();
+
+            Assert.AreEqual(e1, e3);
+            Assert.AreEqual(e2, e4);
+            Assert.AreEqual(e2, e5);
+        }
+
+        [Test]
         public void ShouldSplitCurrentEpochGroup()
         {
             var src = persistor.AddSource("label", null);

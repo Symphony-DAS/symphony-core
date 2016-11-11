@@ -1278,9 +1278,11 @@ namespace Symphony.Core
             {
                 newEpochGroup.Group.AddHardLink(ParentGroupName, parent.Group);
             }
+            
             SetGroup(newEpochGroup.Group);
-
             InitEpochGroupH5Objects();
+
+            EntityFactory.SetEntityInCache(this);
         }
 
         public IPersistentExperiment Experiment
@@ -1551,9 +1553,11 @@ namespace Symphony.Core
             
             newBlock._epochGroupGroup.Delete();
             newBlock.Group.AddHardLink(EpochGroupGroupName, epochGroup.Group);
+            
             SetGroup(newBlock.Group);
-
             InitEpochBlockH5Objects();
+
+            EntityFactory.SetEntityInCache(this);
         }
     }
 
@@ -1799,9 +1803,11 @@ namespace Symphony.Core
 
             newEpoch._epochBlockGroup.Delete();
             newEpoch.Group.AddHardLink(EpochBlockGroupName, epochBlock.Group);
+            
             SetGroup(newEpoch.Group);
-
             InitEpochH5Objects();
+
+            EntityFactory.SetEntityInCache(this);
         }
     }
 
@@ -2024,10 +2030,12 @@ namespace Symphony.Core
 
             newResponse._epochGroup.Delete();
             newResponse.Group.AddHardLink(EpochGroupName, epoch.Group);
-            SetGroup(newResponse.Group);
 
+            SetGroup(newResponse.Group);
             InitIOBaseH5Objects();
             InitResponseH5Objects();
+
+            EntityFactory.SetEntityInCache(this);
         }
     }
 
@@ -2161,10 +2169,12 @@ namespace Symphony.Core
 
             newStimulus._epochGroup.Delete();
             newStimulus.Group.AddHardLink(EpochGroupName, epoch.Group);
-            SetGroup(newStimulus.Group);
 
+            SetGroup(newStimulus.Group);
             InitIOBaseH5Objects();
             InitStimulusH5Objects();
+
+            EntityFactory.SetEntityInCache(this);
         }
     }
 
@@ -2230,9 +2240,11 @@ namespace Symphony.Core
 
             newBackground._epochGroup.Delete();
             newBackground.Group.AddHardLink(EpochGroupName, epoch.Group);
-            SetGroup(newBackground.Group);
 
+            SetGroup(newBackground.Group);
             InitIOBaseH5Objects();
+
+            EntityFactory.SetEntityInCache(this);
         }
     }
 
@@ -2309,8 +2321,9 @@ namespace Symphony.Core
             var newResource = (H5PersistentResource)entity.GetResource(UUID);
 
             SetGroup(newResource.Group);
-
             InitResourceH5Objects();
+
+            EntityFactory.SetEntityInCache(this);
         }
     }
 
