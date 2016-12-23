@@ -105,9 +105,9 @@ namespace Heka
 
         private IHekaDevice Device { get; set; }
 
-        private const string SAMPLE_RATE_KEY = "SampleRate";
-        private const string DEVICE_TYPE_KEY = "DeviceType";
-        private const string DEVICE_NUMBER_KEY = "DeviceNumber";
+        private const string SAMPLE_RATE_KEY = "sampleRate";
+        private const string DEVICE_TYPE_KEY = "deviceType";
+        private const string DEVICE_NUMBER_KEY = "deviceNumber";
 
         /// <summary>
         /// Common sampling rate for all analog and digital streams

@@ -78,8 +78,8 @@ namespace NI
 
         private INIDevice Device { get; set; }
 
-        private const string SAMPLE_RATE_KEY = "SampleRate";
-        private const string DEVICE_NAME_KEY = "DeviceName";
+        private const string SAMPLE_RATE_KEY = "sampleRate";
+        private const string DEVICE_NAME_KEY = "deviceName";
 
         public IMeasurement SampleRate
         {

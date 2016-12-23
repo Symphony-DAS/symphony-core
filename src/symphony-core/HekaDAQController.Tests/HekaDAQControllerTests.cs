@@ -435,7 +435,7 @@ namespace Heka
             c.SampleRate = expected;
 
             Assert.That(c.SampleRate, Is.EqualTo(expected));
-            Assert.That(c.Configuration.ContainsKey("SampleRate"));
+            Assert.That(c.Configuration.ContainsKey("sampleRate"));
         }
 
     }

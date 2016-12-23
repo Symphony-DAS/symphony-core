@@ -36,7 +36,7 @@ namespace Heka
             get
             {
                 var config = base.Configuration;
-                config["SampleRate"] = SampleRate;
+                config["sampleRate"] = SampleRate;
 
                 return config;
             }

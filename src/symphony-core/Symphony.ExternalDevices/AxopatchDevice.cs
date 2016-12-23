@@ -103,10 +103,10 @@ namespace Symphony.ExternalDevices
                              ? new Dictionary<string, object>()
                              : new Dictionary<string, object>(config);
 
-            result["ExternalCommandSensitivity"] = deviceParameters.ExternalCommandSensitivity;
-            result["ExternalCommandSensitivityUnits"] = deviceParameters.ExternalCommandSensitivityUnits.ToString();
-            result["Gain"] = deviceParameters.Gain;
-            result["OperatingMode"] = deviceParameters.OperatingMode.ToString();
+            result["externalCommandSensitivity"] = deviceParameters.ExternalCommandSensitivity;
+            result["externalCommandSensitivityUnits"] = deviceParameters.ExternalCommandSensitivityUnits.ToString();
+            result["gain"] = deviceParameters.Gain;
+            result["operatingMode"] = deviceParameters.OperatingMode.ToString();
 
             return result;
         }

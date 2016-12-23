@@ -211,33 +211,33 @@ namespace Symphony.ExternalDevices
                 new Dictionary<string, object>() :
                 new Dictionary<string, object>(config);
 
-            result["Alpha"] = deviceParameters.Alpha;
-            result["ExternalCommandSensitivity"] = deviceParameters.ExternalCommandSensitivity;
-            result["ExternalCommandSensitivityUnits"] = deviceParameters.ExternalCommandSensitivityUnits.ToString();
-            result["HardwareType"] = deviceParameters.HardwareType.ToString();
-            result["LPFCutoff"] = deviceParameters.LPFCutoff;
-            result["MembraneCapacitance"] = deviceParameters.MembraneCapacitance;
-            result["OperatingMode"] = deviceParameters.OperatingMode.ToString();
-            result["RawScaleFactor"] = deviceParameters.RawScaleFactor;
-            result["RawScaleFactorUnits"] = deviceParameters.RawScaleFactorUnits.ToString();
-            result["ScaleFactor"] = deviceParameters.ScaleFactor;
-            result["ScaleFactorUnits"] = deviceParameters.ScaleFactorUnits.ToString();
+            result["alpha"] = deviceParameters.Alpha;
+            result["externalCommandSensitivity"] = deviceParameters.ExternalCommandSensitivity;
+            result["externalCommandSensitivityUnits"] = deviceParameters.ExternalCommandSensitivityUnits.ToString();
+            result["hardwareType"] = deviceParameters.HardwareType.ToString();
+            result["lpfCutoff"] = deviceParameters.LPFCutoff;
+            result["membraneCapacitance"] = deviceParameters.MembraneCapacitance;
+            result["operatingMode"] = deviceParameters.OperatingMode.ToString();
+            result["rawScaleFactor"] = deviceParameters.RawScaleFactor;
+            result["rawScaleFactorUnits"] = deviceParameters.RawScaleFactorUnits.ToString();
+            result["scaleFactor"] = deviceParameters.ScaleFactor;
+            result["scaleFactorUnits"] = deviceParameters.ScaleFactorUnits.ToString();
 
             if (Commander.HardwareType == MultiClampInterop.HardwareType.MCTG_HW_TYPE_MC700A)
             {
-                result["RawOutputSignal"] = deviceParameters.RawOutputSignal700A.ToString();
-                result["ScaledOutputSignal"] = deviceParameters.ScaledOutputSignal700A.ToString();
+                result["rawOutputSignal"] = deviceParameters.RawOutputSignal700A.ToString();
+                result["scaledOutputSignal"] = deviceParameters.ScaledOutputSignal700A.ToString();
             }
             else
             {
-                result["AppVersion"] = deviceParameters.AppVersion;
-                result["DSPVersion"] = deviceParameters.DSPVersion;
-                result["FirmwareVersion"] = deviceParameters.FirmwareVersion;
-                result["RawOutputSignal"] = deviceParameters.RawOutputSignal700B.ToString();
-                result["ScaledOutputSignal"] = deviceParameters.ScaledOutputSignal700B.ToString();
-                result["SecondaryAlpha"] = deviceParameters.SecondaryAlpha;
-                result["SecondaryLPFCutoff"] = deviceParameters.SecondaryLPFCutoff;
-                result["SerialNumber"] = deviceParameters.SerialNumber;
+                result["appVersion"] = deviceParameters.AppVersion;
+                result["dspVersion"] = deviceParameters.DSPVersion;
+                result["firmwareVersion"] = deviceParameters.FirmwareVersion;
+                result["rawOutputSignal"] = deviceParameters.RawOutputSignal700B.ToString();
+                result["scaledOutputSignal"] = deviceParameters.ScaledOutputSignal700B.ToString();
+                result["secondaryAlpha"] = deviceParameters.SecondaryAlpha;
+                result["secondaryLPFCutoff"] = deviceParameters.SecondaryLPFCutoff;
+                result["serialNumber"] = deviceParameters.SerialNumber;
             }
 
             return result;
