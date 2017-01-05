@@ -763,7 +763,7 @@ namespace Symphony.Core
 
             if (persistor != null)
             {
-                // Add new device resources to persistor
+                // Sync device resources to persistor
                 foreach (var device in Devices)
                 {
                     var pdev = persistor.Device(device.Name, device.Manufacturer);
@@ -771,11 +771,27 @@ namespace Symphony.Core
 
                     foreach (var name in device.GetResourceNames())
                     {
-                        if (!pnames.Contains(name))
+                        var res = device.GetResource(name);
+                        if (pnames.Contains(name))
                         {
-                            var r = device.GetResource(name);
-                            pdev.AddResource(r.UTI, r.Name, r.Data);
+                            var pres = pdev.GetResource(name);
+                            if (!pres.UTI.Equals(res.UTI) || !pres.Data.SequenceEqual(res.Data))
+                            {
+                                pdev.RemoveResource(name);
+                                pdev.AddResource(res.UTI, res.Name, res.Data);
+                                log.DebugFormat("Persisted device resource '{0}' was replaced with a new resource of the same name", name);
+                            }
+                            pnames.Remove(name);
                         }
+                        else
+                        {
+                            pdev.AddResource(res.UTI, res.Name, res.Data);
+                        }
+                    }
+
+                    foreach (var name in pnames)
+                    {
+                        pdev.RemoveResource(name);
                     }
                 }
             }
