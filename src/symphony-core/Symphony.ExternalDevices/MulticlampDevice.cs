@@ -957,6 +957,13 @@ namespace Symphony.ExternalDevices
             Backgrounds[operatingMode] = background;
         }
 
+        public void SetBackgroundForMode(string operatingMode, IMeasurement background)
+        {
+            MultiClampInterop.OperatingMode mode;
+            Enum.TryParse(operatingMode, false, out mode);
+            SetBackgroundForMode(mode, background);
+        }
+
         /// <summary>
         /// Gets the device's background for a particular mode.
         /// </summary>
@@ -965,6 +972,13 @@ namespace Symphony.ExternalDevices
         public IMeasurement BackgroundForMode(MultiClampInterop.OperatingMode operatingMode)
         {
             return Backgrounds[operatingMode];
+        }
+
+        public IMeasurement BackgroundForMode(string operatingMode)
+        {
+            MultiClampInterop.OperatingMode mode;
+            Enum.TryParse(operatingMode, false, out mode);
+            return BackgroundForMode(mode);
         }
     }
 

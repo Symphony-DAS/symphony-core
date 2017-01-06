@@ -346,6 +346,40 @@ namespace Symphony.ExternalDevices
             return base.Validate();
         }
 
+        /// <summary>
+        /// Sets the device background for a particular operating mode.
+        /// </summary>
+        /// <param name="operatingMode">Device operating mode</param>
+        /// <param name="background">Desired background</param>
+        public void SetBackgroundForMode(AxopatchInterop.OperatingMode operatingMode, IMeasurement background)
+        {
+            Backgrounds[operatingMode] = background;
+        }
+
+        public void SetBackgroundForMode(string operatingMode, IMeasurement background)
+        {
+            AxopatchInterop.OperatingMode mode;
+            Enum.TryParse(operatingMode, false, out mode);
+            SetBackgroundForMode(mode, background);
+        }
+
+        /// <summary>
+        /// Gets the device's background for a particular mode.
+        /// </summary>
+        /// <param name="operatingMode">Device operating mode</param>
+        /// <returns>Background Measurement for the given mode.</returns>
+        public IMeasurement BackgroundForMode(AxopatchInterop.OperatingMode operatingMode)
+        {
+            return Backgrounds[operatingMode];
+        }
+
+        public IMeasurement BackgroundForMode(string operatingMode)
+        {
+            AxopatchInterop.OperatingMode mode;
+            Enum.TryParse(operatingMode, false, out mode);
+            return BackgroundForMode(mode);
+        }
+
     }
 
     public class AxopatchDeviceException : ExternalDeviceException
