@@ -508,7 +508,10 @@ namespace Symphony.Core
                 _resourcesGroup = Group.AddGroup(ResourcesGroupName);
             }
 
-            return H5PersistentResource.InsertResource(_resourcesGroup, EntityFactory, uti, name, data);
+            var resource = H5PersistentResource.InsertResource(_resourcesGroup, EntityFactory, uti, name, data);
+            TryFlush();
+
+            return resource;
         }
 
         public bool RemoveResource(string name)
@@ -517,6 +520,7 @@ namespace Symphony.Core
             if (resource == null)
                 return false;
             ((H5PersistentResource) resource).Delete();
+            TryFlush();
             return true;
         }
 
