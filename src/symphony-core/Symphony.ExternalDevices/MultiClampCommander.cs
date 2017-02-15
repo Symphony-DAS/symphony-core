@@ -147,7 +147,7 @@ namespace Symphony.ExternalDevices
             uint channel;
             MultiClampInterop.MCTG_Unpack700BSignalIDs((uint)evtArgs.Message.LParam, out serialNumber, out channel);
 
-            availableSerialNumbers.Add(serialNumber);
+            lock(availableSerialNumbers) availableSerialNumbers.Add(serialNumber);
         }
 
         private static void ScanMultiClamps()
