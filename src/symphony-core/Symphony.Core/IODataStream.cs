@@ -173,17 +173,19 @@ namespace Symphony.Core
             if (OutputPosition + timeSpan > Position)
                 throw new ArgumentException("Time span would set output position past stream position", "timeSpan");
 
-            while (timeSpan > TimeSpan.Zero)
+            var outputSpan = TimeSpan.Zero;
+
+            while (outputSpan < timeSpan)
             {
                 var stream = EndedStreams.Any() ? EndedStreams.Peek() : UnendedStreams.Peek();
-                
-                var span = stream.Duration && timeSpan > stream.Duration - stream.OutputPosition 
-                    ? stream.Duration - stream.OutputPosition 
-                    : timeSpan;
 
-                stream.DidOutputData(outputTime, span, configuration);
+                var span = stream.Duration && timeSpan - outputSpan > stream.Duration - stream.OutputPosition
+                    ? stream.Duration - stream.OutputPosition
+                    : timeSpan - outputSpan;
 
-                timeSpan -= span;
+                stream.DidOutputData(outputTime.Add(outputSpan), span, configuration);
+
+                outputSpan += span;
 
                 if (stream.IsOutputAtEnd && EndedStreams.Any())
                 {
