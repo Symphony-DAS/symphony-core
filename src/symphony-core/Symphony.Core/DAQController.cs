@@ -313,7 +313,8 @@ namespace Symphony.Core
             bool start = true;
             Task startedHardwareTask = null;
 
-            var iterationStart = DateTimeOffset.Now;
+            DateTimeOffset? outputTime = null;
+            DateTimeOffset? iterationStart = null;
 
             var cts = new CancellationTokenSource();
 
@@ -362,31 +363,31 @@ namespace Symphony.Core
                     {
                         StartHardware(waitForTrigger);
                         startedHardwareTask = Task.Factory.StartNew(OnStartedHardware);
+                        start = false;
                     }
 
                     // Run iteration
-                    var outputTime = Clock.Now;
                     var incomingData = ProcessLoopIteration(outgoingData, deficit, cts.Token);
 
                     // Push Output events
-                    PushOutputDataEvents(outputTime, outgoingData);
+                    outputTime = outputTime.HasValue ? outputTime.Value.Add(ProcessInterval) : Clock.Now - ProcessInterval;
+                    PushOutputDataEvents(outputTime.Value, outgoingData);
 
                     // Push Data
                     PushIncomingData(incomingData);
 
                     OnProcessIteration();
 
-                    if (start)
+                    if (!iterationStart.HasValue)
                     {
                         // Assumes no deficit over the first process interval. This seems like a reasonable
                         // assumption and needs to be made because the first process interval may wait for 
                         // trigger for an extended period. The trigger wait time should not build up deficit.
                         iterationStart = DateTimeOffset.Now - ProcessInterval;
-                        start = false;
                     }
 
                     //Wait for rest of the process interval
-                    deficit = SleepForRestOfIteration(iterationStart, ProcessInterval);
+                    deficit = SleepForRestOfIteration(iterationStart.Value, ProcessInterval);
 
                     iterationStart += ProcessInterval;
                 }
