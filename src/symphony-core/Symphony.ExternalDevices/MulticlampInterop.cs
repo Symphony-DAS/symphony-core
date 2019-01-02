@@ -451,6 +451,7 @@ namespace Symphony.ExternalDevices
                 ScaleFactorUnits = (ScaleFactorUnits)mtd.uScaleFactorUnits;
                 SecondaryAlpha = mtd.dSecondaryAlpha;
                 SecondaryLPFCutoff = mtd.dSecondaryLPFCutoff;
+                SeriesResistance = mtd.dSeriesResistance;
 
                 if (HardwareType == HardwareType.MCTG_HW_TYPE_MC700A)
                 {
@@ -510,6 +511,7 @@ namespace Symphony.ExternalDevices
             public string FirmwareVersion { get; set; } //szFirmwareVersion (700B only)
             public string DSPVersion { get; set; } //szDSPVersion (700B only)
             public string SerialNumber { get; set; } //szSerialNumber (700B only)
+            public double SeriesResistance { get; set; } // dSeriesResistance
 
             public override string ToString()
             {

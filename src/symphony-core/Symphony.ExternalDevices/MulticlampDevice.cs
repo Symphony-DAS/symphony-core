@@ -222,6 +222,7 @@ namespace Symphony.ExternalDevices
             result["rawScaleFactorUnits"] = deviceParameters.RawScaleFactorUnits.ToString();
             result["scaleFactor"] = deviceParameters.ScaleFactor;
             result["scaleFactorUnits"] = deviceParameters.ScaleFactorUnits.ToString();
+            result["seriesResistance"] = deviceParameters.SeriesResistance;
 
             if (Commander.HardwareType == MultiClampInterop.HardwareType.MCTG_HW_TYPE_MC700A)
             {
